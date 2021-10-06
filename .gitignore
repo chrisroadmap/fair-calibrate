@@ -2,6 +2,12 @@
 data/netcdf-scm/cmip_data/
 data/netcdf-scm/cmip_data.zip
 
+# Apple files
+.DS_Store
+
+# R history files
+.rapp.history
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
