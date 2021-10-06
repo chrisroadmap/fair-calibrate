@@ -21,6 +21,14 @@ inits3 <- list(
     F_4xCO2 = 5.0
 )
 
+# prepare empty output dataframe
+output <- data.frame(Doubles=double(),
+                 Ints=integer(),
+                 Factors=factor(),
+                 Logicals=logical(),
+                 Characters=character(),
+                 stringsAsFactors=FALSE)
+
 for (model in unique(input_data$climate_model)){
 	rndt = input_data[(input_data$climate_model == model) & (input_data$variable == 'rndt'), 10:159]
 	rndt <- unname(rndt)
@@ -33,5 +41,16 @@ for (model in unique(input_data$climate_model)){
 	rndt <- unlist(rndt)
 
 	result <- FitKalman(inits3, T1=tas, N=rndt)$p
-	print(model, result)
+	check <- capture.output(result <- FitKalman(inits3, T1=tas, N=rndt)$p)
+	
+	if (strsplit(check, " ")[[1]][1] == "Success!") {
+		conv <- TRUE
+		nit <- strsplit(check, " ")[[1]][5]
+	} else {
+		conv <- FALSE
+		nit <- NA
+	}
+	
+	row_out <- c(model, conv, nit, result$gamma, result$C[1], result$C[2], result$C[3],
+	result$kappa, result$epsilon, result$sigma_eta, result$sigma$xi, result$F_4xCO2)
 }
