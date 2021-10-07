@@ -10,6 +10,9 @@ dependencies:
   - matplotlib
   - nbstripout
   - netcdf-scm
-  - seaborn
+  - numpy
+  - pandas
+  - scipy
   - scmdata  # should include seaborn as a dependency
+  - seaborn
   - tqdm
