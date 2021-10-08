@@ -1,6 +1,6 @@
 # large data output files
 data/netcdf-scm/cmip_data/
-data/netcdf-scm/cmip_data.zip
+data/netcdf-scm/*.zip
 
 # Apple files
 .DS_Store
