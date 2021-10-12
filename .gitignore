@@ -1,6 +1,7 @@
 # large data output files
 data/netcdf-scm/cmip_data/
 data/netcdf-scm/*.zip
+data/rcmip/
 
 # Apple files
 .DS_Store
