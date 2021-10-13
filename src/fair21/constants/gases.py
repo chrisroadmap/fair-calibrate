@@ -4,6 +4,8 @@ Greenhouse gas properties
 
 import numpy as np
 
+from .general import M_ATMOS
+
 # GAS LIST
 #
 # All gases in the database, except air and gas-phase SLCFs.
@@ -11,7 +13,7 @@ import numpy as np
 gas_list = [
     "C2F6",
     "C3F8",
-    "C4F10", 
+    "C4F10",
     "C5F12",
     "C6F14",
     "C7F16",
@@ -71,16 +73,15 @@ gas_list = [
 # 3. potential extension to all Chapter 7 SM gases, for calculation of metrics.
 molwt = {
     "AIR": 28.97,  # reference?
-    "C": 12.011,
     "C2F6": 138.01,
     "C3F8": 188.02,
-    "C4F10": 238.03, 
+    "C4F10": 238.03,
     "C5F12": 288.03,
     "C6F14": 338.04,
     "C7F16": 388.05,
     "C8F18": 438.06,
     "cC4F8": 200.03,  # not standard PubChem but used extensively in AR6
-    "CCl4" 153.8,
+    "CCl4": 153.8,
     "CF4": 88.004,
     "CFC-113": 187.37,
     "CFC-114": 170.92,
@@ -125,7 +126,7 @@ molwt = {
 lifetime = {
     "C2F6": 10000,
     "C3F8": 2600,
-    "C4F10": 2600, 
+    "C4F10": 2600,
     "C5F12": 4100,
     "C6F14": 3100,
     "C7F16": 3000,
@@ -167,3 +168,16 @@ lifetime = {
     "SF6": 3200,
     "SO2F2": 36,
 }
+
+# CONCENTRATION GROWTH UNITS
+#
+# How much the atmospheric burden grows for a given emission
+burden_per_emission = {}
+for gas in gas_list:
+    burden_per_emission[gas] = (
+        1 / (M_ATMOS / 1e18 * molwt[gas] / molwt["AIR"])
+    )
+# # CO2 and probably N2O need further adjustment
+# burden_per_emission['CO2'] = (
+#     burden_per_emission['CO2'] * molwt["CO2"] / molwt["C"]
+# )
