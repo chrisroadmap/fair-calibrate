@@ -2,13 +2,46 @@
 Module containing gas cycle functions
 """
 
+from ..defaults.gases import iirf_horizon
+
 import numpy as np
 
 from ..constants.gases import burden_per_emission, lifetime
 from ..defaults.gases import (
     pre_industrial_concentration,
-    partition_fractions
+    partition_fraction,
+    iirf_horizon
 )
+
+def calculate_g(
+    lifetime,
+    partition_fraction=1,
+    iirf_horizon=iirf_horizon,
+    
+):
+    """Calculate the `g` components of the gas cycle.
+    
+    See Leach et al. (2021), eq. (5)
+    
+    Inputs
+    ------
+    lifetime : float
+        atmospheric burden lifetime of the greenhouse gas (yr).
+    partition_fraction : float, default=1 or `np.ndarray` of float
+        proportion of emissions of gas that go into each atmospheric box.
+        Should be 1 or sum to 1 if array.
+    iirf_horizon : float, default=100
+        time horizon (yr) for time integrated impulse response function.
+    
+    Returns
+    -------
+    g0 : float
+    g1 : float
+    """
+    
+    g1 = np.sum(partition_fraction * lifetime * (1 - (1 + iirf_horizon/lifetime) * np.exp(-iirf_horizon/lifetime)))
+    g0 = 1/(np.sinh(np.sum(partition_fraction*lifetime*(1 - np.exp(-iirf_horizon/lifetime)), axis=-1)/g1))
+    return g0, g1
 
 def calculate_alpha(
     cumulative_emissions,
@@ -127,7 +160,7 @@ def step_concentration_co2(
     alpha_lifetime=1,
     pre_industrial_concentration=pre_industrial_concentration['CO2'],  # put in a defaults module
     timestep=1,
-    partition_fractions = partition_fractions['CO2'],
+    partition_fraction = partition_fraction['CO2'],
     lifetime = lifetime['CO2'],
 ):
     """
@@ -151,9 +184,9 @@ def step_concentration_co2(
         pre-industrial concentration of CO2.
     timestep : float, default=1
         emissions timestep in years.
-    partition_fractions : float, default=fair21.defaults.gases.partition_fractions['CO2']`
+    partition_fraction : float, default=fair21.defaults.gases.partition_fraction['CO2']`
         the partition fraction of emissions into each `gas_box`.
-    lifetime : `np.ndarray` of float, default=`fair21.defaults.gases.partition_fractions['CO2']`
+    lifetime : `np.ndarray` of float
         atmospheric burden lifetime of greenhouse gas.
 
     Notes
@@ -175,7 +208,7 @@ def step_concentration_co2(
     decay_rate = timestep/(alpha_lifetime * lifetime)
     decay_factor = np.exp(-decay_rate)
 
-    gas_boxes_new = partition_fractions * emissions * 1 / decay_rate * (1 - decay_factor) * timestep + gas_boxes_old * decay_factor
+    gas_boxes_new = partition_fraction * emissions * 1 / decay_rate * (1 - decay_factor) * timestep + gas_boxes_old * decay_factor
     airborne_emissions_new = np.sum(gas_boxes_new)
 
     concentration_out = pre_industrial_concentration + burden_per_emission * (airborne_emissions_new + airborne_emissions_old) / 2
