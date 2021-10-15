@@ -101,6 +101,7 @@ def step_concentration_1box(
     lifetime,
     burden_per_emission,
     alpha_lifetime=1,
+    natural_emissions_adjustment=0,
     pre_industrial_concentration=0,
     timestep=1
 ):
@@ -121,6 +122,9 @@ def step_concentration_1box(
         kt) emission.
     alpha_lifetime : float, default=1
         scaling factor for the default atmospheric lifetimes.
+    natural_emissions_adjustment : float or `np.ndarray` of float, default=0
+        Amount to adjust emissions by for natural emissions given in the total
+        in emissions files.
     pre_industrial_concentration : float, default=0
         pre-industrial concentration of the gas.
     timestep : float, default=1
@@ -145,7 +149,7 @@ def step_concentration_1box(
 
     # Nick says: there shouldn't be a dt in the first decay rate
     # Chris says: there should, and there should be one here too. Emissions are a rate, e.g. Gt / yr
-    airborne_emissions_new = emissions * 1 / decay_rate * (1 - decay_factor) * timestep + airborne_emissions_old * decay_factor
+    airborne_emissions_new = (emissions-natural_emissions_adjustment) * 1 / decay_rate * (1 - decay_factor) * timestep + airborne_emissions_old * decay_factor
 
     concentration_out = pre_industrial_concentration + burden_per_emission * (airborne_emissions_new + airborne_emissions_old) / 2
 

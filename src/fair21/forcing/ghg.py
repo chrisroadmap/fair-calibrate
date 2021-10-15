@@ -2,9 +2,9 @@ import numpy as np
 
 from ..defaults.gases import (
     pre_industrial_concentration,
-    tropospheric_adjustment,
     radiative_efficiency
 )
+from ..defaults.forcing import tropospheric_adjustment
 
 def meinshausen(
     concentration,
@@ -71,12 +71,14 @@ def meinshausen(
     radiative_forcing = {}
     # CO2
     ca_max = pre_industrial_concentration["CO2"] - b1/(2*a1)
-    if pre_industrial_concentration["CO2"] < concentration["CO2"] <= ca_max: # the most likely case
-        alpha_p = d1 + a1*(concentration["CO2"] - pre_industrial_concentration["CO2"])**2 + b1*(concentration["CO2"] - pre_industrial_concentration["CO2"])
-    elif concentration["CO2"] <= pre_industrial_concentration["CO2"]:
-        alpha_p = d1
-    else:
-        alpha_p = d1 - b1**2/(4*a1)
+    # this logical comparison should work for both scalars and arrays
+    where_central = (pre_industrial_concentration["CO2"] < concentration["CO2"]) & (concentration["CO2"] <= ca_max)
+    where_low = (concentration["CO2"] <= pre_industrial_concentration["CO2"])
+    where_high = (concentration["CO2"] > ca_max)
+    alpha_p = np.ones_like(concentration["CO2"]) * np.nan
+    alpha_p[where_central] = d1 + a1*(concentration["CO2"][where_central] - pre_industrial_concentration["CO2"])**2 + b1*(concentration["CO2"][where_central] - pre_industrial_concentration["CO2"])
+    alpha_p[where_low] = d1
+    alpha_p[where_high] = d1 - b1**2/(4*a1)
     alpha_n2o = c1*np.sqrt(concentration["N2O"])
     radiative_forcing["CO2"] = (alpha_p + alpha_n2o) * np.log(concentration["CO2"]/pre_industrial_concentration["CO2"])
 
@@ -256,14 +258,5 @@ def linear(
             continue
         radiative_forcing[gas] = (concentration[gas] - pre_industrial_concentration[gas]) * radiative_efficiency[gas] * 0.001
         effective_radiative_forcing[gas] = radiative_forcing[gas] * tropospheric_adjustment[gas]
-    # """
-    # Calculate radiative forcing from minor gas species.
-    # Inputs:
-        # C: concentration of minor GHGs (in order of MAGICC RCP concentration
-            # spreadsheets)
-        # Cpi: Pre-industrial concentration of GHGs
-    # Returns:
-        # 28 element array of minor GHG forcings
-    # """
-
-    # return (C - Cpi) * radeff.aslist[3:] * 0.001
+        
+    return radiative_forcing, effective_radiative_forcing

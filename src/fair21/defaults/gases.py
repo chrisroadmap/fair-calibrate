@@ -104,31 +104,34 @@ pre_industrial_concentration.update(
     }
 )
 
-# TROPOSPHERIC ADJUSTMENTS
+# NATURAL EMISSIONS ADJUSTMENTS
 #
-# Tropospheric "rapid" adjustments expressed as a multiplicative ratio of the
-# stratospherically-adjusted radiative forcing. This calculates the effective
-# radiative forcing given SARF.
+# Some greenhouse gas species have a natural emissions source. CH4 and N2O do 
+# (and of course, so does CO2), but these contributions are not included in the
+# emissions files provided by e.g. MAGICC6 (for AR5) or RCMIP (for AR6). 
 #
-# Reference:
-# Forster, P., T. Storelvmo, K. Armour, W. Collins, J. L. Dufresne, D. Frame, 
-# D. J. Lunt, T. Mauritsen, M. D. Palmer, M. Watanabe, M. Wild, H. Zhang,
-# 2021, The Earth’s Energy Budget, Climate Feedbacks, and Climate Sensitivity.
-# In: Climate Change 2021: The Physical Science Basis. Contribution of Working
-# Group I to the Sixth Assessment Report of the Intergovernmental Panel on 
-# Climate Change [Masson-Delmotte, V., P. Zhai, A. Pirani, S. L. Connors, C.
-# Péan, S. Berger, N. Caud, Y. Chen, L. Goldfarb, M. I. Gomis, M. Huang, K.
-# Leitzell, E. Lonnoy, J.B.R. Matthews, T. K. Maycock, T. Waterfield, O. 
-# Yelekçi, R. Yu and B. Zhou (eds.)]. Cambridge University Press.
-tropospheric_adjustment = {}
+# On the other hand, some minor GHGs *do* have their natural emissions included 
+# in the emissions files. This incorrectly suggests that there is a background
+# anthropogenic source of these emissions in pre-industrial times, where there 
+# is in reality not.
+#
+# These default natural emissions come from RCMIP.
+#
+natural_emissions_adjustment = {}
 for gas in gas_list:
-    tropospheric_adjustment[gas] = 1
-tropospheric_adjustment["CO2"] = 1.05
-tropospheric_adjustment["CH4"] = 0.86
-tropospheric_adjustment["N2O"] = 1.07
-tropospheric_adjustment["CFC-11"] = 1.13
-tropospheric_adjustment["CFC-12"] = 1.12
-
+    natural_emissions_adjustment[gas] = 0
+natural_emissions_adjustment.update(
+    {
+        "CF4": 0.010071225,
+        "CCl4": 0.024856862,
+        "CH2Cl2": 246.6579,
+        "CH3Br": 105.08773,
+        "CH3Cl": 4275.7449,
+        "CHCl3": 300.92479,
+        "Halon-1211": 0.0077232726,
+        
+    }
+)
 
 # Carbon cycle partition fractions
 partition_fraction = {}

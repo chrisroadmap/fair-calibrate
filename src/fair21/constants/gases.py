@@ -156,7 +156,7 @@ lifetime = {
     "HFC-134a": 14,
     "HFC-143a": 51,
     "HFC-152a": 1.6,
-    "HFC-227ea": 11.4,
+    "HFC-227ea": 36,
     "HFC-23": 228,
     "HFC-236fa": 213,
     "HFC-245fa": 7.9,
@@ -177,7 +177,42 @@ for gas in gas_list:
     burden_per_emission[gas] = (
         1 / (M_ATMOS / 1e18 * molwt[gas] / molwt["AIR"])
     )
-# # CO2 and probably N2O need further adjustment
-# burden_per_emission['CO2'] = (
-#     burden_per_emission['CO2'] * molwt["CO2"] / molwt["C"]
-# )
+
+
+# number of chlorine atoms in each species
+CL_ATOMS = {}
+for gas in gas_list:
+    CL_ATOMS[gas] = 0
+CL_ATOMS.update(
+    {
+        "CFC-11": 3,
+        "CFC-12": 2,
+        "CFC-113": 3,
+        "CFC-114": 2,
+        "CFC-115": 1,
+        "CCl4": 4,
+        "CH3CCl3": 3,
+        "HCFC-22": 1,
+        "HCFC-141b": 2,
+        "HCFC-142b": 1,
+        "Halon-1211": 1,
+        "CH3Cl": 1,
+        "CH2Cl2": 2,
+        "CHCl3": 3,
+    }
+)
+
+# number of bromine atoms in each species
+BR_ATOMS = {}
+for gas in gas_list:
+    BR_ATOMS[gas] = 0
+BR_ATOMS.update(
+    {
+        "Halon-1211": 1,
+        "Halon-1202": 2,
+        "Halon-1301": 1,
+        "Halon-2402": 2,
+        "CH3Br": 1,
+    }
+)
+
