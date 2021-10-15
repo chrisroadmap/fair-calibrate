@@ -16,7 +16,7 @@ from ..constants.gases import gas_list
 radiative_efficiency = {
     "CH4": 1.75e-4, # W m-2 ppb-1
     "N2O": 7.10e-4, # W m-2 ppb-1
-    "Montreal Gases": -1.25e-4 # W m-2 ppt-1  (maybe time to use bar notation after all)
+    "Montreal Gases": -1.25e-4, # W m-2 ppt-1  (maybe time to use bar notation after all)
     "CO": 1.55e-4, # W m-2 (MtCO yr)-1
     "VOC": 3.29e-4, # W m-2 (MtVOC yr)-1
     "NOx": 1.797e-3, # W m-2 (MtNO2 yr)-1
@@ -26,7 +26,7 @@ br_cl_ratio = 45
 
 # Fractional release (for ozone depletion)
 # References:
-# Daniel, J. and Velders, G.: A focus on information and options for 
+# Daniel, J. and Velders, G.: A focus on information and options for
 # policymakers, in: Scientific Assessment of Ozone Depletion, WMO, 2011
 # Newman et al., 2007: A new formulation of equivalent effective stratospheric
 # chlorine (EESC)

@@ -3,27 +3,41 @@ Module for ozone forcing
 """
 
 import numpy as np
-#from ..constants import cl_atoms, br_atoms, fracrel
 from ..defaults.ozone import radiative_efficiency, br_cl_ratio, fractional_release
-from ..constants.gases import CL_ATOMS, BR_ATOMS
+from ..defaults.forcing import tropospheric_adjustment
+from ..defaults.gases import pre_industrial_concentration
+from ..defaults.short_lived_forcers import pre_industrial_emissions
+from ..constants.gases import CL_ATOMS, BR_ATOMS, gas_list
+from ..constants.short_lived_forcers import slcf_list
 
 # important enough to stand alone
 def calculate_eesc(
     concentration,
     pre_industrial_concentration,
-    fractional_release=fractional_release
+    fractional_release=fractional_release,
     br_cl_ratio=br_cl_ratio,
 ):
     """Calculate equivalent effective stratospheric chlorine.
-    
+
     TODO:
     Inputs
     ------
-    
+        concentration : dict of `np.ndarray` or float
+            concentrations in timestep
+        pre_industrial_concentration : dict of float
+            pre-industrial concentrations
+        fractional_release : dict of float
+            fractional release describing the proportion of available ODS that
+            actually contributes to ozone depletion.
+        br_cl_ratio : float, default=45
+            how much more effective bromine is as an ozone depletor than chlorine.
+
     Returns
     -------
+        eesc_out : float
+            equivalent effective stratospheric chlorine
     """
-    
+
     for igas, gas in enumerate(concentration.keys()):
         if igas==0:
             eesc_out = np.zeros_like(concentration[gas])
@@ -37,30 +51,31 @@ def calculate_eesc(
 def thornhill_skeie(
         emissions,
         concentration,
+        pre_industrial_emissions=pre_industrial_emissions,
+        pre_industrial_concentration=pre_industrial_concentration,
         temperature=0,
         temperature_feedback=-0.037,
         radiative_efficiency=radiative_efficiency,
         timestep=1,
         br_cl_ratio=br_cl_ratio,
-        fractional_release=fractional_release
-#        emissions_pi=np.zeros(40),
-#        concentrations_pi=np.zeros(31),
+        fractional_release=fractional_release,
+        tropospheric_adjustment=tropospheric_adjustment
     ):
     """Determines ozone effective radiative forcing.
-    
+
     Calculates total ozone forcing from precursor emissions and
-    concentrations based on AerChemMIP and CMIP6 Historical behaviour
+    concentrations based on AerChemMIP and CMIP6 Historical behaviour in
     Skeie et al. (2020) and Thornhill et al. (2021).
 
-    By default, ozone forcing depends on concentrations of
+    In this hard-coded treatment, ozone forcing depends on concentrations of
     CH4, N2O, ozone-depleting halogens, and emissions of CO, NVMOC and NOx,
     but any combination of emissions and concentrations are allowed.
-    
+
     Inputs
     ------
         emissions : dict of `np.ndarray` or float
             emissions in timestep
-        concentrations: dict of `np.ndarray` or float
+        concentration: dict of `np.ndarray` or float
             concentrations in timestep
         temperature : float
             global mean surface temperature anomaly in the previous timestep.
@@ -73,44 +88,69 @@ def thornhill_skeie(
             [unit] is the emissions or concentration unit.
         br_cl_ratio : float, default=45
             how much more effective bromine is as an ozone depletor than chlorine.
+        fractional_release : dict of float
+            fractional release describing the proportion of available ODS that
+            actually contributes to ozone depletion.
 
     Returns
     -------
         ozone forcing
     """
 
-    # calculate EESC for halogens
-    cl = np.array(cl_atoms.aslist)
-    br = np.array(br_atoms.aslist)
-    fc = np.array(fracrel.aslist)
-
+    radiative_forcing = {}
+    effective_radiative_forcing = {}
+    # for halogens
     eesc = calculate_eesc(
         concentration,
         pre_industrial_concentration,
-        fractional_release=fractional_release
+        fractional_release=fractional_release,
         br_cl_ratio=br_cl_ratio,
     )
+    radiative_forcing['Ozone|Emitted Gases|Montreal Gases'] = (
+        eesc * radiative_efficiency['Montreal Gases']
+    )
 
-    c_ch4, c_n2o = concentrations[:, [1, 2]].T
-#    delta_c_ods = eesc(concentrations[:,15:].T, concentrations_pi[None, 15:])
-    c_ods = concentrations[:,15:]
-    e_co, e_nmvoc, e_nox = emissions[:,[6, 7, 8]].T
-    c_ch4_pi, c_n2o_pi = concentrations_pi[[1, 2]]
-    c_ods_pi = concentrations_pi[15:]
-    e_co_pi, e_nmvoc_pi, e_nox_pi = emissions_pi[[6, 7, 8]]
+    def _linear_change(radeff, value, pi_value):
+        return radeff * (value - pi_value)
 
+    # to save time, we won't loop through all LLGHGs. But if in the future we
+    # find that ozone is depleted by something else, this will need revisiting.
+    species = {**emissions, **concentration}
+    pre_industrial_species = {**pre_industrial_emissions, **pre_industrial_concentration}
+    for specie in ['CH4', 'N2O', 'CO', 'VOC', 'NOx']:
+        radiative_forcing['Ozone|Emitted Gases|{}'.format(specie)] = (
+            _linear_change(
+                radiative_efficiency[specie],
+                species[specie],
+                pre_industrial_species[specie]
+            )
+        )
 
-    forcing = np.zeros(nt)
-    if np.isscalar(temperature):
-        temperature = np.ones(nt) * temperature
+    # needs to be in a constants module
+    ods_species = ['CH4', 'N2O', 'CO', 'VOC', 'NOx', 'Montreal Gases']
+    for igas, gas in enumerate(ods_species):
+        if igas==0:
+            radiative_forcing['Ozone|Emitted Gases'] = np.zeros_like(species[gas])
+        radiative_forcing['Ozone|Emitted Gases'] = (
+            radiative_forcing['Ozone|Emitted Gases'] +
+            radiative_forcing['Ozone|Emitted Gases|{}'.format(gas)]
+        )
 
-    for i in range(nt):
-        f_ch4   = beta[0] * (c_ch4[i] - c_ch4_pi)
-        f_n2o   = beta[1] * (c_n2o[i] - c_n2o_pi)
-        f_ods   = beta[2] * eesc(c_ods[i], c_ods_pi)
-        f_co    = beta[3] * (e_co[i] - e_co_pi)
-        f_nmvoc = beta[4] * (e_nmvoc[i] - e_nmvoc_pi)
-        f_nox   = beta[5] * (e_nox[i] - e_nox_pi)
-        forcing[i] = f_ch4 + f_n2o + f_ods + f_co + f_nmvoc + f_nox + feedback * temperature[i]
+    radiative_forcing['Ozone|Temperature Feedback'] = (
+        temperature_feedback * temperature * radiative_forcing['Ozone|Emitted Gases']
+    )
+    print(temperature)
+    print(radiative_forcing['Ozone|Emitted Gases'])
+    print(radiative_forcing['Ozone|Temperature Feedback'])
 
-    return radiative_forcing
+    radiative_forcing['Ozone'] = (
+        radiative_forcing['Ozone|Emitted Gases'] +
+        radiative_forcing['Ozone|Temperature Feedback']
+    )
+
+    # I don't propose calculating ERF for every single component of o3 forcing
+    effective_radiative_forcing['Ozone'] = (
+        radiative_forcing['Ozone'] * tropospheric_adjustment['Ozone']
+    )
+
+    return radiative_forcing, effective_radiative_forcing
