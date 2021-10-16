@@ -4,7 +4,7 @@ Default parameters relating to ozone forcing
 
 import numpy as np
 
-from ..constants.gases import gas_list
+from . import gas_list
 
 # OZONE FORCING COEFFICIENTS
 #

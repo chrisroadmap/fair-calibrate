@@ -59,7 +59,7 @@ def meinshausen(
         b3 : float, default=-0.00012462
             fitting parameter (see Meinshausen et al. 2020)
         d3 : float, default=0.045194
-            fitting parameter (see Meinshausen et al. 2020)         
+            fitting parameter (see Meinshausen et al. 2020)
 
     Returns
     -------
@@ -71,7 +71,11 @@ def meinshausen(
     radiative_forcing = {}
     # CO2
     ca_max = pre_industrial_concentration["CO2"] - b1/(2*a1)
-    # this logical comparison should work for both scalars and arrays
+    # cast to array for generalisation. I think this can be made less clunky
+    scalar = False
+    if np.isscalar(concentration["CO2"]):
+        concentration["CO2"] = np.ones(1) * concentration["CO2"]
+        scalar = True
     where_central = (pre_industrial_concentration["CO2"] < concentration["CO2"]) & (concentration["CO2"] <= ca_max)
     where_low = (concentration["CO2"] <= pre_industrial_concentration["CO2"])
     where_high = (concentration["CO2"] > ca_max)
@@ -81,6 +85,8 @@ def meinshausen(
     alpha_p[where_high] = d1 - b1**2/(4*a1)
     alpha_n2o = c1*np.sqrt(concentration["N2O"])
     radiative_forcing["CO2"] = (alpha_p + alpha_n2o) * np.log(concentration["CO2"]/pre_industrial_concentration["CO2"])
+    if scalar:
+        radiative_forcing["CO2"] = radiative_forcing["CO2"][0]
 
     # CH4
     radiative_forcing["CH4"] = (a3*np.sqrt(concentration["CH4"]) + b3*np.sqrt(concentration["N2O"]) + d3) * (np.sqrt(concentration["CH4"]) - np.sqrt(pre_industrial_concentration["CH4"]))
@@ -102,11 +108,11 @@ def etminan(
     tropospheric_adjustment=tropospheric_adjustment
 ):
     """Greenhouse gas forcing from CO2, CH4 and N2O including band overlaps.
-    
+
     This function uses the updated formulas of Etminan et al. (2016),
     including the overlaps between CO2, methane and nitrous oxide.
     Reference: Etminan et al, 2016, JGR, doi: 10.1002/2016GL071930
-    
+
     Inputs
     ------
         concentration : dict of float
@@ -117,7 +123,7 @@ def etminan(
             pre-industrial concentration of the gases (see above).
         tropospheric_adjustment : dict of float
             conversion factor from radiative forcing to effective radiative forcing.
-            
+
     Returns
     -------
         radiative_forcing : dict
@@ -125,20 +131,20 @@ def etminan(
         effective_radiative_forcing : dict
             effective radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
     """
-    
+
     c_bar = 0.5 * (concentration["CO2"] + pre_industrial_concentration["CO2"])
     m_bar = 0.5 * (concentration["CH4"] + pre_industrial_concentration["CH4"])
     n_bar = 0.5 * (concentration["N2O"] + pre_industrial_concentration["N2O"])
 
     radiative_forcing = {}
     radiative_forcing["CO2"] = (
-        (-2.4e-7*(concentration["CO2"] - pre_industrial_concentration["CO2"])**2 + 
-        7.2e-4*np.fabs(concentration["CO2"]-pre_industrial_concentration["CO2"]) - 
+        (-2.4e-7*(concentration["CO2"] - pre_industrial_concentration["CO2"])**2 +
+        7.2e-4*np.fabs(concentration["CO2"]-pre_industrial_concentration["CO2"]) -
         2.1e-4 * n_bar + 5.36) * np.log(concentration["CO2"]/pre_industrial_concentration["CO2"])
     )
     radiative_forcing["CH4"] = (
-        (-1.3e-6*m_bar - 8.2e-6*n_bar + 0.043) * 
-        (np.sqrt(concentration["CH4"]) - 
+        (-1.3e-6*m_bar - 8.2e-6*n_bar + 0.043) *
+        (np.sqrt(concentration["CH4"]) -
         np.sqrt(pre_industrial_concentration["CH4"]))
     )
     radiative_forcing["N2O"] = (-8.0e-6*c_bar + 4.2e-6*n_bar - 4.9e-6*m_bar + 0.117) * (np.sqrt(concentration["N2O"]) - np.sqrt(pre_industrial_concentration["N2O"]))
@@ -157,11 +163,11 @@ def myhre(
     radiative_forcing_2co2=3.71
 ):
     """Calculate the radiative forcing from CO2, CH4 and N2O.
-    
+
     This uses the Myhre et al. (1998) relationships including the band
     overlaps between CH4 and N2O. It is also used in AR5.
     Reference: Myhre et al, 1998, JGR, doi: 10.1029/98GL01908
-    
+
     Inputs
     ------
         concentration : dict of float
@@ -179,11 +185,11 @@ def myhre(
     radiative_forcing = {}
 
     radiative_forcing["CO2"] = co2_log(concentration["CO2"], pre_industrial_concentration["CO2"], radiative_forcing_2co2)
-    
+
     radiative_forcing["CH4"] = 0.036 * (np.sqrt(concentration["CH4"]) - np.sqrt(pre_industrial_concentration["CH4"])) - (
       _ch4_n2o_overlap(concentration["CH4"], concentration["N2O"]) - _ch4_n2o_overlap(pre_industrial_concentration["CH4"], pre_industrial_concentration["N2O"]))
     radiative_forcing["N2O"] = 0.12 * (np.sqrt(concentration["N2O"]) - np.sqrt(pre_industrial_concentration["N2O"])) - (
-      _ch4_n2o_overlap(pre_industrial_concentration["CH4"],concentration["N2O"]) - _ch4_n2o_overlap(pre_industrial_concentration["CH4"],pre_industrial_concentration["N2O"])) 
+      _ch4_n2o_overlap(pre_industrial_concentration["CH4"],concentration["N2O"]) - _ch4_n2o_overlap(pre_industrial_concentration["CH4"],pre_industrial_concentration["N2O"]))
 
     return radiative_forcing
 
@@ -200,7 +206,7 @@ def co2_log(
     radiative_forcing_2co2=3.71
 ):
     """Calculates radiative forcing from CO2 using old logarithmic formula.
-    
+
     Inputs
     ------
     concentration : float
@@ -209,7 +215,7 @@ def co2_log(
         pre-industrial concentration of CO2, ppm
     radiative_forcing_2co2 : float
         radiative forcing (W/m2) from a doubling of CO2.
-    
+
     Returns
     -------
     radiative_forcing : float
@@ -225,12 +231,12 @@ def linear(
     tropospheric_adjustment=tropospheric_adjustment
 ):
     """Greenhouse gas forcing from linear change in concentrations.
-    
+
     This function is useful for GHGs that are not CO2, CH4 and N2O, in which
     there is no good reason to assume that the change in radiative forcing is
-    not linear with concentrations. This treatment has been used since the 
+    not linear with concentrations. This treatment has been used since the
     1990s and through to AR5 and AR6.
-    
+
     Inputs
     ------
         concentration : dict of float
@@ -241,7 +247,7 @@ def linear(
             radiative efficiency (W/m2/ppb) for each gas given in input.
         tropospheric_adjustment : dict of float
             conversion factor from radiative forcing to effective radiative forcing.
-            
+
     Returns
     -------
         radiative_forcing : dict
@@ -249,7 +255,7 @@ def linear(
         effective_radiative_forcing : dict
             effective radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
     """
-    
+
     radiative_forcing = {}
     effective_radiative_forcing = {}
     for gas in concentration.keys():
@@ -258,5 +264,5 @@ def linear(
             continue
         radiative_forcing[gas] = (concentration[gas] - pre_industrial_concentration[gas]) * radiative_efficiency[gas] * 0.001
         effective_radiative_forcing[gas] = radiative_forcing[gas] * tropospheric_adjustment[gas]
-        
+
     return radiative_forcing, effective_radiative_forcing

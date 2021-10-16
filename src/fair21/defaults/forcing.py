@@ -2,7 +2,7 @@
 Defaults for (effective) radiative forcing.
 """
 
-from ..constants.gases import gas_list
+from . import gas_list
 
 # TROPOSPHERIC ADJUSTMENTS
 #

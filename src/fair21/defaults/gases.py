@@ -4,7 +4,8 @@ Default parameters relating to greenhouse gases
 
 import numpy as np
 
-from ..constants.gases import gas_list, lifetime
+from . import gas_list
+from ..constants.gases import lifetime
 
 # RADIATIVE EFFICIENCIES
 #
@@ -43,7 +44,7 @@ radiative_efficiency = {
     'CFC-112': 0.28192,
     'CFC-112a': 0.24564,
     'CFC-113': 0.30142,
-    'CFC-113a': 0.24094, 
+    'CFC-113a': 0.24094,
     'CFC-114': 0.31433,
     'CFC-114a': 0.29747,
     'CFC-115': 0.24625,
@@ -106,13 +107,13 @@ pre_industrial_concentration.update(
 
 # NATURAL EMISSIONS ADJUSTMENTS
 #
-# Some greenhouse gas species have a natural emissions source. CH4 and N2O do 
+# Some greenhouse gas species have a natural emissions source. CH4 and N2O do
 # (and of course, so does CO2), but these contributions are not included in the
-# emissions files provided by e.g. MAGICC6 (for AR5) or RCMIP (for AR6). 
+# emissions files provided by e.g. MAGICC6 (for AR5) or RCMIP (for AR6).
 #
-# On the other hand, some minor GHGs *do* have their natural emissions included 
+# On the other hand, some minor GHGs *do* have their natural emissions included
 # in the emissions files. This incorrectly suggests that there is a background
-# anthropogenic source of these emissions in pre-industrial times, where there 
+# anthropogenic source of these emissions in pre-industrial times, where there
 # is in reality not.
 #
 # These default natural emissions come from RCMIP.
@@ -129,7 +130,7 @@ natural_emissions_adjustment.update(
         "CH3Cl": 4275.7449,
         "CHCl3": 300.92479,
         "Halon-1211": 0.0077232726,
-        
+
     }
 )
 

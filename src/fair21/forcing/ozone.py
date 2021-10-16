@@ -3,12 +3,12 @@ Module for ozone forcing
 """
 
 import numpy as np
+from ..constants.gases import BR_ATOMS, CL_ATOMS
 from ..defaults.ozone import radiative_efficiency, br_cl_ratio, fractional_release
 from ..defaults.forcing import tropospheric_adjustment
 from ..defaults.gases import pre_industrial_concentration
 from ..defaults.short_lived_forcers import pre_industrial_emissions
-from ..constants.gases import CL_ATOMS, BR_ATOMS, gas_list
-from ..constants.short_lived_forcers import slcf_list
+from ..defaults import gas_list, slcf_list
 
 # important enough to stand alone
 def calculate_eesc(
