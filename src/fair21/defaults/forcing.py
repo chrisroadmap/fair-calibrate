@@ -30,3 +30,6 @@ tropospheric_adjustment["CFC-11"] = 1.13
 tropospheric_adjustment["CFC-12"] = 1.12
 
 tropospheric_adjustment["Ozone"] = 1
+
+# TODO: split RF and ERF for aerosols by species, based on chapter 6 and 7 of AR6.
+# currently we assume relationships correspond to ERF.

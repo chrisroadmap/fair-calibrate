@@ -2,6 +2,10 @@
 Default parameters relating to greenhouse gases
 """
 
+# TODO: add default units and volume mixing ratios to each emissions species
+# we don't want FaIR to be slowed down by things like pint, but we could run
+# a check once and convert if necessary.
+
 import numpy as np
 
 from . import gas_list

@@ -24,6 +24,7 @@ from .general import M_ATMOS
 # 3. potential extension to all Chapter 7 SM gases, for calculation of metrics.
 molwt = {
     "AIR": 28.97,  # reference?
+    "C": 12.011,
     "C2F6": 138.01,
     "C3F8": 188.02,
     "C4F10": 238.03,
@@ -63,9 +64,15 @@ molwt = {
     "HFC-32": 52.023,
     "HFC-365mfc": 148.07,
     "HFC-4310mee": 252.05,
+    "N": 14.007,
+    "N2": 28.014,
     "N2O": 44.013,
     "NF3": 71.002,
+    "NO": 30.006,
+    "NO2": 46.006,
+    "S": 32.07,
     "SF6": 146.06,
+    "SO2": 64.069,
     "SO2F2": 102.06,
 }
 

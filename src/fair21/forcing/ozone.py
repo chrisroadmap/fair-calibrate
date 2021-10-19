@@ -73,28 +73,29 @@ def thornhill_skeie(
 
     Inputs
     ------
-        emissions : dict of `np.ndarray` or float
-            emissions in timestep
-        concentration: dict of `np.ndarray` or float
-            concentrations in timestep
-        temperature : float
-            global mean surface temperature anomaly in the previous timestep.
-            A future TODO could be to iterate this.
-        temperature_feedback : float
-            temperature feedback on ozone forcing (W/m2/K)
-        radiative_efficiency : dict of float
-            radiative efficiencies of ozone forcing to different emitted species
-            or atmospheric concentrations. Units should be (W/m/[unit]) where
-            [unit] is the emissions or concentration unit.
-        br_cl_ratio : float, default=45
-            how much more effective bromine is as an ozone depletor than chlorine.
-        fractional_release : dict of float
-            fractional release describing the proportion of available ODS that
-            actually contributes to ozone depletion.
+    emissions : dict of `np.ndarray` or float
+        emissions in timestep
+    concentration: dict of `np.ndarray` or float
+        concentrations in timestep
+    temperature : float
+        global mean surface temperature anomaly in the previous timestep.
+        A future TODO could be to iterate this.
+    temperature_feedback : float
+        temperature feedback on ozone forcing (W/m2/K)
+    radiative_efficiency : dict of float
+        radiative efficiencies of ozone forcing to different emitted species
+        or atmospheric concentrations. Units should be (W/m/[unit]) where
+        [unit] is the emissions or concentration unit.
+    br_cl_ratio : float, default=45
+        how much more effective bromine is as an ozone depletor than chlorine.
+    fractional_release : dict of float
+        fractional release describing the proportion of available ODS that
+        actually contributes to ozone depletion.
 
     Returns
     -------
-        ozone forcing
+    erf_ozone : dict
+        ozone forcing due to each component, and in total.
     """
 
     radiative_forcing = {}
