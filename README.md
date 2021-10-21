@@ -5,6 +5,7 @@ Re-calibration of FaIR v2.0 to updated Cummins calibration and inclusion of ocea
 
 ### requirements
 - `anaconda` for `python3`
+- `python` 3.7, 3.8 or 3.9 (enforced by `pyam`)
 - a reasonably modern version of `R` (4.1.1 used here)
 
 ### python and jupyter notebooks

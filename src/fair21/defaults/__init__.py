@@ -52,6 +52,8 @@ gas_list = [
     "SO2F2",
 ]
 
+gas_list_excl_co2_ch4 = [gas for gas in gas_list if gas not in ('CO2', "CH4")]
+
 # SHORT LIVED CLIMATE FORCER LISTS
 #
 # All short-lived forcers in the database; for the purposes of FaIR, CH4 is
@@ -67,3 +69,20 @@ slcf_list = [
     "VOC",
     "CO"
 ]
+
+# UNITS
+emissions_units = {}
+for gas in gas_list:
+    emissions_units[gas] = 'kt / yr'  # want exact pint/scmdata syntax here
+emissions_units['CO2'] = 'Gt / yr'  # GtCO2
+emissions_units['CH4'] = 'Mt / yr'
+emissions_units['N2O'] = 'Mt / yr'
+for slcf in slcf_list:
+    emissions_units[slcf] = 'Mt / yr'
+
+concentration_units = {}
+for gas in gas_list:
+    concentration_units[gas] = 'ppt'
+concentration_units['CO2'] = 'ppm'
+concentration_units['CH4'] = 'ppb'
+concentration_units['N2O'] = 'ppb'
