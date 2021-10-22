@@ -53,6 +53,7 @@ gas_list = [
 ]
 
 gas_list_excl_co2_ch4 = [gas for gas in gas_list if gas not in ('CO2', "CH4")]
+minor_gas_list = [gas for gas in gas_list if gas not in ('CO2', 'CH4', 'N2O')]
 
 # SHORT LIVED CLIMATE FORCER LISTS
 #

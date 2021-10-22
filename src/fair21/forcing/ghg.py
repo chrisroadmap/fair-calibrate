@@ -239,21 +239,19 @@ def linear(
 
     Inputs
     ------
-        concentration : dict of float
-            concentrations of greenhouse gases.
-        pre_industrial_concentration : dict of float
-            pre-industrial concentration of the gases (see above).
-        radiative_efficiency : dict of float
-            radiative efficiency (W/m2/ppb) for each gas given in input.
-        tropospheric_adjustment : dict of float
-            conversion factor from radiative forcing to effective radiative forcing.
+    concentration : dict of ndarray or float
+        concentration of greenhouse gases.
+    pre_industrial_concentration : dict of float
+        pre-industrial concentration of the gases (see above).
+    radiative_efficiency : dict of float
+        radiative efficiency (W/m2/ppb) for each gas given in input.
+    tropospheric_adjustment : dict of float
+        conversion factor from radiative forcing to effective radiative forcing.
 
     Returns
     -------
-        radiative_forcing : dict
-            radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
-        effective_radiative_forcing : dict
-            effective radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
+    effective_radiative_forcing : dict of ndarray or float
+        effective radiative forcing (W/m2) of greenhouse gas.
     """
 
     radiative_forcing = {}
@@ -265,4 +263,4 @@ def linear(
         radiative_forcing[gas] = (concentration[gas] - pre_industrial_concentration[gas]) * radiative_efficiency[gas] * 0.001
         effective_radiative_forcing[gas] = radiative_forcing[gas] * tropospheric_adjustment[gas]
 
-    return radiative_forcing, effective_radiative_forcing
+    return effective_radiative_forcing
