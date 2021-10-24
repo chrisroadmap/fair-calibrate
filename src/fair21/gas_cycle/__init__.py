@@ -10,19 +10,20 @@ from ..constants.gases import burden_per_emission, lifetime
 from ..defaults.gases import (
     pre_industrial_concentration,
     partition_fraction,
-    iirf_horizon
+    iirf_horizon,
+    iirf_max
 )
 
 def calculate_g(
     lifetime,
     partition_fraction=1,
     iirf_horizon=iirf_horizon,
-    
+
 ):
     """Calculate the `g` components of the gas cycle.
-    
+
     See Leach et al. (2021), eq. (5)
-    
+
     Inputs
     ------
     lifetime : float
@@ -32,13 +33,13 @@ def calculate_g(
         Should be 1 or sum to 1 if array.
     iirf_horizon : float, default=100
         time horizon (yr) for time integrated impulse response function.
-    
+
     Returns
     -------
     g0 : float
     g1 : float
     """
-    
+
     g1 = np.sum(partition_fraction * lifetime * (1 - (1 + iirf_horizon/lifetime) * np.exp(-iirf_horizon/lifetime)))
     g0 = 1/(np.sinh(np.sum(partition_fraction*lifetime*(1 - np.exp(-iirf_horizon/lifetime)), axis=-1)/g1))
     return g0, g1
@@ -53,7 +54,7 @@ def calculate_alpha(
     iirf_airborne,
     g0,
     g1,
-    iirf_max = 97.0,
+    iirf_max = iirf_max,
 ):
     """
     Calculate greenhouse-gas time constant scaling factor.
@@ -95,126 +96,96 @@ def calculate_alpha(
 
     return alpha
 
-def step_concentration_1box(
-    emissions,
-    airborne_emissions_old,
-    lifetime,
-    burden_per_emission,
-    alpha_lifetime=1,
-    natural_emissions_adjustment=0,
-    pre_industrial_concentration=0,
-    timestep=1
-):
-    """
-    Calculates the concentrations from emissions for a generic greenhouse gas.
 
-    Inputs
-    ------
-    emissions: float
-        emissions in timestep.
-    airborne_emissions_old : float
-        The total airborne emissions at the beginning of the timestep. This is
-        the concentrations above the pre-industrial control.
-    lifetime : float or `np.ndarray`
-        atmospheric burden lifetime of greenhouse gas
-    burden_per_emission:
-        how much atmospheric concentrations grow (e.g. in ppt) per unit (e.g.
-        kt) emission.
-    alpha_lifetime : float, default=1
-        scaling factor for the default atmospheric lifetimes.
-    natural_emissions_adjustment : float or `np.ndarray` of float, default=0
-        Amount to adjust emissions by for natural emissions given in the total
-        in emissions files.
-    pre_industrial_concentration : float, default=0
-        pre-industrial concentration of the gas.
-    timestep : float, default=1
-        emissions timestep in years.
-
-    Notes
-    -----
-    Emissions are given in time intervals and concentrations are also reported
-        on the same time intervals: the airborne_emissions values are on time
-        boundaries and these are averaged before being returned.
-
-    Returns
-    -------
-    concentration_out : float
-        greenhouse gas concentration at the centre of the timestep.
-    airborne_emissions_new : float
-        airborne emissions (concentrations above pre-industrial control level)
-        at the end of the timestep.
-    """
-    decay_rate = timestep/(alpha_lifetime * lifetime)
-    decay_factor = np.exp(-decay_rate)
-
-    # Nick says: there shouldn't be a dt in the first decay rate
-    # Chris says: there should, and there should be one here too. Emissions are a rate, e.g. Gt / yr
-    airborne_emissions_new = (emissions-natural_emissions_adjustment) * 1 / decay_rate * (1 - decay_factor) * timestep + airborne_emissions_old * decay_factor
-
-    concentration_out = pre_industrial_concentration + burden_per_emission * (airborne_emissions_new + airborne_emissions_old) / 2
-
-    return concentration_out, airborne_emissions_new
-
-
-def step_concentration_co2(
+def step_concentration(
     emissions,
     gas_boxes_old,
     airborne_emissions_old,
-    burden_per_emission=burden_per_emission['CO2'],
+    burden_per_emission,
+    lifetime,
     alpha_lifetime=1,
-    pre_industrial_concentration=pre_industrial_concentration['CO2'],  # put in a defaults module
+    partition_fraction = 1,
+    pre_industrial_concentration=0,
     timestep=1,
-    partition_fraction = partition_fraction['CO2'],
-    lifetime = lifetime['CO2'],
+    natural_emissions_adjustment=0,
 ):
     """
-    Calculates the concentrations from emissions for CO2.
+    Calculates concentrations from emissions of any greenhouse gas.
 
-    Inputs
-    ------
+    Parameters
+    ----------
     emissions : float
         emissions in timestep.
-    gas_boxes_old : `np.ndarray` of float
-        carbon partition boxes at the end of the previous timestep.
+    gas_boxes_old : ndarray or float
+        the greenhouse gas atmospheric burden in each lifetime box at the end of
+        the previous timestep.
     airborne_emissions_old : float
         The total airborne emissions at the beginning of the timestep. This is
-        the concentrations above the pre-industrial control.
-    burden_per_emission : float, default=`fair21.constants.burden_per_emission['CO2']`
+        the concentrations above the pre-industrial control. It is also the sum
+        of gas_boxes_old if this is an array.
+    burden_per_emission : float
         how much atmospheric concentrations grow (e.g. in ppm) per unit (e.g.
-        Gt) emission.
+        GtCO2) emission.
+    lifetime : ndarray or float
+        atmospheric burden lifetime of greenhouse gas (yr). For multiple
+        lifetimes gases, it is the lifetime of each box.
     alpha_lifetime : float, default=1
-        scaling factor for the default atmospheric lifetimes.
-    pre_industrial_concentration : float, default=`fair21.defaults.gases.pre_industrial_concentration['CO2']`
-        pre-industrial concentration of CO2.
+        scaling factor for `lifetime`. Necessary where there is a state-
+        dependent feedback.
+    partition_fraction : ndarray or float, default=1
+        the partition fraction of emissions into each gas box. If array, the
+        entries should be individually non-negative and sum to one.
+    pre_industrial_concentration : float, default=0
+        pre-industrial concentration gas in question.
     timestep : float, default=1
         emissions timestep in years.
-    partition_fraction : float, default=fair21.defaults.gases.partition_fraction['CO2']`
-        the partition fraction of emissions into each `gas_box`.
-    lifetime : `np.ndarray` of float
-        atmospheric burden lifetime of greenhouse gas.
+    natural_emissions_adjustment : float or ndarray, default=0
+        Amount to adjust emissions by for natural emissions given in the total
+        in emissions files.
 
     Notes
     -----
     Emissions are given in time intervals and concentrations are also reported
-        on the same time intervals: the airborne_emissions values are on time
-        boundaries and these are averaged before being returned.
+    on the same time intervals: the airborne_emissions values are on time
+    boundaries and these are averaged before being returned.
 
     Returns
     -------
     concentration_out : float
         greenhouse gas concentration at the centre of the timestep.
-    gas_boxes_new : `np.ndarray` of float
-        carbon partition boxes at the end of the current timestep.
+    gas_boxes_new : ndarray of float
+        the greenhouse gas atmospheric burden in each lifetime box at the end of
+        the timestep.
     airborne_emissions_new : float
         airborne emissions (concentrations above pre-industrial control level)
         at the end of the timestep.
     """
+
+    # TODO:
+    # 1. check partition fraction
+    # 2. check partition fraction and lifetime and gas_boxes_old are same shape
+    # 3. on first timestep, check airborne_emissions_old = np.sum(gas_boxes_old)
+
+    # NOTE:
+    # although airborne_emissions_old is technically superfluous, we carry it
+    # so that we don't have to recalculate the sum of gas_boxes_old each time.
+    # Speed improvement is probably negligibe, but also probably not zero.
+
     decay_rate = timestep/(alpha_lifetime * lifetime)
     decay_factor = np.exp(-decay_rate)
 
-    gas_boxes_new = partition_fraction * emissions * 1 / decay_rate * (1 - decay_factor) * timestep + gas_boxes_old * decay_factor
+    gas_boxes_new = (
+        partition_fraction *
+        (emissions-natural_emissions_adjustment) *
+        1 / decay_rate *
+        (1 - decay_factor) * timestep + gas_boxes_old * decay_factor
+    )
     airborne_emissions_new = np.sum(gas_boxes_new)
-
-    concentration_out = pre_industrial_concentration + burden_per_emission * (airborne_emissions_new + airborne_emissions_old) / 2
+    concentration_out = (
+        pre_industrial_concentration +
+        burden_per_emission * (
+            airborne_emissions_new + airborne_emissions_old
+        ) / 2
+    )
 
     return concentration_out, gas_boxes_new, airborne_emissions_new
