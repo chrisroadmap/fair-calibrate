@@ -2,6 +2,21 @@
 Module for defaults
 """
 
+# options in all anthropogenic categories are "emissions", "forcing" or None;
+# greenhouse_gases can also be "concentration";
+# solar and volcanic can only be "forcing" or None.
+run_mode = {
+    'co2' : 'emissions',
+    'other_greenhouse_gases' : 'emissions',
+    'aerosol' : 'emissions',
+    'ozone' : 'emissions',
+    'land_use' : 'emissions',
+    'stratospheric_water_vapour' : 'emissions',
+    'contrails' : 'emissions',
+    'solar': 'forcing',
+    'volcanic': 'forcing'
+}
+
 # GAS LIST
 #
 # All gases in the database, except air and gas-phase SLCFs.
