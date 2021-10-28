@@ -164,4 +164,4 @@ iirf_airborne = {
 } # yr/GtCO2
 
 iirf_horizon = 100 # yr
-iirf_max = 97 # yr
+iirf_max = 99.9 # yr
