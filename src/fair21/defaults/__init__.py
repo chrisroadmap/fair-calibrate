@@ -5,16 +5,36 @@ Module for defaults
 # options in all anthropogenic categories are "emissions", "forcing" or None;
 # greenhouse_gases can also be "concentration";
 # solar and volcanic can only be "forcing" or None.
+
+# TODO: standardise names across inputs and outputs
 run_mode = {
-    'co2' : 'emissions',
-    'other_greenhouse_gases' : 'emissions',
-    'aerosol' : 'emissions',
-    'ozone' : 'emissions',
-    'land_use' : 'emissions',
-    'stratospheric_water_vapour' : 'emissions',
-    'contrails' : 'emissions',
-    'solar': 'forcing',
-    'volcanic': 'forcing'
+    'CO2' : 'emissions',
+    'CH4' : 'emissions',
+    'N2O' : 'emissions',
+    'Other greenhouse gases': 'emissions',
+    'Aerosol' : 'emissions',
+    'Ozone' : 'emissions',
+    'Land use' : 'emissions',
+    'Stratospheric water vapour' : 'emissions',
+    'Contrails' : 'emissions',
+    'Black carbon on snow' : 'emissions',
+    'Solar': 'forcing',
+    'Volcanic': 'forcing'
+}
+
+valid_run_modes = {
+    'CO2' : ('emissions', 'concentration', 'forcing', None),
+    'CH4' : ('emissions', 'concentration', 'forcing', None),
+    'N2O' : ('emissions', 'concentration', 'forcing', None),
+    'Other greenhouse gases' : ('emissions', 'concentration', 'forcing', None),
+    'Aerosol' : ('emissions', 'forcing', None),
+    'Ozone' : ('emissions', 'forcing', None),
+    'Land use' : ('emissions', 'forcing', None),
+    'Stratospheric water vapour' : ('emissions', 'forcing', None),
+    'Contrails' : ('emissions', 'forcing', None),
+    'Black carbon on snow' : ('emissions', 'forcing', None),
+    'Solar' : ('forcing', None),
+    'Volcanic' : ('forcing', None),
 }
 
 # GAS LIST

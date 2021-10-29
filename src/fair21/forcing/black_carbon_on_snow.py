@@ -3,10 +3,11 @@ Module for black carbon on snow forcing
 """
 
 from ..defaults.black_carbon_on_snow import radiative_efficiency
+from ..defaults.short_lived_forcers import pre_industrial_emissions
 
 def linear(
     emissions,
-    pre_industrial_emissions,
+    pre_industrial_emissions=pre_industrial_emissions,
     radiative_efficiency=radiative_efficiency["AR6"]
 ):
     """
