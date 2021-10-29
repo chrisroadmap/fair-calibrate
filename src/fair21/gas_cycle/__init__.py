@@ -2,8 +2,6 @@
 Module containing gas cycle functions
 """
 
-from ..defaults.gases import iirf_horizon
-
 import numpy as np
 
 from ..constants.gases import burden_per_emission, lifetime
