@@ -28,45 +28,43 @@ def meinshausen(
     https://gmd.copernicus.org/preprints/gmd-2019-222/gmd-2019-222.pdf
     table 3
 
-    Inputs
-    ------
-        concentration : dict of float
-            concentration of greenhouse gases. "CO2", "CH4" and "N2O" must be
-            included in units of [ppm, ppb, ppb]. Other GHGs can be included
-            but are not used.
-        pre_industrial_concentration : dict of float
-            pre-industrial concentration of the gases (see above).
-        tropospheric_adjustment : dict of float
-            conversion factor from radiative forcing to effective radiative forcing.
-        a1 : float, default=-2.4785e-07
-            fitting parameter (see Meinshausen et al. 2020)
-        b1 : float, default=0.00075906
-            fitting parameter (see Meinshausen et al. 2020)
-        c1 : float, default=-0.0021492
-            fitting parameter (see Meinshausen et al. 2020)
-        d1 : float, default=5.2488
-            fitting parameter (see Meinshausen et al. 2020)
-        a2 : float, default=-0.00034197
-            fitting parameter (see Meinshausen et al. 2020)
-        b2 : float, default=0.00025455
-            fitting parameter (see Meinshausen et al. 2020)
-        c2 : float, default=-0.00024357
-            fitting parameter (see Meinshausen et al. 2020)
-        d2 : float, default=0.12173
-            fitting parameter (see Meinshausen et al. 2020)
-        a3 : float, default=-8.9603e-05
-            fitting parameter (see Meinshausen et al. 2020)
-        b3 : float, default=-0.00012462
-            fitting parameter (see Meinshausen et al. 2020)
-        d3 : float, default=0.045194
-            fitting parameter (see Meinshausen et al. 2020)
+    Parameters
+    ----------
+    concentration : dict of float
+        concentration of greenhouse gases. "CO2", "CH4" and "N2O" must be
+        included in units of [ppm, ppb, ppb]. Other GHGs can be included
+        but are not used.
+    pre_industrial_concentration : dict of float
+        pre-industrial concentration of the gases (see above).
+    tropospheric_adjustment : dict of float
+        conversion factor from radiative forcing to effective radiative forcing.
+    a1 : float, default=-2.4785e-07
+        fitting parameter (see Meinshausen et al. 2020)
+    b1 : float, default=0.00075906
+        fitting parameter (see Meinshausen et al. 2020)
+    c1 : float, default=-0.0021492
+        fitting parameter (see Meinshausen et al. 2020)
+    d1 : float, default=5.2488
+        fitting parameter (see Meinshausen et al. 2020)
+    a2 : float, default=-0.00034197
+        fitting parameter (see Meinshausen et al. 2020)
+    b2 : float, default=0.00025455
+        fitting parameter (see Meinshausen et al. 2020)
+    c2 : float, default=-0.00024357
+        fitting parameter (see Meinshausen et al. 2020)
+    d2 : float, default=0.12173
+        fitting parameter (see Meinshausen et al. 2020)
+    a3 : float, default=-8.9603e-05
+        fitting parameter (see Meinshausen et al. 2020)
+    b3 : float, default=-0.00012462
+        fitting parameter (see Meinshausen et al. 2020)
+    d3 : float, default=0.045194
+        fitting parameter (see Meinshausen et al. 2020)
 
     Returns
     -------
-        radiative_forcing : dict
-            radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
-        effective_radiative_forcing : dict
-            effective radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
+    effective_radiative_forcing : dict
+        effective radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
     """
     radiative_forcing = {}
     # CO2
@@ -86,20 +84,27 @@ def meinshausen(
     alpha_n2o = c1*np.sqrt(concentration["N2O"])
     radiative_forcing["CO2"] = (alpha_p + alpha_n2o) * np.log(concentration["CO2"]/pre_industrial_concentration["CO2"])
     if scalar:
+        concentration["CO2"] = concentration["CO2"][0]
         radiative_forcing["CO2"] = radiative_forcing["CO2"][0]
 
     # CH4
-    radiative_forcing["CH4"] = (a3*np.sqrt(concentration["CH4"]) + b3*np.sqrt(concentration["N2O"]) + d3) * (np.sqrt(concentration["CH4"]) - np.sqrt(pre_industrial_concentration["CH4"]))
+    radiative_forcing["CH4"] = (
+        (a3*np.sqrt(concentration["CH4"]) + b3*np.sqrt(concentration["N2O"]) + d3) *
+        (np.sqrt(concentration["CH4"]) - np.sqrt(pre_industrial_concentration["CH4"]))
+    )
 
     # N2O
-    radiative_forcing["N2O"] = (a2*np.sqrt(concentration["CO2"]) + b2*np.sqrt(concentration["N2O"]) + c2*np.sqrt(concentration["CH4"]) + d2) * (np.sqrt(concentration["N2O"]) - np.sqrt(pre_industrial_concentration["N2O"]))
+    radiative_forcing["N2O"] = (
+        (a2*np.sqrt(concentration["CO2"]) + b2*np.sqrt(concentration["N2O"]) + c2*np.sqrt(concentration["CH4"]) + d2) *
+        (np.sqrt(concentration["N2O"]) - np.sqrt(pre_industrial_concentration["N2O"]))
+    )
 
     # effective radiative forcing
     effective_radiative_forcing = {}
     for gas in ["CO2", "CH4", "N2O"]:
         effective_radiative_forcing[gas] = radiative_forcing[gas] * tropospheric_adjustment[gas]
 
-    return radiative_forcing, effective_radiative_forcing
+    return effective_radiative_forcing
 
 
 def etminan(
@@ -113,23 +118,21 @@ def etminan(
     including the overlaps between CO2, methane and nitrous oxide.
     Reference: Etminan et al, 2016, JGR, doi: 10.1002/2016GL071930
 
-    Inputs
-    ------
-        concentration : dict of float
-            concentration of greenhouse gases. "CO2", "CH4" and "N2O" must be
-            included in units of [ppm, ppb, ppb]. Other GHGs can be included
-            but are not used.
-        pre_industrial_concentration : dict of float
-            pre-industrial concentration of the gases (see above).
-        tropospheric_adjustment : dict of float
-            conversion factor from radiative forcing to effective radiative forcing.
+    Parameters
+    ----------
+    concentration : dict of float
+        concentration of greenhouse gases. "CO2", "CH4" and "N2O" must be
+        included in units of [ppm, ppb, ppb]. Other GHGs can be included
+        but are not used.
+    pre_industrial_concentration : dict of float
+        pre-industrial concentration of the gases (see above).
+    tropospheric_adjustment : dict of float
+        conversion factor from radiative forcing to effective radiative forcing.
 
     Returns
     -------
-        radiative_forcing : dict
-            radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
-        effective_radiative_forcing : dict
-            effective radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
+    effective_radiative_forcing : dict
+        effective radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
     """
 
     c_bar = 0.5 * (concentration["CO2"] + pre_industrial_concentration["CO2"])
@@ -153,7 +156,7 @@ def etminan(
     for gas in ["CO2", "CH4", "N2O"]:
         effective_radiative_forcing[gas] = radiative_forcing[gas] * tropospheric_adjustment[gas]
 
-    return radiative_forcing, effective_radiative_forcing
+    return effective_radiative_forcing
 
 
 # what are we doing about ERF here?
