@@ -1,5 +1,5 @@
 """
-Defaults for (effective) radiative forcing.
+Defaults for effective radiative forcing.
 """
 
 from . import gas_list

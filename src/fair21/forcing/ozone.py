@@ -98,7 +98,6 @@ def thornhill_skeie(
         ozone forcing due to each component, and in total.
     """
 
-    radiative_forcing = {}
     effective_radiative_forcing = {}
     # for halogens
     eesc = calculate_eesc(
@@ -107,8 +106,8 @@ def thornhill_skeie(
         fractional_release=fractional_release,
         br_cl_ratio=br_cl_ratio,
     )
-    radiative_forcing['Ozone|Emitted Gases|Montreal Gases'] = (
-        eesc * radiative_efficiency['Montreal Gases']
+    effective_radiative_forcing['Ozone|Emitted Gases|Montreal Gases'] = (
+        eesc * radiative_efficiency['Montreal Gases'] * tropospheric_adjustment['Ozone']
     )
 
     def _linear_change(radeff, value, pi_value):
@@ -119,7 +118,7 @@ def thornhill_skeie(
     species = {**emissions, **concentration}
     pre_industrial_species = {**pre_industrial_emissions, **pre_industrial_concentration}
     for specie in ['CH4', 'N2O', 'CO', 'VOC', 'NOx']:
-        radiative_forcing['Ozone|Emitted Gases|{}'.format(specie)] = (
+        effective_radiative_forcing['Ozone|Emitted Gases|{}'.format(specie)] = (
             _linear_change(
                 radiative_efficiency[specie],
                 species[specie],
@@ -131,27 +130,19 @@ def thornhill_skeie(
     ods_species = ['CH4', 'N2O', 'CO', 'VOC', 'NOx', 'Montreal Gases']
     for igas, gas in enumerate(ods_species):
         if igas==0:
-            radiative_forcing['Ozone|Emitted Gases'] = np.zeros_like(species[gas])
-        radiative_forcing['Ozone|Emitted Gases'] = (
-            radiative_forcing['Ozone|Emitted Gases'] +
-            radiative_forcing['Ozone|Emitted Gases|{}'.format(gas)]
+            effective_radiative_forcing['Ozone|Emitted Gases'] = np.zeros_like(species[gas])
+        effective_radiative_forcing['Ozone|Emitted Gases'] = (
+            effective_radiative_forcing['Ozone|Emitted Gases'] +
+            effective_radiative_forcing['Ozone|Emitted Gases|{}'.format(gas)]
         )
 
-    radiative_forcing['Ozone|Temperature Feedback'] = (
-        temperature_feedback * temperature * radiative_forcing['Ozone|Emitted Gases']
-    )
-    print(temperature)
-    print(radiative_forcing['Ozone|Emitted Gases'])
-    print(radiative_forcing['Ozone|Temperature Feedback'])
-
-    radiative_forcing['Ozone'] = (
-        radiative_forcing['Ozone|Emitted Gases'] +
-        radiative_forcing['Ozone|Temperature Feedback']
+    effective_radiative_forcing['Ozone|Temperature Feedback'] = (
+        temperature_feedback * temperature * effective_radiative_forcing['Ozone|Emitted Gases']
     )
 
-    # I don't propose calculating ERF for every single component of o3 forcing
     effective_radiative_forcing['Ozone'] = (
-        radiative_forcing['Ozone'] * tropospheric_adjustment['Ozone']
+        effective_radiative_forcing['Ozone|Emitted Gases'] +
+        effective_radiative_forcing['Ozone|Temperature Feedback']
     )
 
-    return radiative_forcing, effective_radiative_forcing
+    return effective_radiative_forcing

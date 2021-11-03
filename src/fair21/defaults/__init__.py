@@ -89,6 +89,25 @@ gas_list = [
 
 gas_list_excl_co2_ch4 = [gas for gas in gas_list if gas not in ('CO2', "CH4")]
 minor_gas_list = [gas for gas in gas_list if gas not in ('CO2', 'CH4', 'N2O')]
+montreal_gas_list = [
+    'CCl4',
+    'CFC-11',
+    'CFC-113',
+    'CFC-114',
+    'CFC-115',
+    'CFC-12',
+    'CH2Cl2',
+    'CH3Br',
+    'CH3CCl3',
+    'CH3Cl',
+    'CHCl3',
+    'HCFC-141b',
+    'HCFC-142b',
+    'HCFC-22',
+    'Halon-1211',
+    'Halon-1301',
+    'Halon-2402',
+]
 
 # SHORT LIVED CLIMATE FORCER LISTS
 #

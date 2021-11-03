@@ -49,8 +49,8 @@ fractional_release.update(
         'HCFC-141b': 0.34,
         'HCFC-142b': 0.17,
         'HCFC-22': 0.13,
-        'Halon1211': 0.62,
-        'Halon1301': 0.28,
-        'Halon2402': 0.65,
+        'Halon-1211': 0.62,
+        'Halon-1301': 0.28,
+        'Halon-2402': 0.65,
     }
 )
