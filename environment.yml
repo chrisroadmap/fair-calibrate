@@ -8,7 +8,6 @@ dependencies:
   - climateforcing
   - jupyter
   - matplotlib
-  - nbstripout
   - netcdf-scm
   - numpy
   - pandas
