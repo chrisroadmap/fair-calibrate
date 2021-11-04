@@ -1,0 +1,18 @@
+name: fair2.1-calibrate
+channels:
+  - chrisroadmap
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7
+  - climateforcing
+  - jupyter
+  - matplotlib
+  - nbstripout
+  - netcdf-scm
+  - numpy
+  - pandas
+  - scipy
+  - scmdata  # should include seaborn as a dependency
+  - seaborn
+  - tqdm

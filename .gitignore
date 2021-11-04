@@ -1,3 +1,14 @@
+# large data output files
+data/netcdf-scm/cmip_data/
+data/netcdf-scm/*.zip
+data/rcmip/
+
+# Apple files
+.DS_Store
+
+# R history files
+.rapp.history
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
