@@ -12,6 +12,7 @@ Re-calibration of FaIR v2.0 to updated Cummins calibration and inclusion of ocea
 ```
 conda env create -f environment.yml
 conda activate fair2.1-calibrate
+nbstripout --install
 ```
 
 If you get module import errors running any of the notebooks, it's likely that your local environment is not up to date:
