@@ -11,6 +11,21 @@ import numpy as np
 from . import gas_list
 from ..constants.gases import lifetime
 
+# DEFAULT MINOR GASES INCLUDED IN EMISSIONS-DRIVEN SCENARIOS
+# CO2, CH4 and N2O can be turned on or off with run_mode
+# as can the whole class of F-Gases and Montreal Gases
+#
+# it will also enable us to define HFC134a-eq or CFC11-eq emissions
+gases_include = {
+    'F-Gases': [
+        # list gases
+    ],
+    'Montreal Gases': [
+        # list gases
+    ],
+}
+
+
 # RADIATIVE EFFICIENCIES
 #
 # Rationale for putting this in "defaults" rather than "constants" is that

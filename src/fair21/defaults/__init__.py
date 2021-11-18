@@ -8,10 +8,12 @@ Module for defaults
 
 # TODO: standardise names across inputs and outputs
 run_mode = {
+    'forcing driven' : False,
     'CO2' : 'emissions',
     'CH4' : 'emissions',
     'N2O' : 'emissions',
-    'Other greenhouse gases': 'emissions',
+    'F-Gases': 'emissions',
+    'Montreal Gases': 'emissions',
     'Aerosol' : 'emissions',
     'Ozone' : 'emissions',
     'Land use' : 'emissions',
@@ -23,10 +25,12 @@ run_mode = {
 }
 
 valid_run_modes = {
+    'forcing driven' : (False, True),
     'CO2' : ('emissions', 'concentration', 'forcing', None),
     'CH4' : ('emissions', 'concentration', 'forcing', None),
     'N2O' : ('emissions', 'concentration', 'forcing', None),
-    'Other greenhouse gases' : ('emissions', 'concentration', 'forcing', None),
+    'F-Gases' : ('emissions', 'concentration', 'forcing', None),
+    'Montreal Gases' : ('emissions', 'concentration', 'forcing', None),
     'Aerosol' : ('emissions', 'forcing', None),
     'Ozone' : ('emissions', 'forcing', None),
     'Land use' : ('emissions', 'forcing', None),
