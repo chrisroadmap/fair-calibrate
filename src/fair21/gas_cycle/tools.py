@@ -4,9 +4,8 @@ Tools for the FaIR gas cycle.
 
 import numpy as np
 
-from ..defaults.gases import iirf_horizon
-
-def lifetime_to_iirf_0(lifetime, iirf_horizon=iirf_horizon):
+# This is now somewhat redundant
+def lifetime_to_iirf_0(lifetime, iirf_horizon=100):
     """Converts greenhouse gas lifetime to time-integrated airborne fraction.
 
     iirf_0 is the 100-year time-integrated airborne fraction to a pulse
@@ -21,7 +20,7 @@ def lifetime_to_iirf_0(lifetime, iirf_horizon=iirf_horizon):
 
     100 years is the default time horizon in FaIR but this can be set to any
     value.
-    
+
     Parameters
     ----------
     lifetime : float

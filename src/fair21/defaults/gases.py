@@ -8,8 +8,8 @@ Default parameters relating to greenhouse gases
 
 import numpy as np
 
-from . import gas_list
-from ..constants.gases import lifetime
+from . import gas_list, gas_list_excl_co2, gas_list_excl_co2_ch4
+from ..constants.gases import lifetime  # should be in defaults rather than constants
 
 # DEFAULT MINOR GASES INCLUDED IN EMISSIONS-DRIVEN SCENARIOS
 # CO2, CH4 and N2O can be turned on or off with run_mode
@@ -159,24 +159,27 @@ for gas in gas_list:
     partition_fraction[gas] = 1
 partition_fraction["CO2"] = np.array([0.2173, 0.2240, 0.2824, 0.2763])
 
-# Variable lifetime gases: only relevant for CO2 and CH4, so we don't fill
-# for all gases.
+# State-dependent lifetimes for greenhouse gases
+# These are all parameterised from the time-integrated airborne fraction, by
+# default over a 100-year time horizon.
+iirf_horizon = 100 # yr
+iirf_max = 99.95 # yr
 iirf_0 = {
-    "CO2" : 29,
-    "CH4" : lifetime["CH4"]
+    'CO2': 29,
+    **{gas: (lifetime[gas] * (1 - np.exp(-iirf_horizon / lifetime[gas]))) for gas in gas_list_excl_co2}
 } # yr
 iirf_cumulative = {
     "CO2" : 0.00846,
-    "CH4" : 0
-} # yr/GtCO2
+    "CH4" : 0,
+    **{gas: 0 for gas in gas_list_excl_co2_ch4}
+} # yr/[gas quantity (e.g. GtCO2)]
 iirf_temperature = {
     "CO2" : 4.0,
     "CH4" : -0.3,
+    **{gas: 0 for gas in gas_list_excl_co2_ch4}
 } # yr/K
 iirf_airborne = {
     "CO2" : 0.000819,
-    "CH4" : 0.00032
-} # yr/GtCO2
-
-iirf_horizon = 100 # yr
-iirf_max = 99.95 # yr
+    "CH4" : 0.00032,
+    **{gas: 0 for gas in gas_list_excl_co2_ch4}
+} # yr/[gas quantity (e.g. GtCO2)]

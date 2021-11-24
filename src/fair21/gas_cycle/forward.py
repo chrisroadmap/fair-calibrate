@@ -76,7 +76,7 @@ def step_concentration(
     # NOTE:
     # although airborne_emissions_old is technically superfluous, we carry it
     # so that we don't have to recalculate the sum of gas_boxes_old each time.
-    # Speed improvement is probably negligibe, but also probably not zero.
+    # Speed improvement is probably negligible, but also probably not zero.
 
     decay_rate = timestep/(alpha_lifetime * lifetime)
     decay_factor = np.exp(-decay_rate)

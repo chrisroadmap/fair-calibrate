@@ -39,7 +39,9 @@ def calculate_g(
     """
 
     g1 = np.sum(partition_fraction * lifetime * (1 - (1 + iirf_horizon/lifetime) * np.exp(-iirf_horizon/lifetime)))
-    g0 = 1/(np.sinh(np.sum(partition_fraction*lifetime*(1 - np.exp(-iirf_horizon/lifetime)), axis=-1)/g1))
+    #g0 = 1/(np.sinh(np.sum(partition_fraction*lifetime*(1 - np.exp(-iirf_horizon/lifetime)), axis=-1)/g1))
+    g0 = np.exp(-1 * np.sum(partition_fraction*lifetime*(1 - np.exp(-iirf_horizon/lifetime)), axis=-1)/g1)
+
     return g0, g1
 
 
@@ -54,6 +56,7 @@ def calculate_alpha(
     g0,
     g1,
     iirf_max = iirf_max,
+    calculate = True
 ):
     """
     Calculate greenhouse-gas time constant scaling factor.
@@ -92,6 +95,10 @@ def calculate_alpha(
 
     iirf = iirf_0 + iirf_cumulative * (cumulative_emissions-airborne_emissions) + iirf_temperature * temperature + iirf_airborne * airborne_emissions
     iirf = (iirf>iirf_max) * iirf_max + iirf * (iirf<iirf_max)
-    alpha = g0 * np.sinh(iirf / g1)
+    alpha = g0 * np.exp(iirf / g1)
+
+#    # hopefully this additional if does not slow us down
+#    if np.isnan(alpha):
+#        alpha=1
 
     return alpha

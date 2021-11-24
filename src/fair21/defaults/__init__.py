@@ -91,6 +91,7 @@ gas_list = [
     "SO2F2",
 ]
 
+gas_list_excl_co2 = [gas for gas in gas_list if gas not in ('CO2')]
 gas_list_excl_co2_ch4 = [gas for gas in gas_list if gas not in ('CO2', "CH4")]
 minor_gas_list = [gas for gas in gas_list if gas not in ('CO2', 'CH4', 'N2O')]
 montreal_gas_list = [
