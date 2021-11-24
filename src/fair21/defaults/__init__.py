@@ -6,6 +6,8 @@ Module for defaults
 # greenhouse_gases can also be "concentration";
 # solar and volcanic can only be "forcing" or None.
 
+N_GAS_BOXES = 4
+
 # TODO: standardise names across inputs and outputs
 run_mode = {
     'forcing driven' : False,

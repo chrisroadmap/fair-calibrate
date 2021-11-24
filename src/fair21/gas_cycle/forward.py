@@ -87,7 +87,7 @@ def step_concentration(
         1 / decay_rate *
         (1 - decay_factor) * timestep + gas_boxes_old * decay_factor
     )
-    airborne_emissions_new = np.sum(gas_boxes_new)
+    airborne_emissions_new = np.sum(gas_boxes_new, axis=-1)
     concentration_out = (
         pre_industrial_concentration +
         burden_per_emission * (
