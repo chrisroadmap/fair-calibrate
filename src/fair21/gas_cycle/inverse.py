@@ -79,12 +79,16 @@ def unstep_concentration(
     airborne_emissions_new = (concentration-pre_industrial_concentration)/burden_per_emission
 
     # [GtCO2/yr] = [GtCO2] - [GtCO2]*[1] / ([1] * [1] * [1] * [yr])
-    emissions =   (( airborne_emissions_new - np.sum(gas_boxes_old*decay_factor)) /
-                   (np.sum( partition_fraction / decay_rate * ( 1. - decay_factor ) * timestep)))
+    emissions =   (( airborne_emissions_new - np.sum(gas_boxes_old*decay_factor, axis=-1)) /
+                   (np.sum( partition_fraction / decay_rate * ( 1. - decay_factor ) * timestep, axis=-1)))
 
+    # this is the best I can do to generalise for scalar and array input
+    # hopefully one if statement per timestep isn't too expensive
+    if np.ndim(emissions)>0:
+        emissions = emissions[:, None]
     # [GtCO2] = [yr] * [GtCO2/yr] * [1] / [1] * [1] + [GtCO2] * [1]
     gas_boxes_new = timestep * emissions * partition_fraction * 1/decay_rate * ( 1. - decay_factor ) + gas_boxes_old * decay_factor
 
-    emissions_out = emissions + natural_emissions_adjustment
+    emissions_out = (emissions + natural_emissions_adjustment).squeeze()
 
-    return emissions_out, gas_boxes_new, airborne_emissions_new
+    return emissions_out, gas_boxes_new.squeeze(), airborne_emissions_new.squeeze()

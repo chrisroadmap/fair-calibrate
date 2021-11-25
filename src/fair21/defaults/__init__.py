@@ -6,7 +6,11 @@ Module for defaults
 # greenhouse_gases can also be "concentration";
 # solar and volcanic can only be "forcing" or None.
 
-N_GAS_BOXES = 4
+# how many gas boxes for the emissions to concentrations calculation?
+# this should be the species with the most lifetimes. Gases with fewer lifetime
+# boxes (typically one) still get this many defined, but unused boxes are
+# allocated a zero partition fraction.
+n_gas_boxes = 4
 
 # TODO: standardise names across inputs and outputs
 run_mode = {
@@ -114,6 +118,32 @@ montreal_gas_list = [
     'Halon-1211',
     'Halon-1301',
     'Halon-2402',
+]
+f_gas_list = [
+    "C2F6",
+    "C3F8",
+    "C4F10",
+    "C5F12",
+    "C6F14",
+    "C7F16",
+    "C8F18",
+    "cC4F8",  # not standard PubChem but used extensively in AR6
+    "CCl4",
+    "CF4",
+    "HFC-125",
+    "HFC-134a",
+    "HFC-143a",
+    "HFC-152a",
+    "HFC-227ea",
+    "HFC-23",
+    "HFC-236fa",
+    "HFC-245fa",
+    "HFC-32",
+    "HFC-365mfc",
+    "HFC-4310mee",
+    "NF3",
+    "SF6",
+    "SO2F2",
 ]
 
 # SHORT LIVED CLIMATE FORCER LISTS

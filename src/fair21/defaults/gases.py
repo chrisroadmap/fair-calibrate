@@ -8,7 +8,7 @@ Default parameters relating to greenhouse gases
 
 import numpy as np
 
-from . import gas_list, gas_list_excl_co2, gas_list_excl_co2_ch4, N_GAS_BOXES
+from . import gas_list, gas_list_excl_co2, gas_list_excl_co2_ch4, n_gas_boxes
 from ..constants.gases import lifetime  # should be in defaults rather than constants
 
 # DEFAULT MINOR GASES INCLUDED IN EMISSIONS-DRIVEN SCENARIOS
@@ -156,7 +156,7 @@ natural_emissions_adjustment.update(
 # Carbon cycle partition fractions
 partition_fraction = {}
 for gas in gas_list:
-    partition_fraction[gas] = np.zeros(N_GAS_BOXES)
+    partition_fraction[gas] = np.zeros(n_gas_boxes)
     partition_fraction[gas][0] = 1
 partition_fraction["CO2"] = np.array([0.2173, 0.2240, 0.2824, 0.2763])
 
