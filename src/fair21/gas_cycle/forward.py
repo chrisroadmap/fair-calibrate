@@ -4,6 +4,8 @@ Module for the forward (emissions to concentration) model.
 
 import numpy as np
 
+from ..constants.general import GAS_BOX_AXIS
+
 def step_concentration(
     emissions,
     gas_boxes_old,
