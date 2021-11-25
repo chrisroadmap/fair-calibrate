@@ -4,6 +4,7 @@ Module containing gas cycle functions
 
 import numpy as np
 
+from ..constants.general import GAS_BOX_AXIS
 from ..constants.gases import burden_per_emission, lifetime
 from ..defaults.gases import (
     pre_industrial_concentration,
@@ -14,7 +15,7 @@ from ..defaults.gases import (
 
 def calculate_g(
     lifetime,
-    partition_fraction=1,
+    partition_fraction,
     iirf_horizon=iirf_horizon,
 
 ):
@@ -22,15 +23,22 @@ def calculate_g(
 
     See Leach et al. (2021), eq. (5)
 
-    Inputs
-    ------
-    lifetime : float
+    Parameters
+    ----------
+    lifetime : ndarray
         atmospheric burden lifetime of the greenhouse gas (yr).
-    partition_fraction : float, default=1 or `np.ndarray` of float
+    partition_fraction : ndarray
         proportion of emissions of gas that go into each atmospheric box.
-        Should be 1 or sum to 1 if array.
+        The sum across the GAS_BOX_AXIS dimension should be 1.
     iirf_horizon : float, default=100
         time horizon (yr) for time integrated impulse response function.
+
+    Notes
+    -----
+    Where array input is taken, the arrays always have the dimensions of
+    (scenario, species, time, gas_box). Dimensionality can be 1, but we
+    retain the singleton dimension in order to preserve clarity of
+    calculation and speed.
 
     Returns
     -------
@@ -38,9 +46,8 @@ def calculate_g(
     g1 : float
     """
 
-    g1 = np.sum(partition_fraction * lifetime * (1 - (1 + iirf_horizon/lifetime) * np.exp(-iirf_horizon/lifetime)))
-    #g0 = 1/(np.sinh(np.sum(partition_fraction*lifetime*(1 - np.exp(-iirf_horizon/lifetime)), axis=-1)/g1))
-    g0 = np.exp(-1 * np.sum(partition_fraction*lifetime*(1 - np.exp(-iirf_horizon/lifetime)), axis=-1)/g1)
+    g1 = np.sum(partition_fraction * lifetime * (1 - (1 + iirf_horizon/lifetime) * np.exp(-iirf_horizon/lifetime)), axis=GAS_BOX_AXIS, keepdims=True)
+    g0 = np.exp(-1 * np.sum(partition_fraction*lifetime*(1 - np.exp(-iirf_horizon/lifetime)), axis=GAS_BOX_AXIS, keepdims=True)/g1)
 
     return g0, g1
 
@@ -56,36 +63,42 @@ def calculate_alpha(
     g0,
     g1,
     iirf_max = iirf_max,
-    calculate = True
 ):
     """
     Calculate greenhouse-gas time constant scaling factor.
 
     Parameters
     ----------
-    cumulative_emissions : float
+    cumulative_emissions : ndarray
         GtC cumulative emissions since pre-industrial.
-    airborne_emissions : float
+    airborne_emissions : ndarray
         GtC total emissions remaining in the atmosphere.
     temperature : float
         K temperature anomaly since pre-industrial.
-    iirf_0 : float
+    iirf_0 : ndarray
         pre-industrial time-integrated airborne fraction.
-    iirf_cumulative : float
+    iirf_cumulative : ndarray
         sensitivity of time-integrated airborne fraction with atmospheric
         carbon stock.
-    iirf_temperature : float
+    iirf_temperature : ndarray
         sensitivity of time-integrated airborne fraction with temperature
         anomaly.
-    iirf_airborne : float
+    iirf_airborne : ndarray
         sensitivity of time-integrated airborne fraction with airborne
         emissions.
-    g0 : float
+    g0 : ndarray
         parameter for alpha TODO: description
-    g1 : float
+    g1 : ndarray
         parameter for alpha TODO: description
     iirf_max : float
         maximum allowable value to time-integrated airborne fraction
+
+    Notes
+    -----
+    Where array input is taken, the arrays always have the dimensions of
+    (scenario, species, time, gas_box). Dimensionality can be 1, but we
+    retain the singleton dimension in order to preserve clarity of
+    calculation and speed.
 
     Returns
     -------
@@ -96,9 +109,5 @@ def calculate_alpha(
     iirf = iirf_0 + iirf_cumulative * (cumulative_emissions-airborne_emissions) + iirf_temperature * temperature + iirf_airborne * airborne_emissions
     iirf = (iirf>iirf_max) * iirf_max + iirf * (iirf<iirf_max)
     alpha = g0 * np.exp(iirf / g1)
-
-#    # hopefully this additional if does not slow us down
-#    if np.isnan(alpha):
-#        alpha=1
 
     return alpha
