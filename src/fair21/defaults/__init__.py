@@ -163,7 +163,7 @@ slcf_list = [
 ]
 
 # All forcers known to man.
-species_list = gas_list + slcf_list + ["O3", "Solar", "Volcanic"]
+species_list = gas_list + slcf_list + ["O3", "Aerosol-cloud interactions", "Solar", "Volcanic"]
 
 # UNITS
 emissions_units = {}
