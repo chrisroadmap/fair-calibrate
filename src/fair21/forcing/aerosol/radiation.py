@@ -1,6 +1,6 @@
 import numpy as np
 
-from ...defaults.aerosol.radiation import radiative_efficiency
+from ...defaults.aerosol import radiative_efficiency
 
 def linear(
     emissions,

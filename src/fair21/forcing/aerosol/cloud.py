@@ -1,6 +1,6 @@
 import numpy as np
 
-from ...defaults.aerosol.cloud import beta, shape
+from ...defaults.aerosol import beta, shape
 
 # TODO: a generalised log relationship and inclusion of temperature
 # feedback. This relationship is untested as yet on ESMs.
