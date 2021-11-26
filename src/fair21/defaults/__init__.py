@@ -162,6 +162,9 @@ slcf_list = [
     "CO"
 ]
 
+# All forcers known to man.
+species_list = gas_list + slcf_list + ["O3", "Solar", "Volcanic"]
+
 # UNITS
 emissions_units = {}
 for gas in gas_list:

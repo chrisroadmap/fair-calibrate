@@ -4,7 +4,7 @@ Default parameters relating to ozone forcing
 
 import numpy as np
 
-from . import gas_list
+from . import gas_list, montreal_gas_list, species_list
 
 # OZONE FORCING COEFFICIENTS
 #
@@ -13,14 +13,15 @@ from . import gas_list
 
 # Reference: Smith, C., Z.R.J. Nicholls, K. Armour, W. Collins, P. Forster, M. Meinshausen, M. D. Palmer, M. Watanabe, 2021, The Earth’s Energy Budget, Climate Feedbacks, and Climate Sensitivity Supplementary Material. In: Climate Change 2021: The Physical Science Basis. Contribution of Working Group I to the Sixth Assessment Report of the Intergovernmental Panel on Climate Change [Masson-Delmotte, V., P. Zhai, A. Pirani, S. L. Connors, C. Péan, S. Berger, N. Caud, Y. Chen, L. Goldfarb, M. I. Gomis, M. Huang, K. Leitzell, E. Lonnoy, J.B.R. Matthews, T. K. Maycock, T. Waterfield, O. Yelekçi, R. Yu and B. Zhou (eds.)]. Available from https://ipcc.ch/static/ar6/wg1.
 # from table 7.SM.3
-radiative_efficiency = {
+radiative_efficiency = {specie: 0 for specie in species_list}
+radiative_efficiency.update({
     "CH4": 1.75e-4, # W m-2 ppb-1
     "N2O": 7.10e-4, # W m-2 ppb-1
-    "Montreal Gases": -1.25e-4, # W m-2 ppt-1  (maybe time to use bar notation after all)
     "CO": 1.55e-4, # W m-2 (MtCO yr)-1
     "VOC": 3.29e-4, # W m-2 (MtVOC yr)-1
     "NOx": 1.797e-3, # W m-2 (MtNO2 yr)-1
-}
+    **{gas: -1.25e-4 for gas in montreal_gas_list}  # W m-2 ppt-1
+})
 
 br_cl_ratio = 45
 

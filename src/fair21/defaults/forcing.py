@@ -2,7 +2,7 @@
 Defaults for effective radiative forcing.
 """
 
-from . import gas_list
+from . import species_list
 
 # TROPOSPHERIC ADJUSTMENTS
 #
@@ -21,15 +21,13 @@ from . import gas_list
 # Leitzell, E. Lonnoy, J.B.R. Matthews, T. K. Maycock, T. Waterfield, O.
 # Yelekçi, R. Yu and B. Zhou (eds.)]. Cambridge University Press.
 tropospheric_adjustment = {}
-for gas in gas_list:
-    tropospheric_adjustment[gas] = 1
+for specie in species_list:
+    tropospheric_adjustment[specie] = 1
 tropospheric_adjustment["CO2"] = 1.05
 tropospheric_adjustment["CH4"] = 0.86
 tropospheric_adjustment["N2O"] = 1.07
 tropospheric_adjustment["CFC-11"] = 1.13
 tropospheric_adjustment["CFC-12"] = 1.12
-
-tropospheric_adjustment["Ozone"] = 1
 
 # TODO: split RF and ERF for aerosols by species, based on chapter 6 and 7 of AR6.
 # currently we assume relationships correspond to ERF.
