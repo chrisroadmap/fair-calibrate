@@ -7,6 +7,14 @@ really convincing literature on this at the moment.
 
 from . import species_list
 
+# this needs sorting out and generalising
+ari_list = [
+    "Sulfur",
+    "BC",
+    "OC",
+    "NH3"
+]
+
 # aerosol-radiation: assumes linear scaling with emissions
 radiative_efficiency = {
     "AR6": {specie: 0 for specie in species_list},

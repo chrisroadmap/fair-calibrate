@@ -162,6 +162,13 @@ slcf_list = [
     "CO"
 ]
 
+ari_list = [
+    "Sulfur",
+    "BC",
+    "OC",
+    "NH3"
+]
+
 # All forcers known to man.
 species_list = gas_list + slcf_list + ["O3", "Aerosol-cloud interactions", "Solar", "Volcanic"]
 
