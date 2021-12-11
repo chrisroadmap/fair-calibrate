@@ -125,9 +125,92 @@ def ghg(
     minor_gas_index = list(range(concentration.shape[SPECIES_AXIS]))
     for major_gas in ['CO2', 'CH4', 'N2O']:
         minor_gas_index.remove(gas_index_mapping[major_gas])
-    erf_out[:, minor_gas_index, ...] = (
-        (concentration[:, minor_gas_index, ...] - pre_industrial_concentration[:, minor_gas_index, ...])
-        * radiative_efficiency[:, minor_gas_index, ...] * 0.001
-    ) * tropospheric_adjustment[:, minor_gas_index, ...]
+    if len(minor_gas_index) > 0:
+        erf_out[:, minor_gas_index, ...] = (
+            (concentration[:, minor_gas_index, ...] - pre_industrial_concentration[:, minor_gas_index, ...])
+            * radiative_efficiency[:, minor_gas_index, ...] * 0.001
+        ) * tropospheric_adjustment[:, minor_gas_index, ...]
 
     return erf_out
+
+
+def meinshausen(
+    concentration,
+    pre_industrial_concentration=pre_industrial_concentration,
+    tropospheric_adjustment=tropospheric_adjustment,
+    a1 = -2.4785e-07,
+    b1 = 0.00075906,
+    c1 = -0.0021492,
+    d1 = 5.2488,
+    a2 = -0.00034197,
+    b2 = 0.00025455,
+    c2 = -0.00024357,
+    d2 = 0.12173,
+    a3 = -8.9603e-05,
+    b3 = -0.00012462,
+    d3 = 0.045194,
+    ):
+    """Greenhouse gas forcing from CO2, CH4 and N2O including band overlaps.
+
+    Note
+    ----
+    This is a wrapper version of the array formula provided for convenience.
+
+    Parameters
+    ----------
+    See `fair.forcing.ghg.ghg`
+
+    Returns
+    -------
+    effective_radiative_forcing : dict
+        effective radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
+    """
+    scalar_input = False
+    if np.ndim(concentration['CO2']) == 0:
+        n_timestep = 1
+        scalar_input = True
+    else:
+        n_timestep = len(concentration['CO2'])
+
+    gas_index_mapping = {
+        "CO2": 0,
+        "CH4": 1,
+        "N2O": 2,
+    }
+
+    concentration_array = np.ones((1, 3, n_timestep, 1)) * np.nan
+    pre_industrial_concentration_array = np.ones((1, 3, 1, 1)) * np.nan
+    tropospheric_adjustment_array = np.ones((1, 3, 1, 1)) * np.nan
+    for gas in gas_index_mapping:
+        concentration_array[0, gas_index_mapping[gas], :, 0] = concentration[gas]
+        pre_industrial_concentration_array[0, gas_index_mapping[gas], 0, 0] = pre_industrial_concentration[gas]
+        tropospheric_adjustment_array[0, gas_index_mapping[gas], 0, 0] = tropospheric_adjustment[gas]
+
+    erf_array = ghg(
+        concentration_array,
+        pre_industrial_concentration_array,
+        tropospheric_adjustment_array,
+        np.zeros(3),
+        gas_index_mapping,
+        a1,
+        b1,
+        c1,
+        d1,
+        a2,
+        b2,
+        c2,
+        d2,
+        a3,
+        b3,
+        d3,
+        )
+
+    effective_radiative_forcing = {}
+    for gas in gas_index_mapping:
+         erf_gas = erf_array[0, gas_index_mapping[gas], :, 0]
+         if scalar_input:
+             effective_radiative_forcing[gas] = erf_gas[0]
+         else:
+             effective_radiative_forcing[gas] = erf_gas
+             
+    return effective_radiative_forcing
