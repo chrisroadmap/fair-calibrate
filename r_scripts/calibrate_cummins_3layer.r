@@ -16,7 +16,7 @@
 library(EBM)
 
 # Get the precalculated 4xCO2 N and T data
-input_data = read.csv("../data/netcdf-scm/4xCO2.csv")
+input_data = read.csv("../data/cmip6-hbf/4xCO2.csv")
 
 # Initial guess for parameter values
 inits3 <- list(
@@ -24,7 +24,7 @@ inits3 <- list(
 	C = c(5, 20, 100),
 	kappa = c(1, 2, 1),
 	epsilon = 1,
-	sigma_eta = 0.5, 
+	sigma_eta = 0.5,
 	sigma_xi = 0.5,
 	F_4xCO2 = 5
 )
@@ -38,23 +38,23 @@ models = unique(input_data$climate_model)
 # iterate through models
 for (model in models) {
 	runs <- input_data[
-		(input_data$climate_model == model) & 
+		(input_data$climate_model == model) &
 		(input_data$variable == "tas"), 3
 	]
 
-	# iterate through runs of the same model for now, though we will probably 
+	# iterate through runs of the same model for now, though we will probably
 	# want to combine/downweight this in the final edition
 	for (run in runs) {
 		rndt <- input_data[
-			(input_data$climate_model == model) & 
+			(input_data$climate_model == model) &
 			(input_data$variable == "rndt") &
 			(input_data$member_id == run), 10:159
 		]
 		rndt <- unname(rndt)
 
 		tas <- input_data[
-			(input_data$climate_model == model) & 
-			(input_data$variable ==  "tas") & 
+			(input_data$climate_model == model) &
+			(input_data$variable ==  "tas") &
 			(input_data$member_id == run), 10:159
 		]
 		tas <- unname(tas)
@@ -66,7 +66,7 @@ for (model in models) {
 		# If it still fails, give up and move on.
 		attempt <- 0
 		success <- FALSE
-		while (attempt < 3) {
+		while (attempt < 5) {
 			tryCatch(
 				{
 					check <- capture.output(
@@ -84,7 +84,7 @@ for (model in models) {
 					message(paste(model, "did not converge or ran out of iterations"))
 					message("Here's the original error message from FitKalman:")
 					message(c)
-					if (attempt < 3) {
+					if (attempt < 4) {
 						message("Trying again with more liberal quadratic penalty (alpha)")
 					}
 					else {
@@ -95,32 +95,32 @@ for (model in models) {
 			if (success) { break }
 			attempt <- attempt + 1
 		}
-		if (!success) { 
+		if (!success) {
 			row_out <- c(model, run, FALSE, NA, NA, NA, NA, NA, NA, NA, NA,
 			NA, NA, NA, NA)
 
 			output <- rbind(output, row_out)
-			next 
+			next
 		}
-		
+
 		conv <- TRUE
 		nit <- strsplit(check, " ")[[1]][5]
 
 		row_out <- c(
-			model, 
-			run, 
-			conv, 
-			nit, 
-			result$gamma, 
-			result$C[1], 
-			result$C[2], 
-			result$C[3], 
-			result$kappa[1], 
-			result$kappa[2], 
-			result$kappa[3], 
-			result$epsilon, 
-			result$sigma_eta, 
-			result$sigma_xi, 
+			model,
+			run,
+			conv,
+			nit,
+			result$gamma,
+			result$C[1],
+			result$C[2],
+			result$C[3],
+			result$kappa[1],
+			result$kappa[2],
+			result$kappa[3],
+			result$epsilon,
+			result$sigma_eta,
+			result$sigma_xi,
 			result$F_4xCO2
 		)
 
@@ -134,10 +134,10 @@ names = c("model", "run", "conv", "nit", "gamma", "C1", "C2", "C3", "kappa1",
 colnames(output) <- names
 
 # save output
-ifelse(!dir.exists(file.path("..", "data", "calibration")), 
+ifelse(!dir.exists(file.path("..", "data", "calibration")),
 	dir.create(file.path("..", "data", "calibration")), FALSE)
 write.csv(
-	output, 
+	output,
 	file.path("..", "data", "calibration", "4xCO2_cummins.csv"),
 	row.names=FALSE
 )
