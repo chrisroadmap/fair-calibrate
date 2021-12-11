@@ -41,6 +41,10 @@ source("calibrate_cummins_3layer.r")
 
 ## reproduction
 
-1. The `010_download-data.ipynb` notebook is run first.
+1. The `015_concatenate_hege_data.ipynb` notebook is run first.
 2. Then, `r_scripts/calibrate_cummins_3layer.r` is run.
 3. Finally, the remaining notebooks are run in numerical order.
+
+## acknowledgements
+
+1. Hege-Beate Fredriksen for crunching the CMIP6 data from all of the models
