@@ -9,10 +9,16 @@ class IncompatibleConfigError(Exception):
 class InvalidRunModeError(Exception):
     pass
 
+class LifetimeError(Exception):
+    pass
+
 class MissingInputError(Exception):
     pass
 
 class NonNumericInputError(Exception):
+    pass
+
+class PartitionFractionError(Exception):
     pass
 
 class ScenarioLengthMismatchError(Exception):
