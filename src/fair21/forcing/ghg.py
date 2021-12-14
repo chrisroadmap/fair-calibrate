@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..constants.general import SPECIES_AXIS
+from ..constants import SPECIES_AXIS
 from ..defaults.gases import (
     pre_industrial_concentration,
     radiative_efficiency
@@ -107,19 +107,19 @@ def ghg(
     alpha_p[where_low] = d1
     alpha_p[where_high] = d1 - b1**2/(4*a1)
     alpha_n2o = c1*np.sqrt(n2o)
-    erf_out[:, [gas_index_mapping["CO2"]], ...] = (alpha_p + alpha_n2o) * np.log(co2/co2_pi) * tropospheric_adjustment[:, [gas_index_mapping["CO2"]], ...]
+    erf_out[:, [gas_index_mapping["CO2"]], ...] = (alpha_p + alpha_n2o) * np.log(co2/co2_pi) * (1 + tropospheric_adjustment[:, [gas_index_mapping["CO2"]], ...])
 
     # CH4
     erf_out[:, [gas_index_mapping["CH4"]], ...] = (
         (a3*np.sqrt(ch4) + b3*np.sqrt(n2o) + d3) *
         (np.sqrt(ch4) - np.sqrt(ch4_pi))
-    )  * tropospheric_adjustment[:, [gas_index_mapping["CH4"]], ...]
+    )  * (1 + tropospheric_adjustment[:, [gas_index_mapping["CH4"]], ...])
 
     # N2O
     erf_out[:, [gas_index_mapping["N2O"]], ...] = (
         (a2*np.sqrt(co2) + b2*np.sqrt(n2o) + c2*np.sqrt(ch4) + d2) *
         (np.sqrt(n2o) - np.sqrt(n2o_pi))
-    )  * tropospheric_adjustment[:, [gas_index_mapping["N2O"]], ...]
+    )  * (1 + tropospheric_adjustment[:, [gas_index_mapping["N2O"]], ...])
 
     # Then, linear forcing for other gases
     minor_gas_index = list(range(concentration.shape[SPECIES_AXIS]))
@@ -129,7 +129,7 @@ def ghg(
         erf_out[:, minor_gas_index, ...] = (
             (concentration[:, minor_gas_index, ...] - pre_industrial_concentration[:, minor_gas_index, ...])
             * radiative_efficiency[:, minor_gas_index, ...] * 0.001
-        ) * tropospheric_adjustment[:, minor_gas_index, ...]
+        ) * (1 + tropospheric_adjustment[:, minor_gas_index, ...])
 
     return erf_out
 

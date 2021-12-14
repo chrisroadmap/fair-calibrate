@@ -22,12 +22,12 @@ from . import species_list
 # Yelekçi, R. Yu and B. Zhou (eds.)]. Cambridge University Press.
 tropospheric_adjustment = {}
 for specie in species_list:
-    tropospheric_adjustment[specie] = 1
-tropospheric_adjustment["CO2"] = 1.05
-tropospheric_adjustment["CH4"] = 0.86
-tropospheric_adjustment["N2O"] = 1.07
-tropospheric_adjustment["CFC-11"] = 1.13
-tropospheric_adjustment["CFC-12"] = 1.12
+    tropospheric_adjustment[specie] = 0
+tropospheric_adjustment["CO2"] = 0.05
+tropospheric_adjustment["CH4"] = -0.14
+tropospheric_adjustment["N2O"] = 0.07
+tropospheric_adjustment["CFC-11"] = 0.13
+tropospheric_adjustment["CFC-12"] = 0.12
 
 # TODO: split RF and ERF for aerosols by species, based on chapter 6 and 7 of AR6.
 # currently we assume relationships correspond to ERF.
