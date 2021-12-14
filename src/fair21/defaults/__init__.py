@@ -11,6 +11,7 @@ Module for defaults
 # boxes (typically one) still get this many defined, but unused boxes are
 # allocated a zero partition fraction.
 n_gas_boxes = 4
+n_temperature_boxes = 3
 
 # TODO: standardise names across inputs and outputs
 run_mode = {
@@ -170,7 +171,7 @@ ari_list = [
 ]
 
 # All forcers known to man.
-species_list = gas_list + slcf_list + ["O3", "Aerosol-cloud interactions", "Solar", "Volcanic"]
+species_list = gas_list + slcf_list + ["O3", "Aerosol-cloud interactions", "Solar", "Volcanic", "MAGICC Fossil and Industrial|Aircraft", "CO2|MAGICC AFOLU"]
 
 # UNITS
 emissions_units = {}

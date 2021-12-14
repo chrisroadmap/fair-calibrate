@@ -4,7 +4,7 @@ Module for the forward (emissions to concentration) model.
 
 import numpy as np
 
-from ..constants.general import GAS_BOX_AXIS
+from ..constants import GAS_BOX_AXIS
 
 def step_concentration(
     emissions,
@@ -24,7 +24,7 @@ def step_concentration(
     Parameters
     ----------
     emissions : ndarray
-        emissions in timestep.
+        emissions rate (emissions unit per year) in timestep.
     gas_boxes_old : ndarray
         the greenhouse gas atmospheric burden in each lifetime box at the end of
         the previous timestep.

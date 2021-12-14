@@ -28,7 +28,7 @@ def ghg(
     """Greenhouse gas forcing from CO2, CH4 and N2O including band overlaps.
 
     Modified Etminan relationship from Meinshausen et al. (2020)
-    https://gmd.copernicus.org/preprints/gmd-2019-222/gmd-2019-222.pdf
+    https://gmd.copernicus.org/articles/13/3571/2020/
     table 3
 
     Parameters
@@ -113,13 +113,13 @@ def ghg(
     erf_out[:, [gas_index_mapping["CH4"]], ...] = (
         (a3*np.sqrt(ch4) + b3*np.sqrt(n2o) + d3) *
         (np.sqrt(ch4) - np.sqrt(ch4_pi))
-    )
+    )  * tropospheric_adjustment[:, [gas_index_mapping["CH4"]], ...]
 
     # N2O
     erf_out[:, [gas_index_mapping["N2O"]], ...] = (
         (a2*np.sqrt(co2) + b2*np.sqrt(n2o) + c2*np.sqrt(ch4) + d2) *
         (np.sqrt(n2o) - np.sqrt(n2o_pi))
-    )
+    )  * tropospheric_adjustment[:, [gas_index_mapping["N2O"]], ...]
 
     # Then, linear forcing for other gases
     minor_gas_index = list(range(concentration.shape[SPECIES_AXIS]))
@@ -166,17 +166,31 @@ def meinshausen(
         effective radiative forcing (W/m2) of "CO2", "CH4" and "N2O".
     """
     scalar_input = False
-    if np.ndim(concentration['CO2']) == 0:
-        n_timestep = 1
-        scalar_input = True
-    else:
-        n_timestep = len(concentration['CO2'])
-
     gas_index_mapping = {
         "CO2": 0,
         "CH4": 1,
         "N2O": 2,
     }
+
+    # For backward compatibility we allow 3-element arrays
+    if isinstance(concentration, np.ndarray):
+        temp_dict = {}
+        for gas in gas_index_mapping:
+            temp_dict[gas] = concentration[gas_index_mapping[gas]]
+        concentration = temp_dict
+        scalar_input = True
+
+    if isinstance(pre_industrial_concentration, np.ndarray):
+        temp_dict = {}
+        for gas in gas_index_mapping:
+            temp_dict[gas] = pre_industrial_concentration[gas_index_mapping[gas]]
+        pre_industrial_concentration = temp_dict
+
+    if np.ndim(concentration['CO2']) == 0:
+        n_timestep = 1
+        scalar_input = True
+    else:
+        n_timestep = len(concentration['CO2'])
 
     concentration_array = np.ones((1, 3, n_timestep, 1)) * np.nan
     pre_industrial_concentration_array = np.ones((1, 3, 1, 1)) * np.nan
@@ -212,5 +226,5 @@ def meinshausen(
              effective_radiative_forcing[gas] = erf_gas[0]
          else:
              effective_radiative_forcing[gas] = erf_gas
-             
+
     return effective_radiative_forcing
