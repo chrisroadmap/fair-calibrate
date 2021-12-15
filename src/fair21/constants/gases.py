@@ -127,14 +127,14 @@ lifetime = {
     "SO2F2": 36,
 }
 
-# # CONCENTRATION GROWTH UNITS
-# #
-# # How much the atmospheric burden grows for a given emission
-# burden_per_emission = {}
-# for gas in gas_list:
-#     burden_per_emission[gas] = (
-#         1 / (M_ATMOS / 1e18 * molwt[gas] / molwt["AIR"])
-#     )
+# CONCENTRATION GROWTH UNITS
+#
+# How much the atmospheric burden grows for a given emission
+burden_per_emission = {}
+for gas in gas_list:
+    burden_per_emission[gas] = (
+        1 / (M_ATMOS / 1e18 * MOLWT[gas] / MOLWT["AIR"])
+    )
 
 
 # number of chlorine atoms in each species
