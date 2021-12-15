@@ -1,5 +1,8 @@
 # Exceptions
 
+class DuplicatedSpeciesError(Exception):
+    pass
+
 class ExternalForcingError(Exception):
     pass
 

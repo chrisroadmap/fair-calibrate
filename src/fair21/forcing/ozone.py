@@ -3,7 +3,7 @@ Module for ozone forcing
 """
 
 import numpy as np
-from ..constants.general import SPECIES_AXIS
+from ..constants import SPECIES_AXIS
 from ..constants.gases import BR_ATOMS, CL_ATOMS
 from ..defaults.ozone import radiative_efficiency, br_cl_ratio, fractional_release
 from ..defaults.forcing import tropospheric_adjustment
@@ -56,7 +56,7 @@ def calculate_eesc(
     """
 
     # EESC is in terms of CFC11-eq
-    cfc11_fr = fractional_release[:, species_index_mapping["CFC-11"], :, :]
+    cfc11_fr = fractional_release[:, :, :, species_index_mapping["CFC-11"], :]
 
     eesc_out = (
         cl_atoms * (concentration - pre_industrial_concentration) * fractional_release / cfc11_fr +
@@ -136,16 +136,16 @@ def thornhill_skeie(
     Notes
     -----
     Where array input is taken, the arrays always have the dimensions of
-    (scenario, species, time, gas_box). Dimensionality can be 1, but we
+    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
     retain the singleton dimension in order to preserve clarity of
     calculation and speed.
     """
 
     array_shape = emissions.shape
-    n_scenarios, n_species, n_timesteps, _ = array_shape
+    n_timesteps, n_scenarios, n_configs, n_species, _ = array_shape
 
     # revisit this if we ever want to dump out intermediate calculations like the feedback strength.
-    _erf = np.ones((n_scenarios, 4, n_timesteps, 1)) * np.nan
+    _erf = np.ones((n_timesteps, n_scenarios, 1, 4, 1)) * np.nan
 
     # Halogens expressed as EESC
     eesc = calculate_eesc(
@@ -158,7 +158,7 @@ def thornhill_skeie(
         br_cl_ratio=br_cl_ratio,
     )
 
-    _erf[:, 0, ...] = np.nansum(eesc * radiative_efficiency * tropospheric_adjustment, axis=SPECIES_AXIS)
+    _erf[:, :, :, 0, :] = np.nansum(eesc * radiative_efficiency * tropospheric_adjustment, axis=SPECIES_AXIS)
 
     # Non-Halogens
     # I'm going to say it's OK to hard-code the gases here; we do it for ERF after all.
@@ -172,17 +172,17 @@ def thornhill_skeie(
         species_index_mapping["NOx"],
     ]
 
-    _erf[:, 1, ...] = np.sum(
-        (concentration[:, o3_species_conc, ...] - pre_industrial_concentration[:, o3_species_conc, ...]) *
-    radiative_efficiency[:, o3_species_conc, ...], axis=SPECIES_AXIS)
+    _erf[:, :, :, 1, :] = np.sum(
+        (concentration[:, :, :, o3_species_conc, :] - pre_industrial_concentration[:, :, :, o3_species_conc, :]) *
+    radiative_efficiency[:, :, :, o3_species_conc, :], axis=SPECIES_AXIS)
 
-    _erf[:, 2, ...] = np.sum(
-        (emissions[:, o3_species_emis, ...] - pre_industrial_emissions[:, o3_species_emis, ...]) *
-    radiative_efficiency[:, o3_species_emis, ...], axis=SPECIES_AXIS)
+    _erf[:, :, :, 2, :] = np.sum(
+        (emissions[:, :, :, o3_species_conc, :] - pre_industrial_emissions[:, :, :, o3_species_conc, :]) *
+    radiative_efficiency[:, :, :, o3_species_conc, :], axis=SPECIES_AXIS)
 
     # Temperature feedback
-    _erf[:, 3, ...] = (
-        temperature_feedback * temperature * np.sum(_erf[:, :3, ...], axis=SPECIES_AXIS)
+    _erf[:, :, :, 3, :] = (
+        temperature_feedback * temperature * np.sum(_erf[:, :, :, :3, :], axis=SPECIES_AXIS)
     )
 
     erf_out = np.sum(_erf, axis=SPECIES_AXIS, keepdims=True)

@@ -76,7 +76,7 @@ def ghg(
     Notes
     -----
     Where array input is taken, the arrays always have the dimensions of
-    (scenario, species, time, gas_box). Dimensionality can be 1, but we
+    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
     retain the singleton dimension in order to preserve clarity of
     calculation and speed.
 
@@ -90,12 +90,12 @@ def ghg(
     # extracting indices upfront means we're not always searching through array and makes things more readable.
     # expanding the co2_pi array to the same shape as co2 allows efficient conditional indexing
     # TODO: what happens if a scenario does not include all these gases?
-    co2 = concentration[:, [gas_index_mapping["CO2"]], ...]
-    co2_pi = pre_industrial_concentration[:, [gas_index_mapping["CO2"]], ...] * np.ones_like(co2)
-    ch4 = concentration[:, [gas_index_mapping["CH4"]], ...]
-    ch4_pi = pre_industrial_concentration[:, [gas_index_mapping["CH4"]], ...]
-    n2o = concentration[:, [gas_index_mapping["N2O"]], ...]
-    n2o_pi = pre_industrial_concentration[:, [gas_index_mapping["N2O"]], ...]
+    co2 = concentration[:, :, :, [gas_index_mapping["CO2"]], ...]
+    co2_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["CO2"]], ...] * np.ones_like(co2)
+    ch4 = concentration[:, :, :, [gas_index_mapping["CH4"]], ...]
+    ch4_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["CH4"]], ...]
+    n2o = concentration[:, :, :, [gas_index_mapping["N2O"]], ...]
+    n2o_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["N2O"]], ...]
 
     # CO2
     ca_max = co2_pi - b1/(2*a1)
@@ -107,29 +107,29 @@ def ghg(
     alpha_p[where_low] = d1
     alpha_p[where_high] = d1 - b1**2/(4*a1)
     alpha_n2o = c1*np.sqrt(n2o)
-    erf_out[:, [gas_index_mapping["CO2"]], ...] = (alpha_p + alpha_n2o) * np.log(co2/co2_pi) * (1 + tropospheric_adjustment[:, [gas_index_mapping["CO2"]], ...])
+    erf_out[:, :, :, [gas_index_mapping["CO2"]], :] = (alpha_p + alpha_n2o) * np.log(co2/co2_pi) * (1 + tropospheric_adjustment[:, :, :, [gas_index_mapping["CO2"]], :])
 
     # CH4
-    erf_out[:, [gas_index_mapping["CH4"]], ...] = (
+    erf_out[:, :, :, [gas_index_mapping["CH4"]], :] = (
         (a3*np.sqrt(ch4) + b3*np.sqrt(n2o) + d3) *
         (np.sqrt(ch4) - np.sqrt(ch4_pi))
-    )  * (1 + tropospheric_adjustment[:, [gas_index_mapping["CH4"]], ...])
+    )  * (1 + tropospheric_adjustment[:, :, :, [gas_index_mapping["CH4"]], :])
 
     # N2O
-    erf_out[:, [gas_index_mapping["N2O"]], ...] = (
+    erf_out[:, :, :, [gas_index_mapping["N2O"]], :] = (
         (a2*np.sqrt(co2) + b2*np.sqrt(n2o) + c2*np.sqrt(ch4) + d2) *
         (np.sqrt(n2o) - np.sqrt(n2o_pi))
-    )  * (1 + tropospheric_adjustment[:, [gas_index_mapping["N2O"]], ...])
+    )  * (1 + tropospheric_adjustment[:, :, :, [gas_index_mapping["N2O"]], :])
 
     # Then, linear forcing for other gases
     minor_gas_index = list(range(concentration.shape[SPECIES_AXIS]))
     for major_gas in ['CO2', 'CH4', 'N2O']:
         minor_gas_index.remove(gas_index_mapping[major_gas])
     if len(minor_gas_index) > 0:
-        erf_out[:, minor_gas_index, ...] = (
-            (concentration[:, minor_gas_index, ...] - pre_industrial_concentration[:, minor_gas_index, ...])
-            * radiative_efficiency[:, minor_gas_index, ...] * 0.001
-        ) * (1 + tropospheric_adjustment[:, minor_gas_index, ...])
+        erf_out[:, :, :, minor_gas_index, :] = (
+            (concentration[:, :, :, minor_gas_index, :] - pre_industrial_concentration[:, :, :, minor_gas_index, :])
+            * radiative_efficiency[:, :, :, minor_gas_index, :] * 0.001
+        ) * (1 + tropospheric_adjustment[:, :, :, minor_gas_index, :])
 
     return erf_out
 
