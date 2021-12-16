@@ -69,7 +69,7 @@ def calculate_alpha(
         GtC cumulative emissions since pre-industrial.
     airborne_emissions : ndarray
         GtC total emissions remaining in the atmosphere.
-    temperature : float
+    temperature : ndarray or float
         K temperature anomaly since pre-industrial.
     iirf_0 : ndarray
         pre-industrial time-integrated airborne fraction.
@@ -105,5 +105,6 @@ def calculate_alpha(
     iirf = iirf_0 + iirf_cumulative * (cumulative_emissions-airborne_emissions) + iirf_temperature * temperature + iirf_airborne * airborne_emissions
     iirf = (iirf>iirf_max) * iirf_max + iirf * (iirf<iirf_max)
     alpha = g0 * np.exp(iirf / g1)
+    print(alpha[0, 0, :, :, 0])
 
     return alpha
