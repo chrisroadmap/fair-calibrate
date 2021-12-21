@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.linalg
+import scipy.stats
 
 from .defaults import n_temperature_boxes
 
@@ -92,8 +93,9 @@ class EnergyBalanceModel:
         self.gamma_autocorrelation = kwargs.get('gamma_autocorrelation', 2)
         self.seed = kwargs.get('seed', None)
         self.temperature = kwargs.get('temperature', np.zeros((1, n_temperature_boxes)))
-        #self.eb_matrix = self._eb_matrix()
-        self.nmatrix = n_temperature_boxes + self.stochastic_run
+        self.n_temperature_boxes = kwargs.get('n_temperature_boxes', 3)  # raise error if this differs from the size of ocean_heat_capacity?
+        self.n_timesteps = kwargs.get('n_timesteps', 1)
+        self.nmatrix = self.n_temperature_boxes + self.stochastic_run
 
 
     def _eb_matrix(self):
@@ -129,7 +131,7 @@ class EnergyBalanceModel:
 
         # Prepend eb_matrix with stochastic terms if this is a stochastic run: Cummins et al. (2020) eqs. 13 and 14
         if self.stochastic_run:
-            eb_matrix = np.insert(eb_matrix, 0, np.zeros(n_temperature_boxes), axis=0)
+            eb_matrix = np.insert(eb_matrix, 0, np.zeros(self.n_temperature_boxes), axis=0)
             prepend_col = np.zeros(self.nmatrix)
             prepend_col[0] = -self.gamma_autocorrelation
             prepend_col[1] = 1/self.ocean_heat_capacity[0]
@@ -145,16 +147,10 @@ class EnergyBalanceModel:
 
     def _forcing_vector(self):
         # Define the forcing vector
-        forcing_vector = np.array([1/self.ocean_heat_capacity[0], 0, 0])
-
-        # Prepend eb_matrix with stochastic terms if this is a stochastic run: Cummins et al. (2020) eqs. 13 and 14
-        eb_matrix = self._eb_matrix()
-        if self.stochastic_run:
-            eb_matrix = np.insert(eb_matrix, 0, np.zeros(n_temperature_boxes), axis=0)
-            prepend_col = np.zeros(self.nmatrix)
-            prepend_col[0] = -self.gamma_autocorrelation
-            prepend_col[1] = 1/self.ocean_heat_capacity[0]
-            eb_matrix = np.insert(eb_matrix, 0, prepend_col, axis=1)
+        if not self.stochastic_run:
+            forcing_vector = np.zeros(self.n_temperature_boxes)
+            forcing_vector[0] = 1/self.ocean_heat_capacity[0]
+        else:
             forcing_vector = np.zeros(self.nmatrix)
             forcing_vector[0] = self.gamma_autocorrelation
         return forcing_vector
@@ -164,6 +160,31 @@ class EnergyBalanceModel:
     def forcing_vector_d(self):
         return scipy.linalg.solve(self._eb_matrix(), (self.eb_matrix_d - np.identity(self.nmatrix)) @ self._forcing_vector())
 
+
+    @property
+    def stochastic_d(self):
+        # define stochastic matrix
+        _stochastic_d = np.zeros((self.n_timesteps, self.nmatrix))
+
+        # stochastic stuff
+        if self.stochastic_run:
+            eb_matrix = self._eb_matrix()
+            q_mat = np.zeros((self.nmatrix, self.nmatrix))
+            q_mat[0,0] = self.sigma_eta**2
+            q_mat[1,1] = (self.sigma_xi/self.ocean_heat_capacity[0])**2
+            ## use Van Loan (1978) to compute the matrix exponential
+            h_mat = np.zeros((self.nmatrix*2, self.nmatrix*2))
+            h_mat[:self.nmatrix,:self.nmatrix] = -eb_matrix
+            h_mat[:self.nmatrix,self.nmatrix:] = q_mat
+            h_mat[self.nmatrix:,self.nmatrix:] = eb_matrix.T
+            g_mat = scipy.linalg.expm(h_mat)
+            q_mat_d = g_mat[self.nmatrix:,self.nmatrix:].T @ g_mat[:self.nmatrix,self.nmatrix:]
+            q_mat_d = q_mat_d.astype(np.float64)
+            _stochastic_d = scipy.stats.multivariate_normal.rvs(
+                size=self.n_timesteps, mean=np.zeros(self.nmatrix), cov=q_mat_d, random_state=self.seed
+            )
+
+        return _stochastic_d
 
     def impulse_response(self):
         """Converts the energy balance to impulse response."""
@@ -221,28 +242,28 @@ class EnergyBalanceModel:
         forcing_vector_d = scipy.linalg.solve(eb_matrix, (eb_matrix_d - np.identity(self.nmatrix)) @ forcing_vector)
 
         # define stochastic matrix
-        stochastic_d = np.zeros((n_timesteps, self.nmatrix))
+        stochastic_d = self.stochastic_d()#np.zeros((n_timesteps, self.nmatrix))
 
-        # stochastic stuff
-        if self.stochastic_run:
-            q_mat = np.zeros((self.nmatrix, self.nmatrix))
-            q_mat[0,0] = self.sigma_eta**2
-            q_mat[1,1] = (self.sigma_xi/self.ocean_heat_capacity[0])**2
-            ## use Van Loan (1978) to compute the matrix exponential
-            h_mat = np.zeros((self.nmatrix*2, self.nmatrix*2))
-            h_mat[:self.nmatrix,:self.nmatrix] = -eb_matrix
-            h_mat[:self.nmatrix,self.nmatrix:] = q_mat
-            h_mat[self.nmatrix:,self.nmatrix:] = eb_matrix.T
-            g_mat = scipy.linalg.expm(h_mat)
-            q_mat_d = g_mat[self.nmatrix:,self.nmatrix:].T @ g_mat[:self.nmatrix,self.nmatrix:]
-            q_mat_d = q_mat_d.astype(np.float64)
-            stochastic_d = scipy.stats.multivariate_normal.rvs(
-                size=n_timesteps, mean=np.zeros(self.nmatrix), cov=q_mat_d, random_state=self.seed
-            )
+        # # stochastic stuff
+        # if self.stochastic_run:
+        #     q_mat = np.zeros((self.nmatrix, self.nmatrix))
+        #     q_mat[0,0] = self.sigma_eta**2
+        #     q_mat[1,1] = (self.sigma_xi/self.ocean_heat_capacity[0])**2
+        #     ## use Van Loan (1978) to compute the matrix exponential
+        #     h_mat = np.zeros((self.nmatrix*2, self.nmatrix*2))
+        #     h_mat[:self.nmatrix,:self.nmatrix] = -eb_matrix
+        #     h_mat[:self.nmatrix,self.nmatrix:] = q_mat
+        #     h_mat[self.nmatrix:,self.nmatrix:] = eb_matrix.T
+        #     g_mat = scipy.linalg.expm(h_mat)
+        #     q_mat_d = g_mat[self.nmatrix:,self.nmatrix:].T @ g_mat[:self.nmatrix,self.nmatrix:]
+        #     q_mat_d = q_mat_d.astype(np.float64)
+        #     stochastic_d = scipy.stats.multivariate_normal.rvs(
+        #         size=n_timesteps, mean=np.zeros(self.nmatrix), cov=q_mat_d, random_state=self.seed
+        #     )
 
-        solution = np.zeros((n_timesteps, self.nmatrix))
+        solution = np.zeros((self.n_timesteps, self.nmatrix))
         solution[0, :] = self.temperature[0, :]
-        for i in range(1, n_timesteps):
+        for i in range(1, self.n_timesteps):
             solution[i, :] = eb_matrix_d @ solution[i-1, :] + forcing_vector_d * self.forcing[i-1] + stochastic_d[i-1, :]
 
         if self.stochastic_run:
