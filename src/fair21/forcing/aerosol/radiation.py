@@ -1,46 +1,49 @@
 import numpy as np
 
-from ...defaults.aerosol import radiative_efficiency
 
 def linear(
     emissions,
     pre_industrial_emissions,
-    radiative_efficiency=radiative_efficiency["AR6"]
+    tropospheric_adjustment,
+    radiative_efficiency,
+    aerosol_index_mapping,
 ):
     """
     Calculate effective radiative forcing from aerosol-radiation interactions.
 
     Inputs
     ------
-    emissions : dict of `np.ndarray` or float
+    emissions : ndarray
         input emissions
-    pre_industrial_emissions : dict of float
+    pre_industrial_emissions : ndarray
         pre-industrial emissions
-    radiative_efficiency : dict of float
-        radiative efficiency of each species.
+    tropospheric_adjustment : ndarray
+        conversion factor from radiative forcing to effective radiative forcing.
+    radiative_efficiency : ndarray
+        radiative efficiency (W m-2 (emission_unit yr-1)-1) of each species.
+    aerosol_index_mapping : dict
+        provides a mapping of which aerosol species corresponds to which array
+        index along the SPECIES_AXIS.
 
     Returns
     -------
-    erf_ari : dict
-        ERF from aerosol radiation interactions from each component.
+    effective_radiative_forcing : ndarray
+        effective radiative forcing (W/m2) from greenhouse gases
+
+    Notes
+    -----
+    Where array input is taken, the arrays always have the dimensions of
+    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
+    retain the singleton dimension in order to preserve clarity of
+    calculation and speed.
     """
 
-    effective_radiative_forcing = {}
+    ari_index = list(aerosol_index_mapping.values())
+    if len(ari_index) > 0:
+        erf_out = np.ones((emissions.shape[0], emissions.shape[1], emissions.shape[2], len(ari_index), 0))
+        erf_out = (
+            (emissions[:, :, :, ari_index, :] - pre_industrial_emissions[:, :, :, ari_index, :])
+            * radiative_efficiency[:, :, :, ari_index, :]
+        ) * (1 + tropospheric_adjustment[:, :, :, ari_index, :])
 
-    species = ['Sulfur', 'BC', 'OC', 'NH3']
-    for specie in species:
-        effective_radiative_forcing['Aerosol|Aerosol-radiation interactions|{}'.format(specie)] = (
-            radiative_efficiency[specie] *
-            (emissions[specie] - pre_industrial_emissions[specie])
-        )
-
-    # needs to be in a constants module
-    for ispecie, specie in enumerate(species):
-        if ispecie==0:
-            effective_radiative_forcing['Aerosol|Aerosol-radiation interactions'] = np.zeros_like(emissions[specie])
-        effective_radiative_forcing['Aerosol|Aerosol-radiation interactions'] = (
-            effective_radiative_forcing['Aerosol|Aerosol-radiation interactions'] +
-            effective_radiative_forcing['Aerosol|Aerosol-radiation interactions|{}'.format(specie)]
-        )
-
-    return effective_radiative_forcing
+    return erf_out
