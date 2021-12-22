@@ -28,7 +28,7 @@ def linear(
     Returns
     -------
     effective_radiative_forcing : ndarray
-        effective radiative forcing (W/m2) from greenhouse gases
+        effective radiative forcing (W/m2) from aerosol-radiation interactions
 
     Notes
     -----
