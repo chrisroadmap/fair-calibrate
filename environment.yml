@@ -5,7 +5,7 @@ channels:
   - defaults
 dependencies:
   - python=3.7
-  - climateforcing
+  - climateforcing=0.2.3
   - jupyter
   - line_profiler
   - matplotlib
