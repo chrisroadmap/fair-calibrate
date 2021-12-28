@@ -54,12 +54,6 @@ class IIRF():
                 * np.asarray(self.partition_fraction)
             )
 
-iirf = IIRF(29, 0, 0.003, 4)
-print(iirf)
-
-iirf2 = IIRF(lifetime=27, partition_fraction=(0.3, 0.2, 0.1, 0.4))
-print(iirf2)
-
 co2_iirf = IIRF(lifetime=[1e9, 394, 36, 4], partition_fraction=[0.2173,0.2240,0.2824,0.2763])
 print(co2_iirf)
 
