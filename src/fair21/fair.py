@@ -4,6 +4,27 @@ import typing
 import numpy as np
 
 
+# each Scenario will contain a list of Species
+# each Config will contain settings, as well as options relating to each Species
+# FAIR can contain one or more Scenarios and one or more Configs
+
+class Scenario():
+    pass
+
+
+class Config():
+    pass
+
+
+class FAIR():
+    def __init__(self, scenarios: typing.List[Scenario], configs: typing.List[Config]):
+        self.scenarios = scenarios
+        self.configs = configs
+
+fair=FAIR(scenarios=None, configs=None)
+print(fair)
+
+
 @dataclass
 class Species():
     name: str
@@ -100,7 +121,7 @@ print(co2_config)
 print()
 print()
 
-co2_emissions = Emissions(co2_species, np.arange(10), 0)
+co2_emissions = Emissions(co2_species, np.arange(50), 0)
 print(co2_emissions)
 
 
