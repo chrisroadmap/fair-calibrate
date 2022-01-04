@@ -30,6 +30,9 @@ class ScenarioLengthMismatchError(Exception):
 class TimeNotDefinedError(Exception):
     pass
 
+class TimeNotIterableError(Exception):
+    pass
+
 class UndefinedSpeciesError(Exception):
     pass
 
