@@ -27,9 +27,6 @@ class PartitionFractionError(Exception):
 class ScenarioLengthMismatchError(Exception):
     pass
 
-class TimeNotDefinedError(Exception):
-    pass
-
 class TimeNotIterableError(Exception):
     pass
 
@@ -37,4 +34,7 @@ class UndefinedSpeciesError(Exception):
     pass
 
 class UnknownRunModeError(Exception):
+    pass
+
+class UnexpectedInputError(Exception):
     pass

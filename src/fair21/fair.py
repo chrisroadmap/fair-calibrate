@@ -5,6 +5,10 @@ import typing
 
 import numpy as np
 
+from exceptions import (
+    MissingInputError,
+    UnexpectedInputError
+)
 
 # each Scenario will contain a list of Species
 # each Config will contain settings, as well as options relating to each Species
@@ -12,10 +16,17 @@ import numpy as np
 
 IIRF_HORIZON = 100
 
+@dataclass
+class Emissions():
+    emissions: Iterable=None
+    baseline: float=0
+    natural_emissions_adjustment: float=0
+
 
 @dataclass
-class Species():
-    name: str
+class Concentration():
+    concentration: typing.Union[tuple, list, np.ndarray]
+    baseline: float=0
 
 
 @dataclass
@@ -24,65 +35,6 @@ class IIRF():
     iirf_airborne: float=0
     iirf_cumulative: float=0
     iirf_temperature: float=0
-
-
-@dataclass
-class Emissions():
-    species: Species
-    emissions: Iterable=None
-    baseline: float=0
-    natural_emissions_adjustment: float=0
-
-    def __post_init__(self):
-        if not isinstance(self.species, Species):
-            raise ValueError(f"{self.species} is not of type Species")
-        self.emissions = np.asarray(self.emissions)
-
-
-@dataclass
-class Concentration():
-    species: Species
-    concentration: typing.Union[tuple, list, np.ndarray]
-    baseline: float=0
-
-
-@dataclass
-class Scenario():
-    emissions: typing.List[Emissions]
-
-
-co2 = Species(name="CO2")
-ch4 = Species("CH4")
-so2 = Species("Sulfur")
-
-co2_e1 = Emissions(co2, np.arange(50))
-ch4_e1 = Emissions(ch4, np.ones(50)*200)
-co2_e2 = Emissions(co2, np.arange(50)*2)
-ch4_e2 = Emissions(ch4, np.ones(50)*100)
-co2_e3 = Emissions(co2, np.ones(50)*10)
-ch4_e3 = Emissions(ch4, np.zeros(50))
-so2_e  = Emissions(so2, np.ones(50)*100)
-
-scen1 = Scenario((co2_e1, ch4_e1, so2_e))
-scen2 = Scenario((co2_e2, ch4_e2, so2_e))
-scen3 = Scenario((co2_e3, ch4_e3, so2_e))
-
-
-@dataclass
-class ClimateResponse():
-    ocean_heat_capacity: typing.Union[Iterable, float]
-    ocean_heat_transfer: typing.Union[Iterable, float]
-    deep_ocean_efficacy: float=1
-    stochastic_run: bool=False
-    sigma_xi: float=None
-    sigma_eta: float=None
-    gamma_autocorrelation: float=None
-    seed: int=None
-
-    # type checking will take too long
-    def __post_init__(self):
-        self.ocean_heat_capacity=np.asarray(self.ocean_heat_capacity)
-        self.ocean_heat_transfer=np.asarray(self.ocean_heat_transfer)
 
 
 @dataclass
@@ -122,13 +74,58 @@ class GasConfig():
             self.iirf=IIRF(iirf_0, 0, 0, 0)
 
 
+
+@dataclass
+class Forcing():
+    forcing: typing.Union[tuple, list, np.ndarray]
+    tropospheric_adjustment: float=0
+    scale: float=1
+    efficacy: float=1
+
+
+@dataclass
+class GreenhouseGas():
+    name: str
+    emissions: Emissions=None
+    concentration: Concentration=None
+    gas_config: GasConfig=None
+    forcing: Forcing=None
+
+
 @dataclass
 class AerosolConfig():
-    species: Species
     erfari_emissions_to_forcing: float
-    scale: float=1
-    tropospheric_adjustment: float=0
-    efficacy: float=1
+
+
+@dataclass
+class Aerosol():
+    name: str
+    emissions: Emissions=None
+    aerosol_config: AerosolConfig=None
+    forcing: Forcing=None
+
+
+@dataclass
+class Scenario():
+    emissions: typing.List[Emissions]
+
+
+@dataclass
+class ClimateResponse():
+    ocean_heat_capacity: typing.Union[Iterable, float]
+    ocean_heat_transfer: typing.Union[Iterable, float]
+    deep_ocean_efficacy: float=1
+    stochastic_run: bool=False
+    sigma_xi: float=None
+    sigma_eta: float=None
+    gamma_autocorrelation: float=None
+    seed: int=None
+
+    # type checking will take too long
+    def __post_init__(self):
+        self.ocean_heat_capacity=np.asarray(self.ocean_heat_capacity)
+        self.ocean_heat_transfer=np.asarray(self.ocean_heat_transfer)
+
 
 
 @dataclass
@@ -141,89 +138,50 @@ class Config():
         if not hasattr(self.species_config, "__iter__"):
             self.species_config = [self.species_config]
 
-
-
-cr1 = ClimateResponse(ocean_heat_capacity = (5, 20, 100), ocean_heat_transfer=(1,2,1), deep_ocean_efficacy=1.29)
-cr2 = ClimateResponse(ocean_heat_capacity = (2, 10, 80), ocean_heat_transfer=(1,2,3))
-
 # from default_configs import CO2, CH4, ...
 
 #@dataclass
 #class CO2(GasConfig):
 #    species: Species=Species("CO2")
 #    ... all the rest
-
-
-co2_cfg1 = GasConfig(
-    co2,
-    lifetime=[1e9, 394, 36, 4.3],
-    partition_fraction=[0.25, 0.25, 0.25, 0.25],
-    radiative_efficiency=1.33e-5,
-    molecular_weight=44.009,
-    scale=1.04
-)
-
-co2_cfg2 = GasConfig(
-    co2,
-    lifetime=[1e9, 394, 36, 4.3],
-    partition_fraction=[0.25, 0.25, 0.25, 0.25],
-    radiative_efficiency=1.33e-5,
-    molecular_weight=44.009,
-    iirf=IIRF(29, 0.000819, 0.00846, 4),
-    scale=0.99
-)
-co2_cfg1.radiative_efficiency=1.6e-5
-
-ch4_cfg1 = GasConfig(
-    ch4,
-    lifetime=8.25,
-    partition_fraction=1,
-    molecular_weight=16.043,
-    iirf=IIRF(8.25, 0.00032, 0, -0.3)
-)
-ch4_cfg2 = copy.copy(ch4_cfg1)
-ch4_cfg2.scale=0.86
-
-
-so2_cfg = AerosolConfig(so2, erfari_emissions_to_forcing=-0.00362)
-
-config1 = Config(cr1, (co2_cfg1, ch4_cfg1, so2_cfg))
-config2 = Config(cr2, (co2_cfg2, ch4_cfg2, so2_cfg))
-
-print(config1)
-print()
-print(config2)
-
-print()
-
-
-
-# def _check_scenarios(scenarios):
-#     scenarios = list(self.scenarios.keys())
-# species_included = self.scenarios[scenarios[0]].species.keys()
-# for scenario in scenarios[1:]:
-#     if self.scenarios[scenario].species.keys() != species_included:
-#         raise ValueError('put a better exception here')
+def verify_same_species(scenarios):
+    """Checks to see if all supplied scenarios include the same species."""
+    for iscen, scenario in enumerate(scenarios):
+        if iscen==0:
+            species_included = scenarios[0]
+            print(species_included)
+        if scenarios[iscen] != species_included:
+            raise ValueError('put a better exception here')
 
 
 class FAIR():
     def __init__(
         self,
-        scenarios: typing.List[Scenario],
-        configs: typing.List[Config],
+        scenarios: typing.List[Scenario]=None,
+        configs: typing.List[Config]=None,
         time: np.ndarray=None
     ):
-        self.scenarios = scenarios
+        print()
+        print(scenarios[2])
+        print()
+        if isinstance(scenarios, list):
+            verify_same_species(scenarios)
+            self.scenarios = scenarios
+        elif scenarios is None:
+            self.scenarios = []
+        else:
+            raise TypeError("scenarios should be a list of Scenarios or None")
+
+        if not isinstance(configs, list) and configs is not None:
+            raise TypeError("configs should be a list of Configs or None")
         self.configs = configs
         if time is not None:
             self.define_time(time)
 
-        #_check_scenarios(self.scenarios)
-
 
     def add_scenario(self, scenario: Scenario):
         self.scenarios.append(Scenario)
-
+        #verify_same_species(scenarios)
 
     def add_config(self, config: Config):
         self.configs.append(Config)
@@ -236,14 +194,26 @@ class FAIR():
 
 
     def _pre_run_checks(self):
-        # Check if time vector is defined
-        if not hasattr(self, 'time'):
-            raise TimeNotDefinedError("Time vector is not defined")
-        # Check if at least one scenario is defined
-        if not hasattr(self, 'scenarios'):
-            raise ScenariosNotDefinedError("Scenarios are not defined")
-        # if more than one scenario is defined, check they have the same species
-        if len(self.scenarios) > 1
+        # Check if necessary inputs are defined
+        for attr in ('scenarios', 'configs', 'time'):
+            if not hasattr(self, attr):
+                raise MissingInputError(
+                    f"{attr} was not provided when trying to run"
+                )
+        for iscen, scenario in enumerate(self.scenarios):
+            if not isinstance(scenario, Scenario):
+                raise TypeError(
+                    f"scenarios contains an element of type {type(scenario)} "
+                    f"where it should be a list of Scenario objects"
+                )
+        for config in self.configs:
+            if not isinstance(configs, Config):
+                raise TypeError(
+                    f"configs contains an element of type {type(config)} "
+                    f"where it should be a list of Config objects"
+                )
+                # check configs
+
         # # ensure all the scenarios contain the same species
         # if hasattr(self, 'scenarios'):
         #     if hasattr(self.scenarios, '__iter__') and len(self.scenarios) > 1:
@@ -381,23 +351,6 @@ class FAIR():
         self._fill_temperature()
 
 
-fair=FAIR(scenarios=(scen1, scen2, scen3), configs=(config1, config2))
-print(fair)
-
-
-
-
-
-
-
-
-
-@dataclass
-class Forcing():
-    species: Species
-    forcing: typing.Union[tuple, list, np.ndarray]
-    tropospheric_adjustment: float=0
-    scale: float=1
 
 
 
