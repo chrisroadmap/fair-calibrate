@@ -61,23 +61,27 @@ ch4_e2 = Emissions(ch4, np.ones(50)*100)
 co2_e3 = Emissions(co2, np.ones(50)*10)
 ch4_e3 = Emissions(ch4, np.zeros(50))
 so2_e  = Emissions(so2, np.ones(50)*100)
+co2_e5 = Emissions(co2, np.arange(10))
 
-scen1 = Scenario((co2_e1, ch4_e1, so2_e))
-scen2 = Scenario((co2_e2, ch4_e2, so2_e))
-scen3 = Scenario((co2_e3, ch4_e3, so2_e))
-scen4 = Scenario((co2_e3))
+scen1 = Scenario([co2_e1, ch4_e1, so2_e])
+scen2 = Scenario([co2_e2, ch4_e2, so2_e])
+scen3 = Scenario([co2_e3, ch4_e3, so2_e])
+scen4 = Scenario([co2_e3])
+scen5 = Scenario([co2_e5, ch4_e3, so2_e])
 
-##print(co2_e1.emissions)
-#print(co2_e1)
 print()
 
-fair = FAIR(scenarios=[scen1, scen2, scen4], configs=[config1, config2], time=np.arange(10))
-#print(fair.scenarios)
-print()
+try:
+    fair = FAIR(scenarios=[scen1, scen2, scen4], configs=[config1, config2], time=np.arange(10))
+except (SpeciesMismatchError):
+    print("test passed")
 
+try:
+    fair = FAIR(scenarios=[scen1, scen2, scen5], configs=[config1, config2], time=np.arange(10))
+    print("test failed")
+except (TimeMismatchError):
+    print("test passed")
 
-
-# should give error
 try:
     fair=FAIR()
     fair.run()
@@ -86,15 +90,16 @@ except MissingInputError:
 
 
 try:
-    fair=FAIR(scenarios=(scen1, scen2, 'scen3'), configs=(config1, config2), time=np.arange(10))
-    fair.run()
+    fair=FAIR(scenarios=[scen1, scen2, 'scen3'], configs=[config1, config2], time=np.arange(10))
 except TypeError:
     print ("test passed")
 
-try:
-    fair=FAIR(scenarios=(scen1, scen2, scen3), configs=(config1, 'config2'), time=np.arange(10))
-    fair.run()
-except TypeError:
-    print ("test passed")
+#try:
+fair=FAIR(scenarios=[scen1, scen2, scen3], configs=[config1, 'config2'], time=np.arange(10))
+#    fair.run()
+#except TypeError:
+#    print ("test passed")
+
+# next: get it to fail if time doesn't match emissions supplied.
 
 print()

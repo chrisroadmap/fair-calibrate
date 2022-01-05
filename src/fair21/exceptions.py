@@ -27,6 +27,12 @@ class PartitionFractionError(Exception):
 class ScenarioLengthMismatchError(Exception):
     pass
 
+class SpeciesMismatchError(Exception):
+    pass
+
+class TimeMismatchError(Exception):
+    pass
+
 class TimeNotIterableError(Exception):
     pass
 

@@ -7,7 +7,9 @@ import numpy as np
 
 from exceptions import (
     MissingInputError,
-    UnexpectedInputError
+    UnexpectedInputError,
+    SpeciesMismatchError,
+    TimeMismatchError
 )
 
 # each Scenario will contain a list of Species
@@ -17,16 +19,32 @@ from exceptions import (
 IIRF_HORIZON = 100
 
 @dataclass
+class Species():
+    name: str
+
+
+@dataclass
 class Emissions():
-    emissions: Iterable=None
+    species: Species
+    emissions: np.ndarray=None
     baseline: float=0
     natural_emissions_adjustment: float=0
 
 
 @dataclass
 class Concentration():
-    concentration: typing.Union[tuple, list, np.ndarray]
+    species: Species
+    concentration: np.ndarray=None
     baseline: float=0
+
+
+@dataclass
+class Forcing():
+    species: Species
+    forcing: np.ndarray=None
+    tropospheric_adjustment: float=0
+    scale: float=1
+    efficacy: float=1
 
 
 @dataclass
@@ -74,32 +92,15 @@ class GasConfig():
             self.iirf=IIRF(iirf_0, 0, 0, 0)
 
 
-
-@dataclass
-class Forcing():
-    forcing: typing.Union[tuple, list, np.ndarray]
-    tropospheric_adjustment: float=0
-    scale: float=1
-    efficacy: float=1
-
-
-@dataclass
-class GreenhouseGas():
-    name: str
-    emissions: Emissions=None
-    concentration: Concentration=None
-    gas_config: GasConfig=None
-    forcing: Forcing=None
-
-
 @dataclass
 class AerosolConfig():
+    species: Species
     erfari_emissions_to_forcing: float
 
 
 @dataclass
 class Aerosol():
-    name: str
+    species: Species
     emissions: Emissions=None
     aerosol_config: AerosolConfig=None
     forcing: Forcing=None
@@ -107,8 +108,11 @@ class Aerosol():
 
 @dataclass
 class Scenario():
-    emissions: typing.List[Emissions]
+    list_of_species: typing.List[Species]
 
+    def __post_init__(self):
+        if not isinstance(self.list_of_species, list):
+            raise TypeError('list_of_species argument passed to Scenario must be a list of Species')
 
 @dataclass
 class ClimateResponse():
@@ -144,14 +148,45 @@ class Config():
 #class CO2(GasConfig):
 #    species: Species=Species("CO2")
 #    ... all the rest
-def verify_same_species(scenarios):
-    """Checks to see if all supplied scenarios include the same species."""
+def verify_scenario_consistency(scenarios):
+    """Checks to see if all supplied scenarios are self-consistent."""
+    check_type_of_elements(scenarios, Scenario, name="scenarios")
+    n_species_first_scenario = len(scenarios[0].list_of_species)
     for iscen, scenario in enumerate(scenarios):
         if iscen==0:
-            species_included = scenarios[0]
-            print(species_included)
-        if scenarios[iscen] != species_included:
-            raise ValueError('put a better exception here')
+            species_included_first_scenario = []
+# TODO: generalise to concentration, forcing
+            n_timesteps_first_scenario_species = len(scenarios[0].list_of_species[0].emissions)
+            for ispec in range(n_species_first_scenario):
+                species_included_first_scenario.append(scenarios[0].list_of_species[ispec].species)
+                if len(scenarios[0].list_of_species[ispec].emissions) != n_timesteps_first_scenario_species:
+                    raise TimeMismatchError(
+                        f"Each Species in each Scenario must have the same "
+                        f"number of timesteps for their emissions, concentration "
+                        f"or forcing"
+                    )
+        species_included = []
+        n_species = len(scenarios[iscen].list_of_species)
+        for ispec in range(n_species):
+            species_included.append(scenarios[iscen].list_of_species[ispec].species)
+        if species_included != species_included_first_scenario:
+            raise SpeciesMismatchError(
+                f"Each Scenario must contain the same list of Species, in the "
+                f"same order")
+
+
+def verify_config_consistency(configs):
+    """Checks to see if all supplied configs are self-consistent."""
+    check_type_of_elements(configs, Config, name="configs")
+
+
+def check_type_of_elements(things_to_check, desired_type, name='the list you supplied'):
+    for thing in things_to_check:
+        if not isinstance(thing, desired_type):
+            raise TypeError(
+                f"{name} contains an element of type {type(thing)} "
+                f"where it should be a list of {desired_type} objects"
+            )
 
 
 class FAIR():
@@ -161,20 +196,22 @@ class FAIR():
         configs: typing.List[Config]=None,
         time: np.ndarray=None
     ):
-        print()
-        print(scenarios[2])
-        print()
         if isinstance(scenarios, list):
-            verify_same_species(scenarios)
+            verify_scenario_consistency(scenarios)
             self.scenarios = scenarios
         elif scenarios is None:
             self.scenarios = []
         else:
             raise TypeError("scenarios should be a list of Scenarios or None")
 
-        if not isinstance(configs, list) and configs is not None:
+        if isinstance(configs, list):
+            verify_config_consistency(configs)
+            self.configs = configs
+        elif configs is None:
+            self.configs = []
+        else:
             raise TypeError("configs should be a list of Configs or None")
-        self.configs = configs
+
         if time is not None:
             self.define_time(time)
 
@@ -200,24 +237,8 @@ class FAIR():
                 raise MissingInputError(
                     f"{attr} was not provided when trying to run"
                 )
-        for iscen, scenario in enumerate(self.scenarios):
-            if not isinstance(scenario, Scenario):
-                raise TypeError(
-                    f"scenarios contains an element of type {type(scenario)} "
-                    f"where it should be a list of Scenario objects"
-                )
-        for config in self.configs:
-            if not isinstance(configs, Config):
-                raise TypeError(
-                    f"configs contains an element of type {type(config)} "
-                    f"where it should be a list of Config objects"
-                )
-                # check configs
-
-        # # ensure all the scenarios contain the same species
-        # if hasattr(self, 'scenarios'):
-        #     if hasattr(self.scenarios, '__iter__') and len(self.scenarios) > 1:
-
+        check_type_of_elements(self.scenarios, Scenario, 'scenarios')
+        check_type_of_elements(self.configs, Config, 'configs')
 
 
     def run(self):
