@@ -1,6 +1,6 @@
 # Exceptions
 
-class DuplicatedSpeciesError(Exception):
+class DuplicationError(Exception):
     pass
 
 class ExternalForcingError(Exception):
@@ -43,4 +43,7 @@ class UnknownRunModeError(Exception):
     pass
 
 class UnexpectedInputError(Exception):
+    pass
+
+class WrongArrayShapeError(Exception):
     pass
