@@ -2,7 +2,7 @@ import numpy as np
 import scipy.linalg
 import scipy.stats
 
-from .defaults import n_temperature_boxes
+from exceptions import IncompatibleConfigError
 
 class EnergyBalanceModel:
     """Energy balance model that converts forcing to temperature.
@@ -92,8 +92,10 @@ class EnergyBalanceModel:
         self.sigma_xi = kwargs.get('sigma_xi', 0.5)
         self.gamma_autocorrelation = kwargs.get('gamma_autocorrelation', 2)
         self.seed = kwargs.get('seed', None)
-        self.temperature = kwargs.get('temperature', np.zeros((1, n_temperature_boxes)))
-        self.n_temperature_boxes = kwargs.get('n_temperature_boxes', 3)  # raise error if this differs from the size of ocean_heat_capacity?
+        self.n_temperature_boxes = len(self.ocean_heat_capacity)
+        if len(self.ocean_heat_transfer) != self.n_temperature_boxes:
+            raise IncompatibleConfigError("ocean_heat_capacity and ocean_heat_transfer must be arrays of the same shape.")
+        self.temperature = kwargs.get('temperature', np.zeros((1, self.n_temperature_boxes)))
         self.n_timesteps = kwargs.get('n_timesteps', 1)
         self.nmatrix = self.n_temperature_boxes + self.stochastic_run
 

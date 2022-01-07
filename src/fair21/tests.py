@@ -5,52 +5,49 @@ from fair import *
 cr1 = ClimateResponse(ocean_heat_capacity = (5, 20, 100), ocean_heat_transfer=(1,2,1), deep_ocean_efficacy=1.29)
 cr2 = ClimateResponse(ocean_heat_capacity = (2, 10, 80), ocean_heat_transfer=(1,2,3))
 
-co2 = Species(name="CO2", category=Category.GREENHOUSE_GAS)
-ch4 = Species("CH4", Category.GREENHOUSE_GAS)
+co2 = Species(name="CO2", category=Category.CO2)
+ch4 = Species("CH4", Category.CH4)
 so2 = Species("Sulfur", Category.AEROSOL)
 bc = Species("BC", Category.AEROSOL)
 aci = Species("Aerosol-Cloud Interactions", Category.AEROSOL_CLOUD_INTERACTIONS)
 
-co2_cfg1 = SpeciesConfig(
-    co2,
+co2_gasprop1 = GasProperties(
     lifetime=[1e9, 394, 36, 4.3],
     partition_fraction=[0.25, 0.25, 0.25, 0.25],
     radiative_efficiency=1.33e-5,
     molecular_weight=44.009,
-    scale=1.04
 )
+co2_forcprop1 = ForcingProperties(tropospheric_adjustment=0.04)
+co2_cfg1 = SpeciesConfig(co2, gas_properties=co2_gasprop1, forcing_properties=co2_forcprop1)
+print(co2_cfg1)
 
-co2_cfg2 = SpeciesConfig(
-    co2,
-    lifetime=[1e9, 394, 36, 4.3],
-    partition_fraction=[0.25, 0.25, 0.25, 0.25],
-    radiative_efficiency=1.33e-5,
-    molecular_weight=44.009,
-    iirf=IIRF(29, 0.000819, 0.00846, 4),
-    scale=0.99
-)
-co2_cfg1.radiative_efficiency=1.6e-5
+co2_gasprop2 = copy.copy(co2_gasprop1)
+co2_gasprop2.iirf=IIRF(29, 0.000819, 0.00846, 4)
+co2_forcprop2 = ForcingProperties(scale=0.99)
 
-ch4_cfg1 = SpeciesConfig(
-    ch4,
+co2_cfg2 = SpeciesConfig(co2, co2_gasprop2, co2_forcprop2)
+co2_cfg1.gas_properties.radiative_efficiency=1.6e-5
+
+ch4_gasprop1 = GasProperties(
     lifetime=8.25,
     partition_fraction=1,
     molecular_weight=16.043,
     iirf=IIRF(8.25, 0.00032, 0, -0.3)
 )
-ch4_cfg2 = copy.copy(ch4_cfg1)
-ch4_cfg2.scale=0.86
 
-so2_cfg = SpeciesConfig(so2, erfari_emissions_to_forcing=-0.00362)
-bc_cfg = SpeciesConfig(bc, erfari_emissions_to_forcing=0.0508)
-aci_cfg = SpeciesConfig(aci, erfaci_beta=2.09841432, erfaci_shape_bcoc=76.7, erfaci_shape_sulfur=260.34644166)
+ch4_cfg1 = SpeciesConfig(ch4, gas_properties=ch4_gasprop1)
+ch4_cfg2 = SpeciesConfig(ch4, gas_properties=ch4_gasprop1, forcing_properties=ForcingProperties(scale=0.86))
+
+so2_cfg = SpeciesConfig(so2, aerosol_properties=AerosolProperties(erfari_emissions_to_forcing=-0.00362))
+bc_cfg = SpeciesConfig(bc, aerosol_properties=AerosolProperties(erfari_emissions_to_forcing=0.0508))
+#aci_cfg = SpeciesConfig(aci, erfaci_beta=2.09841432, erfaci_shape_bcoc=76.7, erfaci_shape_sulfur=260.34644166)
 
 config1 = Config('UKESM', cr1, [co2_cfg1, ch4_cfg1, so2_cfg])
 config2 = Config('MIROC6', cr2, [co2_cfg2, ch4_cfg2, so2_cfg])
 config3 = Config('IPSL', cr1, [co2_cfg1, ch4_cfg1, bc_cfg])
 config4 = Config('GISS', cr2, [co2_cfg2, ch4_cfg2, bc_cfg])
 
-config7 = Config('NorESM', cr2, [co2_cfg2, ch4_cfg2, aci_cfg])
+#config7 = Config('NorESM', cr2, [co2_cfg2, ch4_cfg2, aci_cfg])
 
 # print(config1)
 # print()
@@ -135,7 +132,7 @@ try:
 except DuplicationError:
     print('test passed')
 
-fair = FAIR(scenarios=[scen7], configs=[config7])
+#fair = FAIR(scenarios=[scen7], configs=[config7])
 
 
 fair = FAIR(scenarios=[scen1, scen2, scen3], configs=[config1, config2], time=np.arange(50))
