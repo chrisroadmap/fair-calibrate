@@ -10,10 +10,11 @@ import numpy as np
 from energy_balance_model import EnergyBalanceModel
 from exceptions import (
     DuplicationError,
+    IncompatibleConfigError,
     MissingInputError,
-    UnexpectedInputError,
     SpeciesMismatchError,
     TimeMismatchError,
+    UnexpectedInputError,
     WrongArrayShapeError
 )
 
@@ -22,9 +23,12 @@ from exceptions import (
 # FAIR can contain one or more Scenarios and one or more Configs
 
 IIRF_HORIZON = 100
+iirf_max = 99.95
 M_ATMOS = 5.1352e18
 MOLWT_AIR = 28.97
 TIME_AXIS = 0
+SPECIES_AXIS = 3
+GAS_BOX_AXIS = 4
 
 class Category(Enum):
     """Types of Species encountered in climate scenarios."""
@@ -185,9 +189,9 @@ class ClimateResponse():
     ocean_heat_transfer: typing.Union[Iterable, float]
     deep_ocean_efficacy: float=1
     stochastic_run: bool=False
-    sigma_xi: float=None
-    sigma_eta: float=None
-    gamma_autocorrelation: float=None
+    sigma_xi: float=0.5
+    sigma_eta: float=0.5
+    gamma_autocorrelation: float=2.0
     seed: int=None
 
     def __post_init__(self):
@@ -362,6 +366,9 @@ def map_species_scenario_config(scenarios, configs):
     # now that we have a unique list of species, check for Categories for which
     # it makes no sense to duplicate
     no_dupes = [
+        Category.CO2,
+        Category.CH4,
+        Category.N2O,
         Category.OZONE,
         Category.AEROSOL_CLOUD_INTERACTIONS,
         Category.CONTRAILS,
@@ -370,6 +377,7 @@ def map_species_scenario_config(scenarios, configs):
         Category.SOLAR,
         Category.VOLCANIC
     ]
+
     running_total = {category: 0 for category in no_dupes}
     for species in species_included_first_config:
         if species.category in no_dupes:
@@ -379,6 +387,14 @@ def map_species_scenario_config(scenarios, configs):
                     f"The scenario contains more than one instance of "
                     f"{species.category}"
                 )
+    n_major_ghgs = running_total[Category.CO2] + running_total[Category.CH4] + running_total[Category.N2O]
+    if 0 < n_major_ghgs < 3: #TODO and emissions or concentration driven mode
+        raise IncompatibleConfigError(
+            f"Either all of CO2, CH4 and N2O must be given in a Scenario, or "
+            f"none, unless running purely forcing-driven. If you want to "
+            f"exclude the effect of one or two of these gases, consider setting "
+            f"emissions of these gases to zero."
+        )
     return species_included_first_config
 
 
@@ -397,6 +413,314 @@ def _make_time_deltas(time):
     time_bounds = np.concatenate(([time_lower_bound], time_inner_bounds, [time_upper_bound]))
     time_deltas = np.diff(time_bounds)
     return time_deltas
+
+
+def _make_ebm(configs):
+    eb_matrix_d = []
+    forcing_vector_d = []
+    stochastic_d = []
+    for iconf, config in enumerate(configs):
+        conf_clim = config.climate_response
+        ebm = EnergyBalanceModel(
+            ocean_heat_capacity=conf_clim.ocean_heat_capacity,
+            ocean_heat_transfer=conf_clim.ocean_heat_transfer,
+            deep_ocean_efficacy=conf_clim.deep_ocean_efficacy,
+            stochastic_run=conf_clim.stochastic_run,
+            sigma_eta=conf_clim.sigma_eta,
+            sigma_xi=conf_clim.sigma_xi,
+            gamma_autocorrelation=conf_clim.gamma_autocorrelation,
+            seed=conf_clim.seed,
+#            n_timesteps=n_timesteps,
+        )
+        eb_matrix_d.append(ebm.eb_matrix_d)
+        forcing_vector_d.append(ebm.forcing_vector_d)
+        stochastic_d.append(ebm.stochastic_d)
+    return eb_matrix_d, forcing_vector_d, stochastic_d
+
+
+def calculate_alpha(
+    cumulative_emissions,
+    airborne_emissions,
+    temperature,
+    iirf_0,
+    iirf_cumulative,
+    iirf_temperature,
+    iirf_airborne,
+    g0,
+    g1,
+    iirf_max = iirf_max,
+):
+    """
+    Calculate greenhouse-gas time constant scaling factor.
+
+    Parameters
+    ----------
+    cumulative_emissions : ndarray
+        GtC cumulative emissions since pre-industrial.
+    airborne_emissions : ndarray
+        GtC total emissions remaining in the atmosphere.
+    temperature : ndarray or float
+        K temperature anomaly since pre-industrial.
+    iirf_0 : ndarray
+        pre-industrial time-integrated airborne fraction.
+    iirf_cumulative : ndarray
+        sensitivity of time-integrated airborne fraction with atmospheric
+        carbon stock.
+    iirf_temperature : ndarray
+        sensitivity of time-integrated airborne fraction with temperature
+        anomaly.
+    iirf_airborne : ndarray
+        sensitivity of time-integrated airborne fraction with airborne
+        emissions.
+    g0 : ndarray
+        parameter for alpha TODO: description
+    g1 : ndarray
+        parameter for alpha TODO: description
+    iirf_max : float
+        maximum allowable value to time-integrated airborne fraction
+
+    Notes
+    -----
+    Where array input is taken, the arrays always have the dimensions of
+    (scenario, species, time, gas_box). Dimensionality can be 1, but we
+    retain the singleton dimension in order to preserve clarity of
+    calculation and speed.
+
+    Returns
+    -------
+    alpha : float
+        scaling factor for lifetimes
+    """
+
+    iirf = iirf_0 + iirf_cumulative * (cumulative_emissions-airborne_emissions) + iirf_temperature * temperature + iirf_airborne * airborne_emissions
+    iirf = (iirf>iirf_max) * iirf_max + iirf * (iirf<iirf_max)
+    alpha = g0 * np.exp(iirf / g1)
+
+    return alpha
+
+def step_concentration(
+    emissions,
+    gas_boxes_old,
+    airborne_emissions_old,
+    burden_per_emission,
+    lifetime,
+    alpha_lifetime,
+    partition_fraction,
+    pre_industrial_concentration,
+    timestep=1,
+    natural_emissions_adjustment=0,
+):
+    """
+    Calculates concentrations from emissions of any greenhouse gas.
+
+    Parameters
+    ----------
+    emissions : ndarray
+        emissions rate (emissions unit per year) in timestep.
+    gas_boxes_old : ndarray
+        the greenhouse gas atmospheric burden in each lifetime box at the end of
+        the previous timestep.
+    airborne_emissions_old : ndarray
+        The total airborne emissions at the beginning of the timestep. This is
+        the concentrations above the pre-industrial control. It is also the sum
+        of gas_boxes_old if this is an array.
+    burden_per_emission : ndarray
+        how much atmospheric concentrations grow (e.g. in ppm) per unit (e.g.
+        GtCO2) emission.
+    lifetime : ndarray
+        atmospheric burden lifetime of greenhouse gas (yr). For multiple
+        lifetimes gases, it is the lifetime of each box.
+    alpha_lifetime : ndarray
+        scaling factor for `lifetime`. Necessary where there is a state-
+        dependent feedback.
+    partition_fraction : ndarray
+        the partition fraction of emissions into each gas box. If array, the
+        entries should be individually non-negative and sum to one.
+    pre_industrial_concentration : ndarray
+        pre-industrial concentration of gas(es) in question.
+    timestep : float, default=1
+        emissions timestep in years.
+    natural_emissions_adjustment : ndarray or float, default=0
+        Amount to adjust emissions by for natural emissions given in the total
+        in emissions files.
+
+    Notes
+    -----
+    Emissions are given in time intervals and concentrations are also reported
+    on the same time intervals: the airborne_emissions values are on time
+    boundaries and these are averaged before being returned.
+
+    Where array input is taken, the arrays always have the dimensions of
+    (scenario, species, time, gas_box). Dimensionality can be 1, but we
+    retain the singleton dimension in order to preserve clarity of
+    calculation and speed.
+
+    Returns
+    -------
+    concentration_out : ndarray
+        greenhouse gas concentrations at the centre of the timestep.
+    gas_boxes_new : ndarray
+        the greenhouse gas atmospheric burden in each lifetime box at the end of
+        the timestep.
+    airborne_emissions_new : ndarray
+        airborne emissions (concentrations above pre-industrial control level)
+        at the end of the timestep.
+    """
+
+    decay_rate = timestep/(alpha_lifetime * lifetime)
+    decay_factor = np.exp(-decay_rate)
+
+    gas_boxes_new = (
+        partition_fraction *
+        (emissions-natural_emissions_adjustment) *
+        1 / decay_rate *
+        (1 - decay_factor) * timestep + gas_boxes_old * decay_factor
+    )
+    airborne_emissions_new = np.sum(gas_boxes_new, axis=GAS_BOX_AXIS, keepdims=True)
+    concentration_out = (
+        pre_industrial_concentration +
+        burden_per_emission * (
+            airborne_emissions_new + airborne_emissions_old
+        ) / 2
+    )
+
+    return concentration_out, gas_boxes_new, airborne_emissions_new
+
+
+def ghg(
+    concentration,
+    pre_industrial_concentration,
+    tropospheric_adjustment,
+    radiative_efficiency,
+    gas_index_mapping,
+    a1 = -2.4785e-07,
+    b1 = 0.00075906,
+    c1 = -0.0021492,
+    d1 = 5.2488,
+    a2 = -0.00034197,
+    b2 = 0.00025455,
+    c2 = -0.00024357,
+    d2 = 0.12173,
+    a3 = -8.9603e-05,
+    b3 = -0.00012462,
+    d3 = 0.045194,
+    ):
+    """Greenhouse gas forcing from CO2, CH4 and N2O including band overlaps.
+
+    Modified Etminan relationship from Meinshausen et al. (2020)
+    https://gmd.copernicus.org/articles/13/3571/2020/
+    table 3
+
+    Parameters
+    ----------
+    concentration : ndarray
+        concentration of greenhouse gases. "CO2", "CH4" and "N2O" must be
+        included in units of [ppm, ppb, ppb]. Other GHGs are units of ppt.
+    pre_industrial_concentration : ndarray
+        pre-industrial concentration of the gases (see above).
+    tropospheric_adjustment : ndarray
+        conversion factor from radiative forcing to effective radiative forcing.
+    radiative_efficiency : ndarray
+        radiative efficiency to use for linear-forcing gases, in W m-2 ppb-1
+    gas_index_mapping : dict
+        provides a mapping of which gas corresponds to which array index along
+        the SPECIES_AXIS.
+    a1 : float, default=-2.4785e-07
+        fitting parameter (see Meinshausen et al. 2020)
+    b1 : float, default=0.00075906
+        fitting parameter (see Meinshausen et al. 2020)
+    c1 : float, default=-0.0021492
+        fitting parameter (see Meinshausen et al. 2020)
+    d1 : float, default=5.2488
+        fitting parameter (see Meinshausen et al. 2020)
+    a2 : float, default=-0.00034197
+        fitting parameter (see Meinshausen et al. 2020)
+    b2 : float, default=0.00025455
+        fitting parameter (see Meinshausen et al. 2020)
+    c2 : float, default=-0.00024357
+        fitting parameter (see Meinshausen et al. 2020)
+    d2 : float, default=0.12173
+        fitting parameter (see Meinshausen et al. 2020)
+    a3 : float, default=-8.9603e-05
+        fitting parameter (see Meinshausen et al. 2020)
+    b3 : float, default=-0.00012462
+        fitting parameter (see Meinshausen et al. 2020)
+    d3 : float, default=0.045194
+        fitting parameter (see Meinshausen et al. 2020)
+
+    Returns
+    -------
+    effective_radiative_forcing : ndarray
+        effective radiative forcing (W/m2) from greenhouse gases
+
+    Notes
+    -----
+    Where array input is taken, the arrays always have the dimensions of
+    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
+    retain the singleton dimension in order to preserve clarity of
+    calculation and speed.
+
+    References
+    ----------
+    [1] Meinshausen et al. 2020
+    [2] Myhre et al. 1998
+    """
+    erf_out = np.ones_like(concentration) * np.nan
+
+    # extracting indices upfront means we're not always searching through array and makes things more readable.
+    # expanding the co2_pi array to the same shape as co2 allows efficient conditional indexing
+    # TODO: what happens if a scenario does not include all these gases?
+    print(gas_index_mapping)
+    # Check whether all of CO2, CH4 and N2O are provided. If they are not,
+    # TODO: Raise a warning
+    # and set to default baseline
+
+
+    co2 = concentration[:, :, :, [gas_index_mapping["CO2"]], ...]
+    co2_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["CO2"]], ...] * np.ones_like(co2)
+    ch4 = concentration[:, :, :, [gas_index_mapping["CH4"]], ...]
+    ch4_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["CH4"]], ...]
+    n2o = concentration[:, :, :, [gas_index_mapping["N2O"]], ...]
+    n2o_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["N2O"]], ...]
+
+    # CO2
+    ca_max = co2_pi - b1/(2*a1)
+    where_central = np.asarray((co2_pi < co2) & (co2 <= ca_max)).nonzero()
+    where_low = np.asarray((co2 <= co2_pi)).nonzero()
+    where_high = np.asarray((co2 > ca_max)).nonzero()
+    alpha_p = np.ones_like(co2) * np.nan
+    alpha_p[where_central] = d1 + a1*(co2[where_central] - co2_pi[where_central])**2 + b1*(co2[where_central] - co2_pi[where_central])
+    alpha_p[where_low] = d1
+    alpha_p[where_high] = d1 - b1**2/(4*a1)
+    alpha_n2o = c1*np.sqrt(n2o)
+    erf_out[:, :, :, [gas_index_mapping["CO2"]], :] = (alpha_p + alpha_n2o) * np.log(co2/co2_pi) * (1 + tropospheric_adjustment[:, :, :, [gas_index_mapping["CO2"]], :])
+
+    # CH4
+    erf_out[:, :, :, [gas_index_mapping["CH4"]], :] = (
+        (a3*np.sqrt(ch4) + b3*np.sqrt(n2o) + d3) *
+        (np.sqrt(ch4) - np.sqrt(ch4_pi))
+    )  * (1 + tropospheric_adjustment[:, :, :, [gas_index_mapping["CH4"]], :])
+
+    # N2O
+    erf_out[:, :, :, [gas_index_mapping["N2O"]], :] = (
+        (a2*np.sqrt(co2) + b2*np.sqrt(n2o) + c2*np.sqrt(ch4) + d2) *
+        (np.sqrt(n2o) - np.sqrt(n2o_pi))
+    )  * (1 + tropospheric_adjustment[:, :, :, [gas_index_mapping["N2O"]], :])
+
+    # Then, linear forcing for other gases
+    minor_gas_index = list(range(concentration.shape[SPECIES_AXIS]))
+    for major_gas in ['CO2', 'CH4', 'N2O']:
+        minor_gas_index.remove(gas_index_mapping[major_gas])
+    if len(minor_gas_index) > 0:
+        erf_out[:, :, :, minor_gas_index, :] = (
+            (concentration[:, :, :, minor_gas_index, :] - pre_industrial_concentration[:, :, :, minor_gas_index, :])
+            * radiative_efficiency[:, :, :, minor_gas_index, :] * 0.001
+        ) * (1 + tropospheric_adjustment[:, :, :, minor_gas_index, :])
+
+    return erf_out
+
+#### MAIN CLASS ####
+
 
 class FAIR():
     def __init__(
@@ -513,9 +837,9 @@ class FAIR():
         self.forcing_scaling_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.efficacy_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.erfari_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
-        self.scale_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
-        self.shape_sulfur_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
-        self.shape_bcoc_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        #self.scale_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        #self.shape_sulfur_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        #self.shape_bcoc_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
 
         # START HERE AND GO BACK TO NAMES
         for ispec, species_name in enumerate(self.species_index_mapping):
@@ -567,6 +891,7 @@ class FAIR():
         self.airborne_emissions_array = np.zeros((n_timesteps, n_scenarios, n_configs, n_species, 1))
         self.stochastic_forcing = np.ones((n_timesteps, n_scenarios, n_configs)) * np.nan
 
+#### MAIN RUN ####
 
     def run(self):
         self._pre_run_checks()
@@ -581,7 +906,7 @@ class FAIR():
         # from this point onwards, we lose a bit of the clean OO-style and go
         # back to prodecural programming, which is a ton quicker.
         self._initialise_arrays(n_timesteps, n_scenarios, n_configs, n_species)
-
+        # move to initialise_arrays?
         gas_boxes = np.zeros((1, n_scenarios, n_configs, n_species, self.run_config.n_gas_boxes))
         temperature_boxes = np.zeros((1, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes+1))
         #self.temperature_prescribed=False
@@ -591,29 +916,7 @@ class FAIR():
         # initialise the energy balance model and get critical vectors
         # which itself needs to be run once per "config" and dimensioned correctly
 
-        #TODO: can these be lists?
-        ebm_matrix_d = []
-        forcing_vector_d = []
-        stochastic_d = []
-        for iconf, config in enumerate(self.configs):
-            conf_clim = config.climate_response
-            print(conf_clim)
-            ebm = EnergyBalanceModel(
-                ocean_heat_capacity=conf_clim.ocean_heat_capacity,
-                ocean_heat_transfer=conf_clim.ocean_heat_transfer,
-                deep_ocean_efficacy=conf_clim.deep_ocean_efficacy,
-                stochastic_run=conf_clim.stochastic_run,
-                sigma_eta=conf_clim.sigma_eta,
-                sigma_xi=conf_clim.sigma_xi,
-                gamma_autocorrelation=conf_clim.gamma_autocorrelation,
-                seed=conf_clim.seed,
-                n_timesteps=n_timesteps,
-            )
-            ebm_matrix_d.append(ebm.eb_matrix_d)
-            forcing_vector_d.append(ebm.forcing_vector_d)
-            stochastic_d.append(ebm.stochastic_d)
-        print(ebm_matrix_d)
-        import sys; sys.exit()
+        eb_matrix_d, forcing_vector_d, stochastic_d = _make_ebm(self.configs)
 
         for i_timestep in range(n_timesteps):
             # 1. ghg emissions to concentrations
@@ -628,7 +931,7 @@ class FAIR():
                 self.g0_array,
                 self.g1_array,
             )
-            alpha_lifetime_array[np.isnan(alpha_lifetime_array)]=1  # CF4 seems to have an issue. Should we raise warning?
+#            alpha_lifetime_array[np.isnan(alpha_lifetime_array)]=1  # CF4 seems to have an issue. Should we raise warning?
             self.concentration_array[[i_timestep], ...], gas_boxes, self.airborne_emissions_array[[i_timestep], ...] = step_concentration(
                 self.emissions_array[[i_timestep], ...],
                 gas_boxes,
@@ -636,12 +939,17 @@ class FAIR():
                 self.burden_per_emission_array,
                 self.lifetime_array,
                 alpha_lifetime=alpha_lifetime_array,
-                pre_industrial_concentration=self.pre_industrial_concentration_array,
+                pre_industrial_concentration=self.baseline_concentration_array,
                 timestep=self.time_deltas[i_timestep],
                 partition_fraction=self.partition_fraction_array,
                 natural_emissions_adjustment=self.natural_emissions_adjustment_array,
             )
             self.alpha_lifetime_array[[i_timestep], ...] = alpha_lifetime_array
+
+#### START HERE: diagnosing why concentration_array is nan
+            #print(gas_boxes.shape)
+            print(self.burden_per_emission_array)
+            import sys; sys.exit()
 
             # 2. concentrations to emissions for ghg emissions:
             # TODO:
@@ -649,11 +957,13 @@ class FAIR():
             # 3. Greenhouse gas concentrations to forcing
             self.forcing_array[i_timestep:i_timestep+1, :, :, self.ghg_indices] = ghg(
                 self.concentration_array[[i_timestep], ...],
-                self.pre_industrial_concentration_array,
-                self.tropospheric_adjustment_array,
+                self.baseline_concentration_array,
+                self.forcing_scaling_array,
                 self.radiative_efficiency_array,
                 self.species_index_mapping
             )[0:1, :, :, self.ghg_indices, :]
+            print(self.forcing_array[i_timestep:i_timestep+1, :, :, :])
+
 
             # 4. aerosol emissions to forcing
             self.forcing_array[i_timestep:i_timestep+1, :, :, self.ari_indices, :] = erf_ari(

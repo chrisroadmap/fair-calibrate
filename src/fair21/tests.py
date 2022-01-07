@@ -7,6 +7,7 @@ cr2 = ClimateResponse(ocean_heat_capacity = (2, 10, 80), ocean_heat_transfer=(1,
 
 co2 = Species(name="CO2", category=Category.CO2)
 ch4 = Species("CH4", Category.CH4)
+n2o = Species("N2O", Category.N2O)
 so2 = Species("Sulfur", Category.AEROSOL)
 bc = Species("BC", Category.AEROSOL)
 aci = Species("Aerosol-Cloud Interactions", Category.AEROSOL_CLOUD_INTERACTIONS)
@@ -19,7 +20,6 @@ co2_gasprop1 = GasProperties(
 )
 co2_forcprop1 = ForcingProperties(tropospheric_adjustment=0.04)
 co2_cfg1 = SpeciesConfig(co2, gas_properties=co2_gasprop1, forcing_properties=co2_forcprop1)
-print(co2_cfg1)
 
 co2_gasprop2 = copy.copy(co2_gasprop1)
 co2_gasprop2.iirf=IIRF(29, 0.000819, 0.00846, 4)
@@ -38,14 +38,18 @@ ch4_gasprop1 = GasProperties(
 ch4_cfg1 = SpeciesConfig(ch4, gas_properties=ch4_gasprop1)
 ch4_cfg2 = SpeciesConfig(ch4, gas_properties=ch4_gasprop1, forcing_properties=ForcingProperties(scale=0.86))
 
+n2o_gasprop = GasProperties(lifetime=109, partition_fraction=1, radiative_efficiency=3, molecular_weight=44.013)
+n2o_forcprop = ForcingProperties(tropospheric_adjustment=0.07)
+n2o_cfg = SpeciesConfig(n2o, n2o_gasprop, n2o_forcprop)
+
 so2_cfg = SpeciesConfig(so2, aerosol_properties=AerosolProperties(erfari_emissions_to_forcing=-0.00362))
 bc_cfg = SpeciesConfig(bc, aerosol_properties=AerosolProperties(erfari_emissions_to_forcing=0.0508))
 #aci_cfg = SpeciesConfig(aci, erfaci_beta=2.09841432, erfaci_shape_bcoc=76.7, erfaci_shape_sulfur=260.34644166)
 
-config1 = Config('UKESM', cr1, [co2_cfg1, ch4_cfg1, so2_cfg])
-config2 = Config('MIROC6', cr2, [co2_cfg2, ch4_cfg2, so2_cfg])
-config3 = Config('IPSL', cr1, [co2_cfg1, ch4_cfg1, bc_cfg])
-config4 = Config('GISS', cr2, [co2_cfg2, ch4_cfg2, bc_cfg])
+config1 = Config('UKESM', cr1, [co2_cfg1, ch4_cfg1, n2o_cfg, so2_cfg])
+config2 = Config('MIROC6', cr2, [co2_cfg2, ch4_cfg2, n2o_cfg, so2_cfg])
+config3 = Config('IPSL', cr1, [co2_cfg1, ch4_cfg1, n2o_cfg, bc_cfg])
+config4 = Config('GISS', cr2, [co2_cfg2, ch4_cfg2, n2o_cfg, bc_cfg])
 
 #config7 = Config('NorESM', cr2, [co2_cfg2, ch4_cfg2, aci_cfg])
 
@@ -67,15 +71,16 @@ co2_e3 = Emissions(co2, np.ones(50)*10)
 ch4_e3 = Emissions(ch4, np.zeros(50))
 so2_e  = Emissions(so2, np.ones(50)*100)
 co2_e5 = Emissions(co2, np.arange(10))
+n2o_e = Emissions(n2o, np.zeros(50))
 aci_p = Placeholder(aci)
 
-scen1 = Scenario("ssp119", [co2_e1, ch4_e1, so2_e])
-scen2 = Scenario("ssp126", [co2_e2, ch4_e2, so2_e])
-scen3 = Scenario("ssp245", [co2_e3, ch4_e3, so2_e])
+scen1 = Scenario("ssp119", [co2_e1, ch4_e1, n2o_e, so2_e])
+scen2 = Scenario("ssp126", [co2_e2, ch4_e2, n2o_e, so2_e])
+scen3 = Scenario("ssp245", [co2_e3, ch4_e3, n2o_e, so2_e])
 scen4 = Scenario("ssp370", [co2_e3])
-scen5 = Scenario("ssp434", [co2_e5, ch4_e3, so2_e])
-scen6 = Scenario("ssp460", [co2_e1, co2_e2, ch4_e1])
-scen7 = Scenario("ssp585", [co2_e1, ch4_e1, aci_p])
+scen5 = Scenario("ssp434", [co2_e5, ch4_e3, n2o_e, so2_e])
+scen6 = Scenario("ssp460", [co2_e1, co2_e2, n2o_e, ch4_e1])
+scen7 = Scenario("ssp585", [co2_e1, ch4_e1, n2o_e, aci_p])
 
 print()
 
@@ -134,6 +139,8 @@ except DuplicationError:
 
 #fair = FAIR(scenarios=[scen7], configs=[config7])
 
+
+# TODO: check temeprautre results are unchanged for the non-stochastic EBM with different gamma/xi.
 
 fair = FAIR(scenarios=[scen1, scen2, scen3], configs=[config1, config2], time=np.arange(50))
 fair.remove_scenario(scen3)
