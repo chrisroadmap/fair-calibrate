@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from numbers import Number
 import typing
+import warnings
 
 import numpy as np
 
@@ -166,10 +167,10 @@ class AciMethod(Enum):
 # top level: consider excluding "Config"
 @dataclass
 class RunConfig():
-    n_gas_boxes = 4
-    n_temperature_boxes = 3
-    temperature_prescribed = False
-    aci_method = AciMethod.SMITH2018
+    n_gas_boxes: int=4
+    n_temperature_boxes: int=3
+    temperature_prescribed: bool=False
+    aci_method: AciMethod=AciMethod.SMITH2018
 
 # top level?
 
@@ -197,10 +198,19 @@ class SpeciesConfig():
     tropospheric_adjustment: float=0
     scale: float=1
     efficacy: float=1
+    aci_params: dict=None
 
     def __post_init__(self):
         # validate input - the whole partition_fraction and lifetime thing
         # would be nice to validate if not CO2, CH4 or N2O that radiative_efficiency must be defined.
+#        if self.partition_fraction is not isinstance(Number, Iterable):
+#            raise MissingInputError('partition_fraction must be a number or an array-like type') # custom exception needed
+#                    if len(partition_fraction) != len(lifetime):
+#                        raise IncompatibleConfigError('`partition_fraction` and `lifetime` are different shapes') # custom exception needed
+#                    if ~np.isclose(np.sum(partition_fraction), 1):
+#                        raise PartitionFractionError('partition_fraction should sum to 1') # custom exception needed
+#        elif np.ndim(self.lifetime) > 1:
+#            raise LifetimeError('`lifetime` array dimension is greater than 1')
         if self.species_id.category in GREENHOUSE_GAS:
             self.g1 = np.sum(
                 np.asarray(self.partition_fraction) * np.asarray(self.lifetime) *
@@ -219,6 +229,7 @@ class SpeciesConfig():
                     (1 - np.exp(-IIRF_HORIZON / np.asarray(self.lifetime)))
                     * np.asarray(self.partition_fraction))
                 )
+
 
         if self.species_id.category in HALOGEN:
             if ~isinstance(self.ozone_radiative_efficiency, Number):
@@ -309,15 +320,11 @@ class Config():
     name: str
     climate_response: ClimateResponse
     species_configs: typing.List[SpeciesConfig]
-    aci_params: dict=None
 
     def __post_init__(self):
         # check eveything provided is a Config
         if not isinstance(self.species_configs, list):
             raise TypeError('species_configs argument passed to Config must be a list of SpeciesConfig')
-        # fill aci_params with AR6 defaults if not provided.
-        if self.aci_params is None:
-            self.aci_params={"scale": 2.09841432, "Sulfur": 260.34644166, "BC+OC": 111.05064063}
 
 # TODO: radiative efficiency for the big three should be calculated internally
 default_species_config = {
@@ -390,6 +397,10 @@ default_species_config = {
 #        ozone_radiative_efficiency =,
         baseline_emissions = 60.0218262241548
     ),
+    'aerosol-cloud interactions': SpeciesConfig(
+        species_id = SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS),
+        aci_params={"scale": 2.09841432, "Sulfur": 260.34644166, "BC+OC": 111.05064063}
+    )
 }
 
 def species_config_from_default(name, **kwargs):
@@ -500,17 +511,18 @@ def verify_config_consistency(configs):
                 f"same order")
 
 
-def check_included(aci_params, aci_method):
+def check_aci_params(aci_params, aci_method):
     required_params = {
         AciMethod.SMITH2018: ['scale', 'Sulfur', 'BC+OC'],
         AciMethod.STEVENS2015: ['scale', 'Sulfur']
     }
-    if list(aci_params) != required_params[aci_method]:
-        raise IncompatibleConfigError(
-            f"For aerosol-cloud interactions using the {run_config.aci_method}, "
-            f"the aci_params in the construction of Config must include "
-            f"{required_params[aci_method]}."
-        )
+    for param in required_params[aci_method]:
+        if param not in aci_params:
+            raise IncompatibleConfigError(
+                f"For aerosol-cloud interactions using the {aci_method}, "
+                f"the aci_params in the construction of Config must include "
+                f"{required_params[aci_method]}."
+            )
 
 
 
@@ -550,6 +562,7 @@ def map_species_scenario_config(scenarios, configs, run_config):
             aerosol_species_included.append(scenarios[0].list_of_species[ispec].species_id.category)
         if scenarios[0].list_of_species[ispec].species_id.category == Category.AEROSOL_CLOUD_INTERACTIONS:
             aci_desired = True
+            aci_index = ispec
     # check config/scenario species consistency
     if species_included_first_config != species_included_first_scenario:
         raise SpeciesMismatchError(
@@ -565,8 +578,12 @@ def map_species_scenario_config(scenarios, configs, run_config):
             f"all of {[species_id.name for species_id in required_aerosol_species[run_config.aci_method]]} "
             f"must be provided in the scenario."
         )
+    # by the time we get here, we should have checked that scearios and configs species line up
+    # and configs where ACI is defined
+    # so we just need to check that each config has the correct aci_params
+    if aci_desired:
         for config in configs:
-            check_included(config.aci_params, run_config.aci_method)
+            check_aci_params(config.species_configs[aci_index].aci_params, run_config.aci_method)
     return species_included_first_config
 
 
@@ -935,6 +952,75 @@ def calculate_erfari_forcing(
     return erf_out
 
 
+def calculate_erfaci_forcing(
+    emissions,
+    pre_industrial_emissions,
+    tropospheric_adjustment,
+    scale,
+    shape_sulfur,
+    shape_bcoc,
+    aerosol_index_mapping,
+):
+    """Calculate effective radiative forcing from aerosol-cloud interactions.
+
+    This uses the relationship to calculate ERFaci described in Smith et al.
+    (2021).
+
+    Inputs
+    ------
+    emissions : ndarray
+        input emissions
+    pre_industrial_emissions : ndarray
+        pre-industrial emissions
+    tropospheric_adjustment : ndarray
+        conversion factor from radiative forcing to effective radiative forcing.
+    scale : ndarray
+        scaling factor to apply to the logarithm
+    shape_sulfur : ndarray
+        scale factor for sulfur emissions
+    shape_bcoc : ndarray
+        scale factor for BC+OC emissions
+    radiative_efficiency : ndarray
+        radiative efficiency (W m-2 (emission_unit yr-1)-1) of each species.
+    aerosol_index_mapping : dict
+        provides a mapping of which aerosol species corresponds to which array
+        index along the SPECIES_AXIS.
+
+    Returns
+    -------
+    effective_radiative_forcing : ndarray
+        effective radiative forcing (W/m2) from aerosol-cloud interactions
+
+    Notes
+    -----
+    Where array input is taken, the arrays always have the dimensions of
+    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
+    retain the singleton dimension in order to preserve clarity of
+    calculation and speed.
+    """
+
+    so2 = emissions[:, :, :, [aerosol_index_mapping["Sulfur"]], ...]
+    so2_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["Sulfur"]], ...]
+    bc = emissions[:, :, :, [aerosol_index_mapping["BC"]], ...]
+    bc_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["BC"]], ...]
+    oc = emissions[:, :, :, [aerosol_index_mapping["OC"]], ...]
+    oc_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["OC"]], ...]
+    aci_index = aerosol_index_mapping["Aerosol-Cloud Interactions"]
+
+
+    # TODO: raise an error if sulfur, BC and OC are not all there
+    radiative_effect = -scale * np.log(
+        1 + so2/shape_sulfur +
+        (bc + oc)/shape_bcoc
+    )
+    pre_industrial_radiative_effect = -scale * np.log(
+        1 + so2_pi/shape_sulfur +
+        (bc_pi + oc_pi)/shape_bcoc
+    )
+
+    erf_out = (radiative_effect - pre_industrial_radiative_effect) * (1 + tropospheric_adjustment)
+    return erf_out
+
 
 #### MAIN CLASS ####
 
@@ -1012,7 +1098,7 @@ class FAIR():
         self.configs_index_mapping = {}
         self.ghg_indices = []
         self.ari_indices = []
-        self.aci_index = []
+        self.aci_index = None
         #self.config_indices = []
         for ispec, specie in enumerate(self.species):
             self.species_index_mapping[specie.name] = ispec
@@ -1035,27 +1121,32 @@ class FAIR():
                     scen_spec = self.scenarios[iscen].list_of_species[ispec]
                     scen_spec.concentration = self.concentration_array[:, iscen, :, ispec, 0]
                     scen_spec.cumulative_emissions = np.squeeze(self.cumulative_emissions_array[:, iscen, :, ispec, 0])
-                    scen_spec.airborne_fraction = self.airborne_emissions_array[:, iscen, :, ispec, 0] / self.cumulative_emissions_array[:, iscen, :, ispec, 0]
+                    with warnings.catch_warnings():
+                        # we know about divide by zero possibility
+                        warnings.simplefilter('ignore', RuntimeWarning)
+                        scen_spec.airborne_fraction = self.airborne_emissions_array[:, iscen, :, ispec, 0] / self.cumulative_emissions_array[:, iscen, :, ispec, 0]
+                    scen_spec.airborne_fraction[self.cumulative_emissions_array[:, iscen, :, ispec, 0]==0]=0
                     if self.species[ispec].category == Category.CH4:
                         scen_spec.effective_lifetime = self.alpha_lifetime_array[:, iscen, :, ispec, 0] * self.lifetime_array[:, 0, :, ispec, 0]
-
+                    #print(species_name, scen_spec.airborne_fraction)
 
     def _fill_forcing(self):
         """Add the forcing as an attribute to each Species and Scenario"""
         for iscen, scenario in enumerate(self.scenarios):
             for ispec, specie in enumerate(self.species):
-                self.scenarios[scenario].species[specie].forcing = self.forcing_array[:, iscen, :, ispec, 0]
-            self.scenarios[scenario].forcing = self.forcing_sum_array[:, iscen, :, 0, 0]
-            self.scenarios[scenario].stochastic_forcing = self.stochastic_forcing[:, iscen, :]
+                scen_spec = self.scenarios[iscen].list_of_species[ispec]
+                scen_spec.forcing = self.forcing_array[:, iscen, :, ispec, 0]
+            self.scenarios[iscen].forcing = self.forcing_sum_array[:, iscen, :, 0, 0]
+            self.scenarios[iscen].stochastic_forcing = self.stochastic_forcing[:, iscen, :]
 
 
     def _fill_temperature(self):
         """Add the temperature as an attribute to each Scenario"""
         for iscen, scenario in enumerate(self.scenarios):
-            self.scenarios[scenario].temperature_layers = self.temperature[:, iscen, :, 0, :]
-            self.scenarios[scenario].temperature = self.temperature[:, iscen, :, 0, 0]
+            self.scenarios[iscen].temperature_layers = self.temperature[:, iscen, :, 0, :]
+            self.scenarios[iscen].temperature = self.temperature[:, iscen, :, 0, 0]
 
-    def _initialise_arrays(self, n_timesteps, n_scenarios, n_configs, n_species):
+    def _initialise_arrays(self, n_timesteps, n_scenarios, n_configs, n_species, aci_method):
         self.emissions_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1)) * np.nan
         self.concentration_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1)) * np.nan
         self.forcing_sum_array = np.ones((n_timesteps, n_scenarios, n_configs, 1, 1)) * np.nan
@@ -1070,7 +1161,7 @@ class FAIR():
         self.iirf_temperature_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.iirf_airborne_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.burden_per_emission_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
-        self.lifetime_array = np.ones((1, 1, n_configs, n_species, self.run_config.n_gas_boxes)) * np.nan
+        self.lifetime_array = np.zeros((1, 1, n_configs, n_species, self.run_config.n_gas_boxes))
         self.baseline_emissions_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.baseline_concentration_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.partition_fraction_array = np.zeros((1, 1, n_configs, n_species, self.run_config.n_gas_boxes))
@@ -1079,9 +1170,9 @@ class FAIR():
         self.forcing_scaling_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.efficacy_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.erfari_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
-        #self.scale_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
-        #self.shape_sulfur_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
-        #self.shape_bcoc_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.erfaci_scale_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
+        self.erfaci_shape_sulfur_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
+        self.erfaci_shape_bcoc_array = np.ones((1, 1, n_configs, 1, 1)) * np.inf
         self.temperature = np.ones((n_timesteps, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
 
         for ispec, species_name in enumerate(self.species_index_mapping):
@@ -1091,8 +1182,12 @@ class FAIR():
                 self.efficacy_array[:, 0, iconf, ispec, 0] = conf_spec.efficacy
                 self.baseline_emissions_array[:, :, iconf, ispec, :] = conf_spec.baseline_emissions
                 if self.species[ispec].category in GREENHOUSE_GAS:
+                    partition_fraction = np.asarray(conf_spec.partition_fraction)
+                    if np.ndim(partition_fraction) == 1:
+                        self.partition_fraction_array[:, :, iconf, ispec, :] = conf_spec.partition_fraction
+                    else:
+                        self.partition_fraction_array[:, :, iconf, ispec, 0] = conf_spec.partition_fraction
                     self.lifetime_array[:, :, iconf, ispec, :] = conf_spec.lifetime
-                    self.partition_fraction_array[:, :, iconf, ispec, :] = conf_spec.partition_fraction
                     self.iirf_0_array[:, :, iconf, ispec, :] = conf_spec.iirf_0
                     self.iirf_cumulative_array[:, :, iconf, ispec, :] = conf_spec.iirf_cumulative
                     self.iirf_temperature_array[:, :, iconf, ispec, :] = conf_spec.iirf_temperature
@@ -1109,6 +1204,11 @@ class FAIR():
                     self.cl_atoms_array[:, :, iconf, ispec, 0] = conf_spec.cl_atoms
                 if self.species[ispec].category in AEROSOL:
                     self.erfari_emissions_to_forcing_array[:, 0, iconf, ispec, :] = conf_spec.erfari_emissions_to_forcing
+                if self.species[ispec].category == Category.AEROSOL_CLOUD_INTERACTIONS:
+                    self.erfaci_scale_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['scale']
+                    self.erfaci_shape_sulfur_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['Sulfur']
+                    if aci_method==AciMethod.SMITH2018:
+                        self.erfaci_shape_bcoc_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['BC+OC']
             for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
                 scen_spec = self.scenarios[iscen].list_of_species[ispec]
                 if self.species[ispec].run_mode == RunMode.EMISSIONS:
@@ -1117,7 +1217,6 @@ class FAIR():
                     self.concentration_array[:, iscen, :, ispec, 0] = scen_spec.concentration[:, None]
                 if self.species[ispec].run_mode == RunMode.FORCING:
                     self.forcing_array[:, iscen, :, ispec, 0] = scen_spec.forcing[:, None]
-
                     # if isinstance(self.species[specie], AerosolCloudInteractions):
                     #     if hasattr(self.configs[iconfig], 'species') and specie in self.configs[iconfig].species:
                     #         self.scale_array[:, 0, iconfig, ispec, :] = self.configs[iconfig].species[specie].scale
@@ -1127,8 +1226,6 @@ class FAIR():
                     #         self.scale_array[:, 0, iconfig, ispec, :] = self.scenarios[scenario].species[specie].scale
                     #         self.shape_sulfur_array[:, 0, iconfig, ispec, :] = self.scenarios[scenario].species[specie].shape_sulfur
                     #         self.shape_bcoc_array[:, 0, iconfig, ispec, :] = self.scenarios[scenario].species[specie].shape_bcoc
-
-
 
         self.cumulative_emissions_array = np.cumsum(self.emissions_array * self.time_deltas[:, None, None, None, None], axis=TIME_AXIS)
         self.alpha_lifetime_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1))
@@ -1149,7 +1246,7 @@ class FAIR():
 
         # from this point onwards, we lose a bit of the clean OO-style and go
         # back to prodecural programming, which is a ton quicker.
-        self._initialise_arrays(n_timesteps, n_scenarios, n_configs, n_species)
+        self._initialise_arrays(n_timesteps, n_scenarios, n_configs, n_species, self.run_config.aci_method)
         # move to initialise_arrays?
         gas_boxes = np.zeros((1, n_scenarios, n_configs, n_species, self.run_config.n_gas_boxes))
         temperature_boxes = np.zeros((1, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes+1))
@@ -1208,14 +1305,14 @@ class FAIR():
                 self.species_index_mapping
             )[0:1, :, :, self.ari_indices, :]
 
-            if 'Aerosol-Cloud Interactions' in self.species_index_mapping:
-                self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = erf_aci(
+            if self.aci_index is not None:
+                self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = calculate_erfaci_forcing(
                     self.emissions_array[[i_timestep], ...],
-                    self.pre_industrial_emissions_array,
-                    self.tropospheric_adjustment_array,
-                    self.scale_array,
-                    self.shape_sulfur_array,
-                    self.shape_bcoc_array,
+                    self.baseline_emissions_array,
+                    self.forcing_scaling_array,
+                    self.erfaci_scale_array,
+                    self.erfaci_shape_sulfur_array,
+                    self.erfaci_shape_bcoc_array,
                     self.species_index_mapping
                 )[0:1, :, :, self.aci_index, :]
 
@@ -1231,6 +1328,9 @@ class FAIR():
             self.forcing_sum_array[[i_timestep], ...] = np.nansum(
                 self.forcing_array[[i_timestep], ...], axis=SPECIES_AXIS, keepdims=True
             )
+            efficacy_adjusted_forcing=np.nansum(
+                self.forcing_array[[i_timestep], ...]*self.efficacy_array, axis=SPECIES_AXIS, keepdims=True
+            )
 
             # 100. run the energy balance model
             # TODO: skip if temperature prescribed
@@ -1239,15 +1339,15 @@ class FAIR():
                 for iconf, config in enumerate(self.configs):
                     temperature_boxes[0, iscen, iconf, 0, :] = (
                         eb_matrix_d[iconf] @ temperature_boxes[0, iscen, iconf, 0, :] +
-                        forcing_vector_d[iconf] * self.forcing_sum_array[i_timestep, iscen, iconf, 0, 0] +
+                        forcing_vector_d[iconf] * efficacy_adjusted_forcing[0, iscen, iconf, 0, 0] +
                         stochastic_d[iconf][i_timestep, :]
                     )
                     self.temperature[i_timestep, iscen, iconf, :, :] = temperature_boxes[0, iscen, iconf, 0, 1:]
                     self.stochastic_forcing[i_timestep, iscen, iconf] = temperature_boxes[0, iscen, iconf, 0, 0]
 
         self._fill_concentration()
-#        self._fill_forcing()
-#        self._fill_temperature()
+        self._fill_forcing()
+        self._fill_temperature()
 
 
 

@@ -24,24 +24,34 @@ scen_dict['ssp119'] = [
     Species(species_ids['ch4'], emissions=np.ones(100)*300),
     Species(species_ids['n2o'], emissions=np.ones(100)*10),
     Species(species_ids['sulfur'], emissions=np.ones(100)*100),
+    Species(species_ids['bc'], emissions=np.ones(100)*8),
+    Species(species_ids['oc'], emissions=np.ones(100)*35),
+    Species(species_ids['aci'])
 ]
 scen_dict['ssp126'] = [
     Species(species_ids['co2'], emissions=np.arange(100)*2),
     Species(species_ids['ch4'], emissions=np.ones(100)*100),
     Species(species_ids['n2o'], emissions=np.ones(100)*10),
     Species(species_ids['sulfur'], emissions=np.arange(100)),
+    Species(species_ids['bc'], emissions=np.arange(100)*.08),
+    Species(species_ids['oc'], emissions=np.arange(100)*.35),
+    Species(species_ids['aci'])
 ]
 scen_dict['ssp245'] = [
     Species(species_ids['co2'], emissions=np.arange(100)*0.2),
     Species(species_ids['ch4'], emissions=np.zeros(100)),
     Species(species_ids['n2o'], emissions=np.zeros(100)),
     Species(species_ids['sulfur'], emissions=np.arange(100)),
+    Species(species_ids['bc'], emissions=np.ones(100)*8),
+    Species(species_ids['oc'], emissions=np.ones(100)*35),
+    Species(species_ids['aci'])
 ]
 scen_dict['ssp434'] = [
     Species(species_ids['co2'], emissions=np.arange(10)*0.2),
     Species(species_ids['ch4'], emissions=np.zeros(100)),
     Species(species_ids['n2o'], emissions=np.zeros(100)),
     Species(species_ids['sulfur'], emissions=np.arange(100)),
+    Species(species_ids['aci'])
 ]
 scen_dict['ssp585'] = [
     Species(species_ids['co2'], emissions=np.arange(100)*0.2),
@@ -83,6 +93,9 @@ config_dict['UKESM']['species'] = [
     species_config_from_default('CH4'),
     species_config_from_default('N2O', tropospheric_adjustment=0),
     species_config_from_default('sulfur'),
+    species_config_from_default('bc'),
+    species_config_from_default('oc'),
+    species_config_from_default('aerosol-cloud interactions')
 ]
 
 config_dict['MIROC6'] = {}
@@ -96,6 +109,9 @@ config_dict['MIROC6']['species'] = [
     species_config_from_default('ch4'),
     species_config_from_default('n2o'),
     species_config_from_default('sulfur'),
+    species_config_from_default('bc'),
+    species_config_from_default('oc'),
+    species_config_from_default('aerosol-cloud interactions', aci_params={"scale": 2.09841432, "Sulfur": 260.34644166, "BC+OC": 111.05064063})
 ]
 
 config_dict['IPSL'] = {}
@@ -138,7 +154,12 @@ except (SpeciesMismatchError):
     print("test passed")
 
 try:
-    fair = FAIR(scenarios=[scenarios[0],scenarios[1],scenarios[2]], configs=[configs[0],configs[1]], time=np.arange(10))
+    fair = FAIR(
+        scenarios=[scenarios[0],scenarios[1],scenarios[2]],
+        configs=[configs[0],configs[1]],
+        time=np.arange(10),
+        run_config=RunConfig(aci_method = AciMethod.STEVENS2015)
+    )
     fair.run()
     print("test failed")
 except (TimeMismatchError):
@@ -176,5 +197,7 @@ fair.add_config(configs[0])
 fair.run()
 
 print()
+for iscen in range(3):
+    print(fair.scenarios[iscen].temperature)
 # this needs to be somehow processed out. And perhaps the best way is to use pyam or scmdata
-print(fair.scenarios[0].list_of_species[0]) #e.g the array of output is time x config
+#print(fair.scenarios[0].list_of_species[0]) #e.g the array of output is time x config
