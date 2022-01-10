@@ -1,3 +1,4 @@
+from abc import ABC
 from collections.abc import Iterable
 import copy
 from dataclasses import dataclass, field
@@ -30,14 +31,34 @@ TIME_AXIS = 0
 SPECIES_AXIS = 3
 GAS_BOX_AXIS = 4
 
+# at top level
+#class CH4(SpeciesID):
+#   greenhouse_gas: True
+#   ozone_precursor: True
+#   ozone_method: 'concentration'
+#   aerosol_direct_precursor: False
+#   aerosol_indirect_precursor: False
+#   co2_precursor: True
+#   stratospheric_water_vapour_precursor: True
+#   contrail_precursor: False
+#   lapsi_precursor: False
+#   landuse_precursor: False
+
+
 class Category(Enum):
     """Types of Species encountered in climate scenarios."""
+    CO2_FFI = auto()
+    CO2_AFOLU = auto()
     CO2 = auto()
     CH4 = auto()
     N2O = auto()
-    HALOGEN = auto()
+    CFC_11 = auto()
+    OTHER_HALOGEN = auto()
     F_GAS = auto()
-    AEROSOL = auto()
+    SULFUR = auto()
+    BC = auto()
+    OC = auto()
+    OTHER_AEROSOL = auto()
     OZONE_PRECURSOR = auto()
     OZONE = auto()
     AEROSOL_CLOUD_INTERACTIONS = auto()
@@ -47,11 +68,17 @@ class Category(Enum):
     VOLCANIC = auto()
     SOLAR = auto()
 
-GREENHOUSE_GAS = [Category.CO2, Category.CH4, Category.N2O, Category.HALOGEN, Category.F_GAS]
+GREENHOUSE_GAS = [Category.CO2_FFI, Category.CO2_AFOLU, Category.CO2, Category.CH4, Category.N2O, Category.CFC_11, Category.OTHER_HALOGEN, Category.F_GAS]
+HALOGEN = [Category.CFC_11, Category.OTHER_HALOGEN]
+AEROSOL = [Category.SULFUR, Category.BC, Category.OC, Category.OTHER_AEROSOL]
 NO_DUPLICATES_ALLOWED = [
     Category.CO2,
     Category.CH4,
     Category.N2O,
+    Category.CFC_11,
+    Category.SULFUR,
+    Category.BC,
+    Category.OC,
     Category.OZONE,
     Category.AEROSOL_CLOUD_INTERACTIONS,
     Category.CONTRAILS,
@@ -70,12 +97,18 @@ class RunMode(Enum):
 
 
 valid_run_modes = {
+    Category.CO2_FFI: (RunMode.EMISSIONS,),
+    Category.CO2_AFOLU: (RunMode.EMISSIONS,),
     Category.CO2: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
     Category.CH4: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
     Category.N2O: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
-    Category.HALOGEN: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
+    Category.CFC_11: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
+    Category.OTHER_HALOGEN: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
     Category.F_GAS: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
-    Category.AEROSOL: (RunMode.EMISSIONS, RunMode.FORCING),
+    Category.SULFUR: (RunMode.EMISSIONS, RunMode.FORCING),
+    Category.BC: (RunMode.EMISSIONS, RunMode.FORCING),
+    Category.OC: (RunMode.EMISSIONS, RunMode.FORCING),
+    Category.OTHER_AEROSOL: (RunMode.EMISSIONS, RunMode.FORCING),
     Category.OZONE_PRECURSOR: (RunMode.EMISSIONS, RunMode.FORCING),
     Category.OZONE: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.AEROSOL_CLOUD_INTERACTIONS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
@@ -164,7 +197,6 @@ class SpeciesConfig():
     tropospheric_adjustment: float=0
     scale: float=1
     efficacy: float=1
-    aci_params: dict=None  # then make default
 
     def __post_init__(self):
         # validate input - the whole partition_fraction and lifetime thing
@@ -188,7 +220,7 @@ class SpeciesConfig():
                     * np.asarray(self.partition_fraction))
                 )
 
-        if self.species_id.category == Category.HALOGEN:
+        if self.species_id.category in HALOGEN:
             if ~isinstance(self.ozone_radiative_efficiency, Number):
                 raise ValueError("ozone_properties.ozone_radiative_efficiency should be a number for Halogens")
             if ~isinstance(self.cl_atoms, int) or self.cl_atoms < 0:
@@ -277,11 +309,15 @@ class Config():
     name: str
     climate_response: ClimateResponse
     species_configs: typing.List[SpeciesConfig]
+    aci_params: dict=None
 
     def __post_init__(self):
         # check eveything provided is a Config
         if not isinstance(self.species_configs, list):
             raise TypeError('species_configs argument passed to Config must be a list of SpeciesConfig')
+        # fill aci_params with AR6 defaults if not provided.
+        if self.aci_params is None:
+            self.aci_params={"scale": 2.09841432, "Sulfur": 260.34644166, "BC+OC": 111.05064063}
 
 # TODO: radiative efficiency for the big three should be calculated internally
 default_species_config = {
@@ -320,22 +356,22 @@ default_species_config = {
 
     ),
     'sulfur': SpeciesConfig(
-        species_id = SpeciesID('Sulfur', Category.AEROSOL, run_mode=RunMode.EMISSIONS),
+        species_id = SpeciesID('Sulfur', Category.SULFUR, run_mode=RunMode.EMISSIONS),
         erfari_emissions_to_forcing = -0.0036167830509091486,
         baseline_emissions = 2.44004843482201
     ),
     'bc': SpeciesConfig(
-        species_id = SpeciesID('BC', Category.AEROSOL, run_mode=RunMode.EMISSIONS),
+        species_id = SpeciesID('BC', Category.BC, run_mode=RunMode.EMISSIONS),
         erfari_emissions_to_forcing = 0.0507748226795483,
         baseline_emissions = 2.09777075542297,
     ),
     'oc': SpeciesConfig(
-        species_id = SpeciesID('OC', Category.AEROSOL, run_mode=RunMode.EMISSIONS),
+        species_id = SpeciesID('OC', Category.OC, run_mode=RunMode.EMISSIONS),
         erfari_emissions_to_forcing = -0.006214374446217472,
         baseline_emissions = 15.4476681469614,
     ),
     'nh3': SpeciesConfig(
-        species_id = SpeciesID('NH3', Category.AEROSOL, run_mode=RunMode.EMISSIONS),
+        species_id = SpeciesID('NH3', Category.OTHER_AEROSOL, run_mode=RunMode.EMISSIONS),
         erfari_emissions_to_forcing = -0.0020809236231100624,
         baseline_emissions = 6.92769009144426
     ),
@@ -464,7 +500,21 @@ def verify_config_consistency(configs):
                 f"same order")
 
 
-def map_species_scenario_config(scenarios, configs):
+def check_included(aci_params, aci_method):
+    required_params = {
+        AciMethod.SMITH2018: ['scale', 'Sulfur', 'BC+OC'],
+        AciMethod.STEVENS2015: ['scale', 'Sulfur']
+    }
+    if list(aci_params) != required_params[aci_method]:
+        raise IncompatibleConfigError(
+            f"For aerosol-cloud interactions using the {run_config.aci_method}, "
+            f"the aci_params in the construction of Config must include "
+            f"{required_params[aci_method]}."
+        )
+
+
+
+def map_species_scenario_config(scenarios, configs, run_config):
     """Checks to see if species provided in scenarios have associated configs.
 
     Parameters
@@ -478,6 +528,7 @@ def map_species_scenario_config(scenarios, configs):
     ------
     SpeciesMismatchError
     DuplicationError
+    IncompatibleConfigError
     """
     # at this point we have checked self-consistency, so we only need to check
     # the first element of each.
@@ -487,8 +538,19 @@ def map_species_scenario_config(scenarios, configs):
         species_included_first_config.append(configs[0].species_configs[ispec].species_id)
     species_included_first_scenario = []
     n_species_first_scenario = len(scenarios[0].list_of_species)
+    required_aerosol_species = {
+        AciMethod.SMITH2018: [Category.SULFUR, Category.BC, Category.OC],
+        AciMethod.STEVENS2015: [Category.SULFUR],
+    }
+    aerosol_species_included = []
+    aci_desired = False
     for ispec, species in enumerate(scenarios[0].list_of_species):
         species_included_first_scenario.append(scenarios[0].list_of_species[ispec].species_id)
+        if scenarios[0].list_of_species[ispec].species_id.category in required_aerosol_species[run_config.aci_method] and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
+            aerosol_species_included.append(scenarios[0].list_of_species[ispec].species_id.category)
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.AEROSOL_CLOUD_INTERACTIONS:
+            aci_desired = True
+    # check config/scenario species consistency
     if species_included_first_config != species_included_first_scenario:
         raise SpeciesMismatchError(
             f"The list of Species provided to Scenario.list_of_species is "
@@ -496,8 +558,15 @@ def map_species_scenario_config(scenarios, configs):
             f"This differs from that provided to Config.species_configs "
             f"{[species_id.name for species_id in species_included_first_config]}."
         )
-
-
+    # check aerosol species provided are consistent with desired indirect forcing mode
+    if aerosol_species_included != required_aerosol_species[run_config.aci_method] and aci_desired:
+        raise IncompatibleConfigError(
+            f"For aerosol-cloud interactions using the {run_config.aci_method}, "
+            f"all of {[species_id.name for species_id in required_aerosol_species[run_config.aci_method]]} "
+            f"must be provided in the scenario."
+        )
+        for config in configs:
+            check_included(config.aci_params, run_config.aci_method)
     return species_included_first_config
 
 
@@ -518,7 +587,7 @@ def _make_time_deltas(time):
     return time_deltas
 
 
-def _make_ebm(configs):
+def _make_ebm(configs, n_timesteps):
     eb_matrix_d = []
     forcing_vector_d = []
     stochastic_d = []
@@ -533,7 +602,7 @@ def _make_ebm(configs):
             sigma_xi=conf_clim.sigma_xi,
             gamma_autocorrelation=conf_clim.gamma_autocorrelation,
             seed=conf_clim.seed,
-#            n_timesteps=n_timesteps,
+            n_timesteps=n_timesteps,
         )
         eb_matrix_d.append(ebm.eb_matrix_d)
         forcing_vector_d.append(ebm.forcing_vector_d)
@@ -926,7 +995,7 @@ class FAIR():
                 )
         check_type_of_elements(self.scenarios, Scenario, 'scenarios')
         check_type_of_elements(self.configs, Config, 'configs')
-        self.species = map_species_scenario_config(self.scenarios, self.configs)
+        self.species = map_species_scenario_config(self.scenarios, self.configs, self.run_config)
         if self.n_timesteps != len(self.time):
             raise TimeMismatchError(
                 f"time vector provided is of length {len(self.time)} whereas "
@@ -949,7 +1018,7 @@ class FAIR():
             self.species_index_mapping[specie.name] = ispec
             if specie.category in GREENHOUSE_GAS:
                 self.ghg_indices.append(ispec)
-            if specie.category == Category.AEROSOL:
+            if specie.category in AEROSOL:
                 self.ari_indices.append(ispec)
             if specie.category == Category.AEROSOL_CLOUD_INTERACTIONS:
                 self.aci_index = ispec
@@ -957,6 +1026,34 @@ class FAIR():
             self.scenarios_index_mapping[scenario.name] = iscen
         for iconf, config in enumerate(self.configs):
             self.configs_index_mapping[config.name] = iconf
+
+    def _fill_concentration(self):
+        """After the emissions to concentrations step we want to put the concs into each GreenhouseGas"""
+        for ispec, species_name in enumerate(self.species_index_mapping):
+            if self.species[ispec].category in GREENHOUSE_GAS: # and self.species[ispec].run_mode == RunMode.EMISSIONS: # don't think necessary as should just be replacing with same thing. We want the alpha for CH4 though.
+                for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
+                    scen_spec = self.scenarios[iscen].list_of_species[ispec]
+                    scen_spec.concentration = self.concentration_array[:, iscen, :, ispec, 0]
+                    scen_spec.cumulative_emissions = np.squeeze(self.cumulative_emissions_array[:, iscen, :, ispec, 0])
+                    scen_spec.airborne_fraction = self.airborne_emissions_array[:, iscen, :, ispec, 0] / self.cumulative_emissions_array[:, iscen, :, ispec, 0]
+                    if self.species[ispec].category == Category.CH4:
+                        scen_spec.effective_lifetime = self.alpha_lifetime_array[:, iscen, :, ispec, 0] * self.lifetime_array[:, 0, :, ispec, 0]
+
+
+    def _fill_forcing(self):
+        """Add the forcing as an attribute to each Species and Scenario"""
+        for iscen, scenario in enumerate(self.scenarios):
+            for ispec, specie in enumerate(self.species):
+                self.scenarios[scenario].species[specie].forcing = self.forcing_array[:, iscen, :, ispec, 0]
+            self.scenarios[scenario].forcing = self.forcing_sum_array[:, iscen, :, 0, 0]
+            self.scenarios[scenario].stochastic_forcing = self.stochastic_forcing[:, iscen, :]
+
+
+    def _fill_temperature(self):
+        """Add the temperature as an attribute to each Scenario"""
+        for iscen, scenario in enumerate(self.scenarios):
+            self.scenarios[scenario].temperature_layers = self.temperature[:, iscen, :, 0, :]
+            self.scenarios[scenario].temperature = self.temperature[:, iscen, :, 0, 0]
 
     def _initialise_arrays(self, n_timesteps, n_scenarios, n_configs, n_species):
         self.emissions_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1)) * np.nan
@@ -985,8 +1082,8 @@ class FAIR():
         #self.scale_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         #self.shape_sulfur_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         #self.shape_bcoc_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.temperature = np.ones((n_timesteps, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
 
-        # START HERE AND GO BACK TO NAMES
         for ispec, species_name in enumerate(self.species_index_mapping):
             for iconf, config_name in enumerate(self.configs_index_mapping):
                 conf_spec = self.configs[iconf].species_configs[ispec]
@@ -1006,11 +1103,11 @@ class FAIR():
                     self.g1_array[:, :, iconf, ispec, :] = conf_spec.g1
                     self.baseline_concentration_array[:, :, iconf, ispec, :] = conf_spec.baseline_concentration
                     self.natural_emissions_adjustment_array[:, :, iconf, ispec, 0] = conf_spec.natural_emissions_adjustment
-                if self.species[ispec].category == Category.HALOGEN:  # TODO: probably needs similar to above here.
+                if self.species[ispec].category in HALOGEN:  # TODO: probably needs similar to above here.
                     self.fractional_release_array[:, :, iconf, ispec, 0] = conf_spec.fractional_release
                     self.br_atoms_array[:, :, iconf, ispec, 0] = conf_spec.br_atoms
                     self.cl_atoms_array[:, :, iconf, ispec, 0] = conf_spec.cl_atoms
-                if self.species[ispec].category == Category.AEROSOL:
+                if self.species[ispec].category in AEROSOL:
                     self.erfari_emissions_to_forcing_array[:, 0, iconf, ispec, :] = conf_spec.erfari_emissions_to_forcing
             for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
                 scen_spec = self.scenarios[iscen].list_of_species[ispec]
@@ -1059,7 +1156,7 @@ class FAIR():
 
         # initialise the energy balance model and get critical vectors
         # which itself needs to be run once per "config" and dimensioned correctly
-        eb_matrix_d, forcing_vector_d, stochastic_d = _make_ebm(self.configs)
+        eb_matrix_d, forcing_vector_d, stochastic_d = _make_ebm(self.configs, n_timesteps)
 
         # Main loop
         for i_timestep in range(n_timesteps):
@@ -1110,11 +1207,6 @@ class FAIR():
                 self.erfari_emissions_to_forcing_array,
                 self.species_index_mapping
             )[0:1, :, :, self.ari_indices, :]
-            print(self.emissions_array[[i_timestep], :, :, 3, :])
-            print(self.baseline_emissions_array)
-            print(self.ari_indices)
-            print(self.forcing_array[i_timestep:i_timestep+1, :, :, :])
-            import sys; sys.exit()
 
             if 'Aerosol-Cloud Interactions' in self.species_index_mapping:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = erf_aci(
@@ -1140,21 +1232,22 @@ class FAIR():
                 self.forcing_array[[i_timestep], ...], axis=SPECIES_AXIS, keepdims=True
             )
 
-            # 100. run the energy balance model - if temperature not prescribed - updating temperature boxes
-            #TODO: remove loop
+            # 100. run the energy balance model
+            # TODO: skip if temperature prescribed
+            # TODO: remove loop
             for iscen, scenario in enumerate(self.scenarios):
                 for iconf, config in enumerate(self.configs):
                     temperature_boxes[0, iscen, iconf, 0, :] = (
-                        ebm_matrix_d[config] @ temperature_boxes[0, iscen, iconf, 0, :] +
-                        forcing_vector_d[config] * self.forcing_sum_array[i_timestep, iscen, iconf, 0, 0] +
-                        stochastic_d[config][i_timestep, :]
+                        eb_matrix_d[iconf] @ temperature_boxes[0, iscen, iconf, 0, :] +
+                        forcing_vector_d[iconf] * self.forcing_sum_array[i_timestep, iscen, iconf, 0, 0] +
+                        stochastic_d[iconf][i_timestep, :]
                     )
                     self.temperature[i_timestep, iscen, iconf, :, :] = temperature_boxes[0, iscen, iconf, 0, 1:]
                     self.stochastic_forcing[i_timestep, iscen, iconf] = temperature_boxes[0, iscen, iconf, 0, 0]
 
         self._fill_concentration()
-        self._fill_forcing()
-        self._fill_temperature()
+#        self._fill_forcing()
+#        self._fill_temperature()
 
 
 

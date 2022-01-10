@@ -7,11 +7,11 @@ species_ids = {
     'co2': SpeciesID('CO2', Category.CO2),
     'ch4': SpeciesID('CH4', Category.CH4),
     'n2o': SpeciesID('N2O', Category.N2O),
-    'cfc_11': SpeciesID('CFC11', Category.HALOGEN),
+    'cfc_11': SpeciesID('CFC-11', Category.CFC_11),
     'hfc_134a': SpeciesID('HFC-134a', Category.F_GAS),
-    'sulfur': SpeciesID('Sulfur', Category.AEROSOL),
-    'bc': SpeciesID('BC', Category.AEROSOL),
-    'oc': SpeciesID('OC', Category.AEROSOL),
+    'sulfur': SpeciesID('Sulfur', Category.SULFUR),
+    'bc': SpeciesID('BC', Category.BC),
+    'oc': SpeciesID('OC', Category.OC),
     'aci': SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS),
     'solar': SpeciesID('Solar', Category.SOLAR),
     'volcanic': SpeciesID('Volcanic', Category.VOLCANIC)
@@ -73,6 +73,7 @@ scenarios = [Scenario(scen, scen_dict[scen]) for scen in scen_dict]
 
 config_dict = {}
 
+#TODO: test with stochastic_run=True
 config_dict['UKESM'] = {}
 config_dict['UKESM']['climate'] = ClimateResponse(
     ocean_heat_capacity = (5, 20, 100), ocean_heat_transfer=(1,2,1), deep_ocean_efficacy=1.29
@@ -175,3 +176,5 @@ fair.add_config(configs[0])
 fair.run()
 
 print()
+# this needs to be somehow processed out. And perhaps the best way is to use pyam or scmdata
+print(fair.scenarios[0].list_of_species[0]) #e.g the array of output is time x config
