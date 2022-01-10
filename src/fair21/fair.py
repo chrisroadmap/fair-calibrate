@@ -362,6 +362,26 @@ default_species_config = {
         ozone_radiative_efficiency = 7.1e-4,
 
     ),
+    'cfc-11': SpeciesConfig(
+        species_id = SpeciesID('CFC-11', Category.CFC_11, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 137.36,
+        lifetime = 52,
+        radiative_efficiency = 0.25941,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 3,
+        fractional_release = 0.47,
+        tropospheric_adjustment = 0.13,
+    ),
+    'cfc-12': SpeciesConfig(
+        species_id = SpeciesID('CFC-12', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 120.91,
+        lifetime = 102,
+        radiative_efficiency = 0.31998,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 2,
+        fractional_release = 0.23,
+        tropospheric_adjustment = 0.12,
+    ),
     'sulfur': SpeciesConfig(
         species_id = SpeciesID('Sulfur', Category.SULFUR, run_mode=RunMode.EMISSIONS),
         erfari_emissions_to_forcing = -0.0036167830509091486,
@@ -401,6 +421,252 @@ default_species_config = {
         species_id = SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS),
         aci_params={"scale": 2.09841432, "Sulfur": 260.34644166, "BC+OC": 111.05064063}
     )
+}
+
+fractional_release = {}
+for gas in gas_list:
+    fractional_release[gas] = 0
+fractional_release.update(
+    {
+        'CCl4': 0.56,
+        'CFC-113': 0.29,
+        'CFC-114': 0.12,
+        'CFC-115': 0.04,
+        'CH2Cl2': 0, # TODO: try to update: no literature value available
+        'CH3Br': 0.60,
+        'CH3CCl3': 0.67,
+        'CH3Cl': 0.44,
+        'CHCl3': 0, # TODO: try to update: no literature value available
+        'HCFC-141b': 0.34,
+        'HCFC-142b': 0.17,
+        'HCFC-22': 0.13,
+        'Halon-1211': 0.62,
+        'Halon-1301': 0.28,
+        'Halon-2402': 0.65,
+    }
+)
+
+natural_emissions_adjustment.update(
+    {
+        "CF4": 0.010071225,
+        "CCl4": 0.024856862,
+        "CH2Cl2": 246.6579,
+        "CH3Br": 105.08773,
+        "CH3Cl": 4275.7449,
+        "CHCl3": 300.92479,
+        "Halon-1211": 0.0077232726,
+
+    }
+)
+
+pre_industrial_concentration.update(
+    {
+        "CO2" : 278.3,
+        "CH4" : 729.2,
+        "N2O" : 270.1,
+        "CF4" : 34.05,
+        "CCl4": 0.025,
+        "CH3Cl": 457,
+        "CH3Br" : 5.3,
+        "CH2Cl2": 6.91,
+        "CHCl3": 4.8,
+        "Halon-1211" : 0.00445
+    }
+)
+
+MOLWT = {
+    "AIR": 28.97,  # reference?
+    "C": 12.011,
+    "C2F6": 138.01,
+    "C3F8": 188.02,
+    "C4F10": 238.03,
+    "C5F12": 288.03,
+    "C6F14": 338.04,
+    "C7F16": 388.05,
+    "C8F18": 438.06,
+    "cC4F8": 200.03,  # not standard PubChem but used extensively in AR6
+    "CCl4": 153.8,
+    "CF4": 88.004,
+    "CFC-113": 187.37,
+    "CFC-114": 170.92,
+    "CFC-115": 154.46,
+    "CH2Cl2": 84.93,
+    "CH3Br": 94.94,
+    "CH3CCl3": 133.4,
+    "CH3Cl": 50.49,
+    "CH4": 16.043,
+    "CHCl3": 119.37,
+    "CO2": 44.009,
+    "Halon-1211": 165.36,
+    "Halon-1301": 148.91,
+    "Halon-2402": 259.82,
+    "HCFC-141b": 116.95,
+    "HCFC-142b": 100.49,
+    "HCFC-22": 86.47,
+    "HFC-125": 120.02,
+    "HFC-134a": 102.03,
+    "HFC-143a": 84.04,
+    "HFC-152a": 66.05,
+    "HFC-227ea": 170.03,
+    "HFC-23": 70.014,
+    "HFC-236fa": 152.04,
+    "HFC-245fa": 134.05,
+    "HFC-32": 52.023,
+    "HFC-365mfc": 148.07,
+    "HFC-4310mee": 252.05,
+    "N": 14.007,
+    "N2": 28.014,
+    "N2O": 44.013,
+    "NF3": 71.002,
+    "NO": 30.006,
+    "NO2": 46.006,
+    "S": 32.07,
+    "SF6": 146.06,
+    "SO2": 64.069,
+    "SO2F2": 102.06,
+}
+
+# ATMOSPHERIC LIFETIMES
+#
+# Convention: alphabetical order by formula or common name
+# Unless stated, source is Smith et al. (2021), AR6 Chapter 7 Supplementary Material
+# https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_Chapter_07_Supplementary_Material.pdf
+lifetime = {
+    "C2F6": 10000,
+    "C3F8": 2600,
+    "C4F10": 2600,
+    "C5F12": 4100,
+    "C6F14": 3100,
+    "C7F16": 3000,
+    "C8F18": 3000,
+    "cC4F8": 3200,  # not standard PubChem name but used extensively in AR6
+    "CCl4": 32,
+    "CF4": 50000,
+    "CFC-113": 93,
+    "CFC-114": 189,
+    "CFC-115": 540,
+    "CH2Cl2": 0.493,
+    "CH3Br": 0.8,
+    "CH3CCl3": 5,
+    "CH3Cl": 0.9,
+    "CH4": 8.25,  # atmospheric burden lifetime in pre-industrial conditions. Source: Leach et al. (2021)
+    "CHCl3": 0.501,
+    "CO2": np.array([1e9, 394.4, 36.54, 4.304]),
+    "Halon-1211": 16,
+    "Halon-1301": 72,
+    "Halon-2402": 28,
+    "HCFC-141b": 9.4,
+    "HCFC-142b": 18,
+    "HCFC-22": 11.9,
+    "HFC-125": 30,
+    "HFC-134a": 14,
+    "HFC-143a": 51,
+    "HFC-152a": 1.6,
+    "HFC-227ea": 36,
+    "HFC-23": 228,
+    "HFC-236fa": 213,
+    "HFC-245fa": 7.9,
+    "HFC-32": 5.4,
+    "HFC-365mfc": 8.9,
+    "HFC-4310mee": 17,
+    "N2O": 109,
+    "NF3": 569,
+    "SF6": 3200,
+    "SO2F2": 36,
+}
+
+# CONCENTRATION GROWTH UNITS
+#
+# How much the atmospheric burden grows for a given emission
+burden_per_emission = {}
+for gas in gas_list:
+    burden_per_emission[gas] = (
+        1 / (M_ATMOS / 1e18 * MOLWT[gas] / MOLWT["AIR"])
+    )
+
+
+# number of chlorine atoms in each species
+CL_ATOMS = {}
+for gas in gas_list:
+    CL_ATOMS[gas] = 0
+CL_ATOMS.update(
+    {
+        "CFC-113": 3,
+        "CFC-114": 2,
+        "CFC-115": 1,
+        "CCl4": 4,
+        "CH3CCl3": 3,
+        "HCFC-22": 1,
+        "HCFC-141b": 2,
+        "HCFC-142b": 1,
+        "Halon-1211": 1,
+        "CH3Cl": 1,
+        "CH2Cl2": 2,
+        "CHCl3": 3,
+    }
+)
+
+# number of bromine atoms in each species
+BR_ATOMS = {}
+for gas in gas_list:
+    BR_ATOMS[gas] = 0
+BR_ATOMS.update(
+    {
+        "Halon-1211": 1,
+        "Halon-1202": 2,
+        "Halon-1301": 1,
+        "Halon-2402": 2,
+        "CH3Br": 1,
+    }
+)
+
+radiative_efficiency = {
+    'HFC-125': 0.23378,
+    'HFC-134a': 0.16714,
+    'HFC-143a': 0.168,
+    'HFC-152a': 0.10174,
+    'HFC-227ea': 0.27325,
+    'HFC-23': 0.19111,
+    'HFC-236fa': 0.25069,
+    'HFC-245fa': 0.24498,
+    'HFC-32': 0.11144,
+    'HFC-365mfc': 0.22813,
+    'HFC-4310mee': 0.35731,
+    'NF3': 0.20448,
+    'C2F6': 0.26105,
+    'C3F8': 0.26999,
+    'C4F10': 0.36874,
+    'C5F12': 0.4076,
+    'C6F14': 0.44888,
+    'C7F16': 0.50312,
+    'C8F18': 0.55787,
+    'CF4': 0.09859,
+    'cC4F8': 0.31392,
+    'SF6': 0.56657,
+    'SO2F2': 0.21074,
+    'CCl4': 0.16616,
+    'CFC-112': 0.28192,
+    'CFC-112a': 0.24564,
+    'CFC-113': 0.30142,
+    'CFC-113a': 0.24094,
+    'CFC-114': 0.31433,
+    'CFC-114a': 0.29747,
+    'CFC-115': 0.24625,
+    'CFC-13': 0.27752,
+    'CH2Cl2': 0.02882,
+    'CH3Br': 0.00432,
+    'CH3CCl3': 0.06454,
+    'CH3Cl': 0.00466,
+    'CHCl3': 0.07357,
+    'HCFC-124': 0.20721,
+    'HCFC-133a': 0.14995,
+    'HCFC-141b': 0.16065,
+    'HCFC-142b': 0.19329,
+    'HCFC-22': 0.21385,
+    'HCFC-31': 0.068,
+    'Halon-1211': 0.30014,
+    'Halon-1301': 0.29943,
+    'Halon-2402': 0.31169,
 }
 
 def species_config_from_default(name, **kwargs):
