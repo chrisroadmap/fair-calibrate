@@ -60,7 +60,7 @@ class Category(Enum):
     BC = auto()
     OC = auto()
     OTHER_AEROSOL = auto()
-    OZONE_PRECURSOR = auto()
+    SLCF_OZONE_PRECURSOR = auto()
     OZONE = auto()
     AEROSOL_CLOUD_INTERACTIONS = auto()
     CONTRAILS = auto()
@@ -72,6 +72,7 @@ class Category(Enum):
 GREENHOUSE_GAS = [Category.CO2_FFI, Category.CO2_AFOLU, Category.CO2, Category.CH4, Category.N2O, Category.CFC_11, Category.OTHER_HALOGEN, Category.F_GAS]
 HALOGEN = [Category.CFC_11, Category.OTHER_HALOGEN]
 AEROSOL = [Category.SULFUR, Category.BC, Category.OC, Category.OTHER_AEROSOL]
+OZONE_PRECURSOR = [Category.CH4, Category.N2O, HALOGEN, Category.SLCF_OZONE_PRECURSOR]
 NO_DUPLICATES_ALLOWED = [
     Category.CO2,
     Category.CH4,
@@ -110,7 +111,7 @@ valid_run_modes = {
     Category.BC: (RunMode.EMISSIONS, RunMode.FORCING),
     Category.OC: (RunMode.EMISSIONS, RunMode.FORCING),
     Category.OTHER_AEROSOL: (RunMode.EMISSIONS, RunMode.FORCING),
-    Category.OZONE_PRECURSOR: (RunMode.EMISSIONS, RunMode.FORCING),
+    Category.SLCF_OZONE_PRECURSOR: (RunMode.EMISSIONS, RunMode.FORCING),
     Category.OZONE: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.AEROSOL_CLOUD_INTERACTIONS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.CONTRAILS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
@@ -171,6 +172,7 @@ class RunConfig():
     n_temperature_boxes: int=3
     temperature_prescribed: bool=False
     aci_method: AciMethod=AciMethod.SMITH2018
+    br_cl_ratio: float=45
 
 # top level?
 
@@ -192,13 +194,14 @@ class SpeciesConfig():
     lapsi_emissions_to_forcing: float=0
     baseline_emissions: float=0
     ozone_radiative_efficiency: float=None
-    cl_atoms: float=None
-    br_atoms: float=None
+    cl_atoms: int=0
+    br_atoms: int=0
     fractional_release: float=None
     tropospheric_adjustment: float=0
     scale: float=1
     efficacy: float=1
     aci_params: dict=None
+    forcing_temperature_feedback: float=0
 
     def __post_init__(self):
         # validate input - the whole partition_fraction and lifetime thing
@@ -230,20 +233,22 @@ class SpeciesConfig():
                     * np.asarray(self.partition_fraction))
                 )
 
-
         if self.species_id.category in HALOGEN:
-            if ~isinstance(self.ozone_radiative_efficiency, Number):
+            if not isinstance(self.ozone_radiative_efficiency, Number):
                 raise ValueError("ozone_properties.ozone_radiative_efficiency should be a number for Halogens")
-            if ~isinstance(self.cl_atoms, int) or self.cl_atoms < 0:
+            if not isinstance(self.cl_atoms, int) or self.cl_atoms < 0:
                 raise ValueError("ozone_properties.cl_atoms should be a non-negative integer for Halogens")
-            if ~isinstance(self.br_atoms, int) or self.cl_atoms < 0:
+            if not isinstance(self.br_atoms, int) or self.cl_atoms < 0:
                 raise ValueError("ozone_properties.br_atoms should be a non-negative integer for Halogens")
-            if ~isinstance(self.fractional_release, Number) or self.fractional_release < 0:
+            if not isinstance(self.fractional_release, Number) or self.fractional_release < 0:
                 raise ValueError("ozone_properties.fractional_release should be a non-negative number for Halogens")
 
         if self.species_id.category == Category.AEROSOL_CLOUD_INTERACTIONS:
-            pass
-            #TODO: CHECK whether correct input is provided.
+            if not isinstance(self.aci_params, dict):
+                raise TypeError("For aerosol-cloud interactions, you must supply a dict of parameters using the aci_params keyword")
+
+        if not isinstance(self.forcing_temperature_feedback, Number):
+            raise ValueError("forcing_temperature_feedback should be a number")
 
 
 @dataclass
@@ -382,6 +387,295 @@ default_species_config = {
         fractional_release = 0.23,
         tropospheric_adjustment = 0.12,
     ),
+    'cfc-113': SpeciesConfig(
+        species_id = SpeciesID('CFC-113', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 187.37,
+        lifetime = 93,
+        radiative_efficiency = 0.30142,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 3,
+        fractional_release = 0.29,
+    ),
+    'cfc-114': SpeciesConfig(
+        species_id = SpeciesID('CFC-114', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 170.92,
+        lifetime = 189,
+        radiative_efficiency = 0.31433,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 2,
+        fractional_release = 0.12,
+    ),
+    'cfc-115': SpeciesConfig(
+        species_id = SpeciesID('CFC-115', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 154.46,
+        lifetime = 540,
+        radiative_efficiency = 0.24625,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 1,
+        fractional_release = 0.04,
+    ),
+    'hcfc-22': SpeciesConfig(
+        species_id = SpeciesID('HCFC-22', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 86.47,
+        lifetime = 11.9,
+        radiative_efficiency = 0.21385,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 1,
+        fractional_release = 0.13,
+    ),
+    'hcfc-141b': SpeciesConfig(
+        species_id = SpeciesID('HCFC-141b', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 116.95,
+        lifetime = 9.4,
+        radiative_efficiency = 0.16065,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 2,
+        fractional_release = 0.34,
+    ),
+    'hcfc-142b': SpeciesConfig(
+        species_id = SpeciesID('HCFC-142b', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 100.49,
+        lifetime = 18,
+        radiative_efficiency = 0.19329,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 1,
+        fractional_release = 0.17,
+    ),
+    'ccl4': SpeciesConfig(
+        species_id = SpeciesID('CCl4', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 153.8,
+        lifetime = 32,
+        radiative_efficiency = 0.16616,
+        natural_emissions_adjustment = 0.024856862,
+        baseline_concentration = 0.025,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 4,
+        fractional_release = 0.56,
+    ),
+    'chcl3': SpeciesConfig(
+        species_id = SpeciesID('CHCl3', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 119.37,
+        lifetime = 0.501,
+        radiative_efficiency = 0.07357,
+        natural_emissions_adjustment = 300.92479,
+        baseline_concentration = 4.8,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 3,
+        fractional_release = 0,  # no literature value available
+    ),
+    'ch2cl2': SpeciesConfig(
+        species_id = SpeciesID('CH2Cl2', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 84.93,
+        lifetime = 0.493,
+        radiative_efficiency = 0.02882,
+        natural_emissions_adjustment = 246.6579,
+        baseline_concentration = 6.91,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 2,
+        fractional_release = 0,  # no literature value available
+    ),
+    'ch3cl': SpeciesConfig(
+        species_id = SpeciesID('CH3Cl', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 50.49,
+        lifetime = 0.9,
+        radiative_efficiency = 0.00466,
+        natural_emissions_adjustment = 4275.7449,
+        baseline_concentration = 457,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 1,
+        fractional_release = 0.44,
+    ),
+    'ch3ccl3': SpeciesConfig(
+        species_id = SpeciesID('CH3CCl3', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 133.4,
+        lifetime = 5,
+        radiative_efficiency = 0.06454,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 3,
+        fractional_release = 0.67,
+    ),
+    'ch3br': SpeciesConfig(
+        species_id = SpeciesID('CH3Br', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 94.94,
+        lifetime = 0.8,
+        radiative_efficiency = 0.00432,
+        natural_emissions_adjustment = 105.08773,
+        baseline_concentration = 5.3,
+        ozone_radiative_efficiency = -1.25e-4,
+        br_atoms = 1,
+        fractional_release = 0.6,
+    ),
+    'halon-1211': SpeciesConfig(
+        species_id = SpeciesID('Halon-1211', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 165.36,
+        lifetime = 16,
+        radiative_efficiency = 0.30014,
+        natural_emissions_adjustment = 0.0077232726,
+        baseline_concentration = 0.00445,
+        ozone_radiative_efficiency = -1.25e-4,
+        cl_atoms = 1,
+        br_atoms = 1,
+        fractional_release = 0.62,
+    ),
+    'halon-1301': SpeciesConfig(
+        species_id = SpeciesID('Halon-1301', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 148.91,
+        lifetime = 72,
+        radiative_efficiency = 0.29943,
+        baseline_concentration = 0.,
+        ozone_radiative_efficiency = -1.25e-4,
+        br_atoms = 1,
+        fractional_release = 0.28,
+    ),
+    'halon-2402': SpeciesConfig(
+        species_id = SpeciesID('Halon-2402', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 259.82,
+        lifetime = 28,
+        radiative_efficiency = 0.31169,
+        ozone_radiative_efficiency = -1.25e-4,
+        br_atoms = 2,
+        fractional_release = 0.65,
+    ),
+    'cf4': SpeciesConfig(
+        species_id = SpeciesID('CF4', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 88.004,
+        lifetime = 50000,
+        radiative_efficiency = 0.09859,
+        baseline_concentration = 34.05,
+        natural_emissions_adjustment = 0.010071225,
+    ),
+    'c2f6': SpeciesConfig(
+        species_id = SpeciesID('C2F6', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 138.01,
+        lifetime = 10000,
+        radiative_efficiency = 0.26105,
+    ),
+    'c3f8': SpeciesConfig(
+        species_id = SpeciesID('C3F8', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 188.02,
+        lifetime = 2600,
+        radiative_efficiency = 0.26999,
+    ),
+    'c-c4f8': SpeciesConfig(
+        species_id = SpeciesID('C-C4F8', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 200.03,
+        lifetime = 3200,
+        radiative_efficiency = 0.31392,
+    ),
+    'c4f10': SpeciesConfig(
+        species_id = SpeciesID('C4F10', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 238.03,
+        lifetime = 2600,
+        radiative_efficiency = 0.36874,
+    ),
+    'c5f12': SpeciesConfig(
+        species_id = SpeciesID('C5F12', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 288.03,
+        lifetime = 4100,
+        radiative_efficiency = 0.4076,
+    ),
+    'c6f14': SpeciesConfig(
+        species_id = SpeciesID('C6F14', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 338.04,
+        lifetime = 3100,
+        radiative_efficiency = 0.44888,
+    ),
+    'c7f16': SpeciesConfig(
+        species_id = SpeciesID('C7F16', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 388.05,
+        lifetime = 3000,
+        radiative_efficiency = 0.50312,
+    ),
+    'c8f18': SpeciesConfig(
+        species_id = SpeciesID('C8F18', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 438.06,
+        lifetime = 3000,
+        radiative_efficiency = 0.55787,
+    ),
+    'hfc-125': SpeciesConfig(
+        species_id = SpeciesID('HFC-125', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 120.02,
+        lifetime = 30,
+        radiative_efficiency = 0.23378,
+    ),
+    'hfc-134a': SpeciesConfig(
+        species_id = SpeciesID('HFC-134a', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 102.03,
+        lifetime = 14,
+        radiative_efficiency = 0.16714,
+    ),
+    'hfc-143a': SpeciesConfig(
+        species_id = SpeciesID('HFC-143a', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 84.04,
+        lifetime = 51,
+        radiative_efficiency = 0.168,
+    ),
+    'hfc-152a': SpeciesConfig(
+        species_id = SpeciesID('HFC-152a', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 66.05,
+        lifetime = 1.6,
+        radiative_efficiency = 0.10174,
+    ),
+    'hfc-227ea': SpeciesConfig(
+        species_id = SpeciesID('HFC-227ea', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 170.03,
+        lifetime = 36,
+        radiative_efficiency = 0.27325,
+    ),
+    'hfc-23': SpeciesConfig(
+        species_id = SpeciesID('HFC-23', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 70.014,
+        lifetime = 228,
+        radiative_efficiency = 0.19111,
+    ),
+    'hfc-236fa': SpeciesConfig(
+        species_id = SpeciesID('HFC-236fa', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 152.04,
+        lifetime = 213,
+        radiative_efficiency = 0.25069,
+    ),
+    'hfc-245fa': SpeciesConfig(
+        species_id = SpeciesID('HFC-245fa', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 134.05,
+        lifetime = 7.9,
+        radiative_efficiency = 0.24498,
+    ),
+    'hfc-32': SpeciesConfig(
+        species_id = SpeciesID('HFC-32', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 52.023,
+        lifetime = 5.4,
+        radiative_efficiency = 0.11144,
+    ),
+    'hfc-365mfc': SpeciesConfig(
+        species_id = SpeciesID('HFC-365mfc', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 148.07,
+        lifetime = 8.9,
+        radiative_efficiency = 0.22813,
+    ),
+    'hfc-4310mee': SpeciesConfig(
+        species_id = SpeciesID('HFC-4310mee', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 252.05,
+        lifetime = 17,
+        radiative_efficiency = 0.35731,
+    ),
+    'nf3': SpeciesConfig(
+        species_id = SpeciesID('NF3', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 71.002,
+        lifetime = 569,
+        radiative_efficiency = 0.20448,
+    ),
+    'sf6': SpeciesConfig(
+        species_id = SpeciesID('SF6', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 146.06,
+        lifetime = 3200,
+        radiative_efficiency = 0.56657,
+    ),
+    'so2f2': SpeciesConfig(
+        species_id = SpeciesID('SO2F2', Category.F_GAS, run_mode=RunMode.EMISSIONS),
+        molecular_weight = 102.06,
+        lifetime = 36,
+        radiative_efficiency = 0.21074,
+    ),
     'sulfur': SpeciesConfig(
         species_id = SpeciesID('Sulfur', Category.SULFUR, run_mode=RunMode.EMISSIONS),
         erfari_emissions_to_forcing = -0.0036167830509091486,
@@ -403,276 +697,39 @@ default_species_config = {
         baseline_emissions = 6.92769009144426
     ),
     'co': SpeciesConfig(
-        species_id = SpeciesID('CO', Category.OZONE_PRECURSOR),
-#        ozone_radiative_efficiency =,
+        species_id = SpeciesID('CO', Category.SLCF_OZONE_PRECURSOR, run_mode=RunMode.EMISSIONS),
+        ozone_radiative_efficiency = 1.55e-4,
         baseline_emissions = 348.52735877736
     ),
     'nox' : SpeciesConfig(
-        species_id = SpeciesID('NOx', Category.OZONE_PRECURSOR),
-#        ozone_radiative_efficiency =,
+        species_id = SpeciesID('NOx', Category.SLCF_OZONE_PRECURSOR, run_mode=RunMode.EMISSIONS),
+        ozone_radiative_efficiency = 1.797e-3,
         baseline_emissions = 12.7352119423177
     ),
     'voc' : SpeciesConfig(
-        species_id = SpeciesID('VOC', Category.OZONE_PRECURSOR),
-#        ozone_radiative_efficiency =,
+        species_id = SpeciesID('VOC', Category.SLCF_OZONE_PRECURSOR, run_mode=RunMode.EMISSIONS),
+        ozone_radiative_efficiency = 3.29e-4,
         baseline_emissions = 60.0218262241548
     ),
     'aerosol-cloud interactions': SpeciesConfig(
-        species_id = SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS),
+        species_id = SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS, run_mode=RunMode.FROM_OTHER_SPECIES),
         aci_params={"scale": 2.09841432, "Sulfur": 260.34644166, "BC+OC": 111.05064063}
+    ),
+    'ozone': SpeciesConfig(
+        species_id = SpeciesID('Ozone', Category.OZONE, run_mode=RunMode.FROM_OTHER_SPECIES),
+        forcing_temperature_feedback = -0.037
     )
 }
 
-fractional_release = {}
-for gas in gas_list:
-    fractional_release[gas] = 0
-fractional_release.update(
-    {
-        'CCl4': 0.56,
-        'CFC-113': 0.29,
-        'CFC-114': 0.12,
-        'CFC-115': 0.04,
-        'CH2Cl2': 0, # TODO: try to update: no literature value available
-        'CH3Br': 0.60,
-        'CH3CCl3': 0.67,
-        'CH3Cl': 0.44,
-        'CHCl3': 0, # TODO: try to update: no literature value available
-        'HCFC-141b': 0.34,
-        'HCFC-142b': 0.17,
-        'HCFC-22': 0.13,
-        'Halon-1211': 0.62,
-        'Halon-1301': 0.28,
-        'Halon-2402': 0.65,
-    }
-)
-
-natural_emissions_adjustment.update(
-    {
-        "CF4": 0.010071225,
-        "CCl4": 0.024856862,
-        "CH2Cl2": 246.6579,
-        "CH3Br": 105.08773,
-        "CH3Cl": 4275.7449,
-        "CHCl3": 300.92479,
-        "Halon-1211": 0.0077232726,
-
-    }
-)
-
-pre_industrial_concentration.update(
-    {
-        "CO2" : 278.3,
-        "CH4" : 729.2,
-        "N2O" : 270.1,
-        "CF4" : 34.05,
-        "CCl4": 0.025,
-        "CH3Cl": 457,
-        "CH3Br" : 5.3,
-        "CH2Cl2": 6.91,
-        "CHCl3": 4.8,
-        "Halon-1211" : 0.00445
-    }
-)
-
-MOLWT = {
-    "AIR": 28.97,  # reference?
-    "C": 12.011,
-    "C2F6": 138.01,
-    "C3F8": 188.02,
-    "C4F10": 238.03,
-    "C5F12": 288.03,
-    "C6F14": 338.04,
-    "C7F16": 388.05,
-    "C8F18": 438.06,
-    "cC4F8": 200.03,  # not standard PubChem but used extensively in AR6
-    "CCl4": 153.8,
-    "CF4": 88.004,
-    "CFC-113": 187.37,
-    "CFC-114": 170.92,
-    "CFC-115": 154.46,
-    "CH2Cl2": 84.93,
-    "CH3Br": 94.94,
-    "CH3CCl3": 133.4,
-    "CH3Cl": 50.49,
-    "CH4": 16.043,
-    "CHCl3": 119.37,
-    "CO2": 44.009,
-    "Halon-1211": 165.36,
-    "Halon-1301": 148.91,
-    "Halon-2402": 259.82,
-    "HCFC-141b": 116.95,
-    "HCFC-142b": 100.49,
-    "HCFC-22": 86.47,
-    "HFC-125": 120.02,
-    "HFC-134a": 102.03,
-    "HFC-143a": 84.04,
-    "HFC-152a": 66.05,
-    "HFC-227ea": 170.03,
-    "HFC-23": 70.014,
-    "HFC-236fa": 152.04,
-    "HFC-245fa": 134.05,
-    "HFC-32": 52.023,
-    "HFC-365mfc": 148.07,
-    "HFC-4310mee": 252.05,
-    "N": 14.007,
-    "N2": 28.014,
-    "N2O": 44.013,
-    "NF3": 71.002,
-    "NO": 30.006,
-    "NO2": 46.006,
-    "S": 32.07,
-    "SF6": 146.06,
-    "SO2": 64.069,
-    "SO2F2": 102.06,
-}
-
-# ATMOSPHERIC LIFETIMES
-#
-# Convention: alphabetical order by formula or common name
-# Unless stated, source is Smith et al. (2021), AR6 Chapter 7 Supplementary Material
-# https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_Chapter_07_Supplementary_Material.pdf
-lifetime = {
-    "C2F6": 10000,
-    "C3F8": 2600,
-    "C4F10": 2600,
-    "C5F12": 4100,
-    "C6F14": 3100,
-    "C7F16": 3000,
-    "C8F18": 3000,
-    "cC4F8": 3200,  # not standard PubChem name but used extensively in AR6
-    "CCl4": 32,
-    "CF4": 50000,
-    "CFC-113": 93,
-    "CFC-114": 189,
-    "CFC-115": 540,
-    "CH2Cl2": 0.493,
-    "CH3Br": 0.8,
-    "CH3CCl3": 5,
-    "CH3Cl": 0.9,
-    "CH4": 8.25,  # atmospheric burden lifetime in pre-industrial conditions. Source: Leach et al. (2021)
-    "CHCl3": 0.501,
-    "CO2": np.array([1e9, 394.4, 36.54, 4.304]),
-    "Halon-1211": 16,
-    "Halon-1301": 72,
-    "Halon-2402": 28,
-    "HCFC-141b": 9.4,
-    "HCFC-142b": 18,
-    "HCFC-22": 11.9,
-    "HFC-125": 30,
-    "HFC-134a": 14,
-    "HFC-143a": 51,
-    "HFC-152a": 1.6,
-    "HFC-227ea": 36,
-    "HFC-23": 228,
-    "HFC-236fa": 213,
-    "HFC-245fa": 7.9,
-    "HFC-32": 5.4,
-    "HFC-365mfc": 8.9,
-    "HFC-4310mee": 17,
-    "N2O": 109,
-    "NF3": 569,
-    "SF6": 3200,
-    "SO2F2": 36,
-}
-
-# CONCENTRATION GROWTH UNITS
-#
-# How much the atmospheric burden grows for a given emission
-burden_per_emission = {}
-for gas in gas_list:
-    burden_per_emission[gas] = (
-        1 / (M_ATMOS / 1e18 * MOLWT[gas] / MOLWT["AIR"])
-    )
 
 
-# number of chlorine atoms in each species
-CL_ATOMS = {}
-for gas in gas_list:
-    CL_ATOMS[gas] = 0
-CL_ATOMS.update(
-    {
-        "CFC-113": 3,
-        "CFC-114": 2,
-        "CFC-115": 1,
-        "CCl4": 4,
-        "CH3CCl3": 3,
-        "HCFC-22": 1,
-        "HCFC-141b": 2,
-        "HCFC-142b": 1,
-        "Halon-1211": 1,
-        "CH3Cl": 1,
-        "CH2Cl2": 2,
-        "CHCl3": 3,
-    }
-)
-
-# number of bromine atoms in each species
-BR_ATOMS = {}
-for gas in gas_list:
-    BR_ATOMS[gas] = 0
-BR_ATOMS.update(
-    {
-        "Halon-1211": 1,
-        "Halon-1202": 2,
-        "Halon-1301": 1,
-        "Halon-2402": 2,
-        "CH3Br": 1,
-    }
-)
-
-radiative_efficiency = {
-    'HFC-125': 0.23378,
-    'HFC-134a': 0.16714,
-    'HFC-143a': 0.168,
-    'HFC-152a': 0.10174,
-    'HFC-227ea': 0.27325,
-    'HFC-23': 0.19111,
-    'HFC-236fa': 0.25069,
-    'HFC-245fa': 0.24498,
-    'HFC-32': 0.11144,
-    'HFC-365mfc': 0.22813,
-    'HFC-4310mee': 0.35731,
-    'NF3': 0.20448,
-    'C2F6': 0.26105,
-    'C3F8': 0.26999,
-    'C4F10': 0.36874,
-    'C5F12': 0.4076,
-    'C6F14': 0.44888,
-    'C7F16': 0.50312,
-    'C8F18': 0.55787,
-    'CF4': 0.09859,
-    'cC4F8': 0.31392,
-    'SF6': 0.56657,
-    'SO2F2': 0.21074,
-    'CCl4': 0.16616,
-    'CFC-112': 0.28192,
-    'CFC-112a': 0.24564,
-    'CFC-113': 0.30142,
-    'CFC-113a': 0.24094,
-    'CFC-114': 0.31433,
-    'CFC-114a': 0.29747,
-    'CFC-115': 0.24625,
-    'CFC-13': 0.27752,
-    'CH2Cl2': 0.02882,
-    'CH3Br': 0.00432,
-    'CH3CCl3': 0.06454,
-    'CH3Cl': 0.00466,
-    'CHCl3': 0.07357,
-    'HCFC-124': 0.20721,
-    'HCFC-133a': 0.14995,
-    'HCFC-141b': 0.16065,
-    'HCFC-142b': 0.19329,
-    'HCFC-22': 0.21385,
-    'HCFC-31': 0.068,
-    'Halon-1211': 0.30014,
-    'Halon-1301': 0.29943,
-    'Halon-2402': 0.31169,
-}
 
 def species_config_from_default(name, **kwargs):
-    config = default_species_config[name.lower()]
+    # not making a copy would mutate the base dict: we don't want this
+    config = copy.copy(default_species_config[name.lower()])
     for key, value in kwargs.items():
         setattr(config, key, value)
+    config.__post_init__()  # ensures checks are run
     return config
 
 
@@ -1045,7 +1102,7 @@ def step_concentration(
 def calculate_ghg_forcing(
     concentration,
     pre_industrial_concentration,
-    tropospheric_adjustment,
+    forcing_scaling,
     radiative_efficiency,
     gas_index_mapping,
     a1 = -2.4785e-07,
@@ -1073,8 +1130,9 @@ def calculate_ghg_forcing(
         included in units of [ppm, ppb, ppb]. Other GHGs are units of ppt.
     pre_industrial_concentration : ndarray
         pre-industrial concentration of the gases (see above).
-    tropospheric_adjustment : ndarray
-        conversion factor from radiative forcing to effective radiative forcing.
+    forcing_scaling : ndarray
+        scaling of the calculated radiative forcing (e.g. for conversion to
+        effective radiative forcing and forcing uncertainty).
     radiative_efficiency : ndarray
         radiative efficiency to use for linear-forcing gases, in W m-2 ppb-1
     gas_index_mapping : dict
@@ -1143,19 +1201,19 @@ def calculate_ghg_forcing(
     alpha_p[where_low] = d1
     alpha_p[where_high] = d1 - b1**2/(4*a1)
     alpha_n2o = c1*np.sqrt(n2o)
-    erf_out[:, :, :, [gas_index_mapping["CO2"]], :] = (alpha_p + alpha_n2o) * np.log(co2/co2_pi) * (1 + tropospheric_adjustment[:, :, :, [gas_index_mapping["CO2"]], :])
+    erf_out[:, :, :, [gas_index_mapping["CO2"]], :] = (alpha_p + alpha_n2o) * np.log(co2/co2_pi) * (forcing_scaling[:, :, :, [gas_index_mapping["CO2"]], :])
 
     # CH4
     erf_out[:, :, :, [gas_index_mapping["CH4"]], :] = (
         (a3*np.sqrt(ch4) + b3*np.sqrt(n2o) + d3) *
         (np.sqrt(ch4) - np.sqrt(ch4_pi))
-    )  * (1 + tropospheric_adjustment[:, :, :, [gas_index_mapping["CH4"]], :])
+    )  * (forcing_scaling[:, :, :, [gas_index_mapping["CH4"]], :])
 
     # N2O
     erf_out[:, :, :, [gas_index_mapping["N2O"]], :] = (
         (a2*np.sqrt(co2) + b2*np.sqrt(n2o) + c2*np.sqrt(ch4) + d2) *
         (np.sqrt(n2o) - np.sqrt(n2o_pi))
-    )  * (1 + tropospheric_adjustment[:, :, :, [gas_index_mapping["N2O"]], :])
+    )  * (forcing_scaling[:, :, :, [gas_index_mapping["N2O"]], :])
 
     # Then, linear forcing for other gases
     minor_gas_index = list(range(concentration.shape[SPECIES_AXIS]))
@@ -1165,7 +1223,7 @@ def calculate_ghg_forcing(
         erf_out[:, :, :, minor_gas_index, :] = (
             (concentration[:, :, :, minor_gas_index, :] - pre_industrial_concentration[:, :, :, minor_gas_index, :])
             * radiative_efficiency[:, :, :, minor_gas_index, :] * 0.001
-        ) * (1 + tropospheric_adjustment[:, :, :, minor_gas_index, :])
+        ) * (forcing_scaling[:, :, :, minor_gas_index, :])
 
     return erf_out
 
@@ -1173,7 +1231,7 @@ def calculate_ghg_forcing(
 def calculate_erfari_forcing(
     emissions,
     pre_industrial_emissions,
-    tropospheric_adjustment,
+    forcing_scaling,
     radiative_efficiency,
     aerosol_index_mapping,
 ):
@@ -1186,8 +1244,9 @@ def calculate_erfari_forcing(
         input emissions
     pre_industrial_emissions : ndarray
         pre-industrial emissions
-    tropospheric_adjustment : ndarray
-        conversion factor from radiative forcing to effective radiative forcing.
+    forcing_scaling : ndarray
+        scaling of the calculated radiative forcing (e.g. for conversion to
+        effective radiative forcing and forcing uncertainty).
     radiative_efficiency : ndarray
         radiative efficiency (W m-2 (emission_unit yr-1)-1) of each species.
     aerosol_index_mapping : dict
@@ -1213,7 +1272,7 @@ def calculate_erfari_forcing(
         erf_out = (
             (emissions[:, :, :, ari_index, :] - pre_industrial_emissions[:, :, :, ari_index, :])
             * radiative_efficiency[:, :, :, ari_index, :]
-        ) * (1 + tropospheric_adjustment[:, :, :, ari_index, :])
+        ) * forcing_scaling[:, :, :, ari_index, :]
 
     return erf_out
 
@@ -1221,7 +1280,7 @@ def calculate_erfari_forcing(
 def calculate_erfaci_forcing(
     emissions,
     pre_industrial_emissions,
-    tropospheric_adjustment,
+    forcing_scaling,
     scale,
     shape_sulfur,
     shape_bcoc,
@@ -1238,8 +1297,9 @@ def calculate_erfaci_forcing(
         input emissions
     pre_industrial_emissions : ndarray
         pre-industrial emissions
-    tropospheric_adjustment : ndarray
-        conversion factor from radiative forcing to effective radiative forcing.
+    forcing_scaling : ndarray
+        scaling of the calculated radiative forcing (e.g. for conversion to
+        effective radiative forcing and forcing uncertainty).
     scale : ndarray
         scaling factor to apply to the logarithm
     shape_sulfur : ndarray
@@ -1284,7 +1344,184 @@ def calculate_erfaci_forcing(
         (bc_pi + oc_pi)/shape_bcoc
     )
 
-    erf_out = (radiative_effect - pre_industrial_radiative_effect) * (1 + tropospheric_adjustment)
+    erf_out = (radiative_effect - pre_industrial_radiative_effect) * forcing_scaling
+    return erf_out
+
+
+def calculate_eesc(
+    concentration,
+    baseline_concentration,
+    fractional_release,
+    cl_atoms,
+    br_atoms,
+    species_index_mapping,
+    br_cl_ratio,
+):
+    """Calculate equivalent effective stratospheric chlorine.
+
+    Parameters
+    ----------
+    concentration : ndarray
+        concentrations in timestep
+    baseline_concentration : ndarray
+        baseline, perhaps pre-industrial concentrations
+    fractional_release : ndarray
+        fractional release describing the proportion of available ODS that
+        actually contributes to ozone depletion.
+    cl_atoms : ndarray
+        Chlorine atoms in each species
+    br_atoms : ndarray
+        Bromine atoms in each species
+    species_index_mapping : dict
+        provides a mapping of which gas corresponds to which array index along
+        the SPECIES_AXIS.
+    br_cl_ratio : float, default=45
+        how much more effective bromine is as an ozone depletor than chlorine.
+
+    Returns
+    -------
+    eesc_out : ndarray
+        equivalent effective stratospheric chlorine
+
+    Notes
+    -----
+    Where array input is taken, the arrays always have the dimensions of
+    (scenario, species, time, gas_box). Dimensionality can be 1, but we
+    retain the singleton dimension in order to preserve clarity of
+    calculation and speed.
+    """
+
+    # EESC is in terms of CFC11-eq
+    cfc11_fr = fractional_release[:, :, :, [species_index_mapping["CFC-11"]], :]
+    eesc_out = (
+        cl_atoms * (concentration - baseline_concentration) * fractional_release / cfc11_fr +
+        br_cl_ratio * br_atoms * (concentration - baseline_concentration) * fractional_release / cfc11_fr
+    ) * cfc11_fr
+    return eesc_out
+
+
+def calculate_ozone_forcing(
+    emissions,
+    concentration,
+    baseline_emissions,
+    baseline_concentration,
+    fractional_release,
+    cl_atoms,
+    br_atoms,
+    forcing_scaling,
+    ozone_radiative_efficiency,
+    temperature,
+    temperature_feedback,
+    br_cl_ratio,
+    species_index_mapping,
+):
+
+    """Determines ozone effective radiative forcing.
+
+    Calculates total ozone forcing from precursor emissions and
+    concentrations based on AerChemMIP and CMIP6 Historical behaviour in
+    Skeie et al. (2020) and Thornhill et al. (2021).
+
+    In this hard-coded treatment, ozone forcing depends on concentrations of
+    CH4, N2O, ozone-depleting halogens, and emissions of CO, NVMOC and NOx,
+    but any combination of emissions and concentrations are allowed.
+
+    Parameters
+    ----------
+    emissions : ndarry
+        emissions in timestep
+    concentration: ndarray
+        concentrations in timestep
+    pre_industrial_emissions : ndarray
+        pre-industrial emissions
+    pre_industrial_concentration : ndarray
+        pre-industrial concentrations
+    fractional_release : ndarray
+        fractional release describing the proportion of available ODS that
+        actually contributes to ozone depletion.
+    cl_atoms : ndarray
+        Chlorine atoms in each species
+    br_atoms : ndarray
+        Bromine atoms in each species
+    forcing_scaling : ndarray
+        scaling of the calculated radiative forcing (e.g. for conversion to
+        effective radiative forcing and forcing uncertainty).
+    radiative_efficiency : ndarray
+        the radiative efficiency at which ozone precursor emissions or
+        concentrations are converted to ozone radiative forcing. The unit is
+        W m-2 (<native emissions or concentration unit>)-1, where the
+        emissions unit is usually Mt/yr for short-lived forcers, ppb for CH4
+        and N2O concentrations, and ppt for halogenated species. Note this is
+        not the same radiative efficiency that is used in the ghg forcing.
+    species_index_mapping : ndarray
+        provides a mapping of which gas corresponds to which array index along
+        the SPECIES_AXIS.
+    temperature : ndarray or float
+        global mean surface temperature anomaly used to calculate the feedback.
+        In the forward model this will be one timestep behind; a future TODO
+        could be to iterate this.
+    temperature_feedback : float
+        temperature feedback on ozone forcing (W m-2 K-1)
+    br_cl_ratio : float, default=45
+        how much more effective bromine is as an ozone depletor than chlorine.
+
+    Returns
+    -------
+    erf_ozone : dict
+        ozone forcing due to each component, and in total.
+
+    Notes
+    -----
+    Where array input is taken, the arrays always have the dimensions of
+    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
+    retain the singleton dimension in order to preserve clarity of
+    calculation and speed.
+    """
+
+    array_shape = emissions.shape
+    n_timesteps, n_scenarios, n_configs, n_species, _ = array_shape
+
+    # revisit this if we ever want to dump out intermediate calculations like the feedback strength.
+    _erf = np.ones((n_timesteps, n_scenarios, n_configs, 4, 1)) * np.nan
+
+    # Halogen GHGs expressed as EESC
+    eesc = calculate_eesc(
+        concentration,
+        baseline_concentration,
+        fractional_release,
+        cl_atoms,
+        br_atoms,
+        species_index_mapping,
+        br_cl_ratio,
+    )
+    _erf[:, :, :, 0, :] = np.nansum(eesc * ozone_radiative_efficiency * forcing_scaling, axis=SPECIES_AXIS)
+
+    # Non-Halogen GHGs, with a concentration-given ozone radiative_efficiency
+    o3_species_conc = []
+    for species in ["CH4", "N2O"]:
+        if species in species_index_mapping:
+            o3_species_conc.append(species_index_mapping[species])
+    _erf[:, :, :, 1, :] = np.sum(
+        (concentration[:, :, :, o3_species_conc, :] - baseline_concentration[:, :, :, o3_species_conc, :]) *
+    ozone_radiative_efficiency[:, :, :, o3_species_conc, :], axis=SPECIES_AXIS)
+
+    # Emissions-based SLCF_OZONE_PRECURSORs
+    o3_species_emis = []
+    for species in ["CO", "VOC", "NOx"]:
+        if species in species_index_mapping:
+            o3_species_emis.append(species_index_mapping[species])
+    _erf[:, :, :, 2, :] = np.sum(
+        (emissions[:, :, :, o3_species_emis, :] - baseline_emissions[:, :, :, o3_species_emis, :]) *
+    ozone_radiative_efficiency[:, :, :, o3_species_emis, :], axis=SPECIES_AXIS)
+
+    # Temperature feedback
+    _erf[:, :, :, [3], :] = (
+        temperature_feedback * temperature * np.sum(_erf[:, :, :, :3, :], axis=SPECIES_AXIS, keepdims=True)
+    )
+    #print(_erf[:, 7, :, 3, :].squeeze())
+    #print(temperature.shape) 1 8 66 1
+    #print(temperature[:, 7, :, :].squeeze())
+    erf_out = np.sum(_erf, axis=SPECIES_AXIS, keepdims=True)
     return erf_out
 
 
@@ -1365,6 +1602,7 @@ class FAIR():
         self.ghg_indices = []
         self.ari_indices = []
         self.aci_index = None
+        self.ozone_index = None
         #self.config_indices = []
         for ispec, specie in enumerate(self.species):
             self.species_index_mapping[specie.name] = ispec
@@ -1374,6 +1612,8 @@ class FAIR():
                 self.ari_indices.append(ispec)
             if specie.category == Category.AEROSOL_CLOUD_INTERACTIONS:
                 self.aci_index = ispec
+            if specie.category == Category.OZONE:
+                self.ozone_index = ispec
         for iscen, scenario in enumerate(self.scenarios):
             self.scenarios_index_mapping[scenario.name] = iscen
         for iconf, config in enumerate(self.configs):
@@ -1394,7 +1634,6 @@ class FAIR():
                     scen_spec.airborne_fraction[self.cumulative_emissions_array[:, iscen, :, ispec, 0]==0]=0
                     if self.species[ispec].category == Category.CH4:
                         scen_spec.effective_lifetime = self.alpha_lifetime_array[:, iscen, :, ispec, 0] * self.lifetime_array[:, 0, :, ispec, 0]
-                    #print(species_name, scen_spec.airborne_fraction)
 
     def _fill_forcing(self):
         """Add the forcing as an attribute to each Species and Scenario"""
@@ -1435,10 +1674,17 @@ class FAIR():
         self.radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.forcing_scaling_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.efficacy_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.fractional_release_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.br_atoms_array = np.ones((1, 1, 1, n_species, 1)) * np.nan
+        self.cl_atoms_array = np.ones((1, 1, 1, n_species, 1)) * np.nan
         self.erfari_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.erfaci_scale_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
         self.erfaci_shape_sulfur_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
         self.erfaci_shape_bcoc_array = np.ones((1, 1, n_configs, 1, 1)) * np.inf
+        self.ozone_radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        # TODO: make a more general temperature-forcing feedback for all species
+        self.forcing_temperature_feedback_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        # TODO: start from non-zero temperature
         self.temperature = np.ones((n_timesteps, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
 
         for ispec, species_name in enumerate(self.species_index_mapping):
@@ -1447,6 +1693,7 @@ class FAIR():
                 self.forcing_scaling_array[:, 0, iconf, ispec, 0] = (1+conf_spec.tropospheric_adjustment) * conf_spec.scale
                 self.efficacy_array[:, 0, iconf, ispec, 0] = conf_spec.efficacy
                 self.baseline_emissions_array[:, :, iconf, ispec, :] = conf_spec.baseline_emissions
+                self.forcing_temperature_feedback_array[:, :, iconf, ispec, :] = conf_spec.forcing_temperature_feedback
                 if self.species[ispec].category in GREENHOUSE_GAS:
                     partition_fraction = np.asarray(conf_spec.partition_fraction)
                     if np.ndim(partition_fraction) == 1:
@@ -1466,8 +1713,8 @@ class FAIR():
                     self.natural_emissions_adjustment_array[:, :, iconf, ispec, 0] = conf_spec.natural_emissions_adjustment
                 if self.species[ispec].category in HALOGEN:  # TODO: probably needs similar to above here.
                     self.fractional_release_array[:, :, iconf, ispec, 0] = conf_spec.fractional_release
-                    self.br_atoms_array[:, :, iconf, ispec, 0] = conf_spec.br_atoms
-                    self.cl_atoms_array[:, :, iconf, ispec, 0] = conf_spec.cl_atoms
+                    self.br_atoms_array[:, :, :, ispec, 0] = conf_spec.br_atoms
+                    self.cl_atoms_array[:, :, :, ispec, 0] = conf_spec.cl_atoms
                 if self.species[ispec].category in AEROSOL:
                     self.erfari_emissions_to_forcing_array[:, 0, iconf, ispec, :] = conf_spec.erfari_emissions_to_forcing
                 if self.species[ispec].category == Category.AEROSOL_CLOUD_INTERACTIONS:
@@ -1475,6 +1722,8 @@ class FAIR():
                     self.erfaci_shape_sulfur_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['Sulfur']
                     if aci_method==AciMethod.SMITH2018:
                         self.erfaci_shape_bcoc_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['BC+OC']
+                if self.species[ispec].category in OZONE_PRECURSOR:
+                    self.ozone_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.ozone_radiative_efficiency
             for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
                 scen_spec = self.scenarios[iscen].list_of_species[ispec]
                 if self.species[ispec].run_mode == RunMode.EMISSIONS:
@@ -1483,15 +1732,6 @@ class FAIR():
                     self.concentration_array[:, iscen, :, ispec, 0] = scen_spec.concentration[:, None]
                 if self.species[ispec].run_mode == RunMode.FORCING:
                     self.forcing_array[:, iscen, :, ispec, 0] = scen_spec.forcing[:, None]
-                    # if isinstance(self.species[specie], AerosolCloudInteractions):
-                    #     if hasattr(self.configs[iconfig], 'species') and specie in self.configs[iconfig].species:
-                    #         self.scale_array[:, 0, iconfig, ispec, :] = self.configs[iconfig].species[specie].scale
-                    #         self.shape_sulfur_array[:, 0, iconfig, ispec, :] = self.configs[iconfig].species[specie].shape_sulfur
-                    #         self.shape_bcoc_array[:, 0, iconfig, ispec, :] = self.configs[iconfig].species[specie].shape_bcoc
-                    #     else:
-                    #         self.scale_array[:, 0, iconfig, ispec, :] = self.scenarios[scenario].species[specie].scale
-                    #         self.shape_sulfur_array[:, 0, iconfig, ispec, :] = self.scenarios[scenario].species[specie].shape_sulfur
-                    #         self.shape_bcoc_array[:, 0, iconfig, ispec, :] = self.scenarios[scenario].species[specie].shape_bcoc
 
         self.cumulative_emissions_array = np.cumsum(self.emissions_array * self.time_deltas[:, None, None, None, None], axis=TIME_AXIS)
         self.alpha_lifetime_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1))
@@ -1582,7 +1822,25 @@ class FAIR():
                     self.species_index_mapping
                 )[0:1, :, :, self.aci_index, :]
 
-            # ozone here
+            # 5. ozone emissions and concentrations to forcing
+            if self.ozone_index is not None:
+                self.forcing_array[i_timestep:i_timestep+1, :, :, [self.ozone_index], :] = calculate_ozone_forcing(
+                    self.emissions_array[[i_timestep], ...],
+                    self.concentration_array[[i_timestep], ...],
+                    self.baseline_emissions_array,
+                    self.baseline_concentration_array,
+                    self.fractional_release_array,
+                    self.cl_atoms_array,
+                    self.br_atoms_array,
+                    self.forcing_scaling_array,
+                    self.ozone_radiative_efficiency_array,
+                    temperature_boxes[:, :, :, :, 1:2],
+                    self.forcing_temperature_feedback_array[:, :, :, [self.ozone_index], :],
+                    self.run_config.br_cl_ratio,
+                    self.species_index_mapping
+                )
+
+
             # contrails here
             # BC on snow here
             # strat water vapour here
