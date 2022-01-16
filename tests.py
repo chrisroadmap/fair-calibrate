@@ -2,7 +2,8 @@
 
 import pandas as pd
 
-from fair import *
+from fair21 import SpeciesID, Category, Species, RunMode, Scenario, ClimateResponse
+from fair21.defaults import species_config_from_default
 
 # top level
 species_ids = {
@@ -78,7 +79,8 @@ scenarios_to_include = ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp46
 scenarios = []
 
 # grab some emissions
-df = pd.read_csv('../../data/rcmip/rcmip-emissions-annual-means-v5-1-0.csv')
+# TODO: RCMIP to fair converter
+df = pd.read_csv('data/rcmip/rcmip-emissions-annual-means-v5-1-0.csv')
 for iscen, scenario in enumerate(scenarios_to_include):
     list_of_species = []
     for ispec, species in enumerate(emitted_species):
@@ -96,7 +98,7 @@ for iscen, scenario in enumerate(scenarios_to_include):
     list_of_species.append(Species(species_ids['ozone']))
     scenarios.append(Scenario(scenario, list_of_species))
 
-df = pd.read_csv("../../data/calibration/4xCO2_cummins.csv")
+df = pd.read_csv("data/calibration/4xCO2_cummins.csv")
 models = df['model'].unique()
 
 params = {}

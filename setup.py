@@ -1,6 +1,8 @@
 from setuptools import setup, find_packages
 import pathlib
 
+import versioneer
+
 here = pathlib.Path(__file__).parent.resolve()
 
 # Get the long description from the README file
@@ -30,7 +32,8 @@ requirements_extras = {
 
 setup(
     name='fair21',  # TODO! change to plain old fair after demo
-    version='2.1.0',
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description='Finite-amplitude Impulse Response (FaIR) simple climate model',
     long_description=long_description,
     long_description_content_type='text/markdown',
