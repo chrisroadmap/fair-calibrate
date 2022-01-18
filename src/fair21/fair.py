@@ -7,8 +7,9 @@ import warnings
 
 import numpy as np
 
-from energy_balance_model import EnergyBalanceModel
-from exceptions import (
+from .constants import (TIME_AXIS, SPECIES_AXIS, GAS_BOX_AXIS)
+from .energy_balance_model import EnergyBalanceModel
+from .exceptions import (
     DuplicationError,
     IncompatibleConfigError,
     MissingInputError,
@@ -17,32 +18,22 @@ from exceptions import (
     UnexpectedInputError,
     WrongArrayShapeError
 )
+from .gas_cycle import calculate_alpha
+from .gas_cycle.forward import step_concentration
+from .structure.top_level import RunConfig, ACIMethod, Category, RunMode, AggregatedCategory
+from .structure.scenario_level import Scenario
+from .structure.config_level import Config
 
 # each Scenario will contain a list of Species
 # each Config will contain settings, as well as options relating to each Species
 # FAIR can contain one or more Scenarios and one or more Configs
 
-IIRF_HORIZON = 100
-iirf_max = 99.95
-M_ATMOS = 5.1352e18
-MOLWT_AIR = 28.97
-TIME_AXIS = 0
-SPECIES_AXIS = 3
-GAS_BOX_AXIS = 4
 
 
-class AciMethod(Enum):
-    STEVENS2015 = auto()
-    SMITH2018 = auto()
 
-# top level: consider excluding "Config"
-@dataclass
-class RunConfig():
-    n_gas_boxes: int=4
-    n_temperature_boxes: int=3
-    temperature_prescribed: bool=False
-    aci_method: AciMethod=AciMethod.SMITH2018
-    br_cl_ratio: float=45
+
+
+
 
 
 
@@ -150,10 +141,10 @@ def verify_config_consistency(configs):
                 f"same order")
 
 
-def check_aci_params(aci_params, aci_method):
+def _check_aci_params(aci_params, aci_method):
     required_params = {
-        AciMethod.SMITH2018: ['scale', 'Sulfur', 'BC+OC'],
-        AciMethod.STEVENS2015: ['scale', 'Sulfur']
+        ACIMethod.SMITH2018: ['scale', 'Sulfur', 'BC+OC'],
+        ACIMethod.STEVENS2015: ['scale', 'Sulfur']
     }
     for param in required_params[aci_method]:
         if param not in aci_params:
@@ -165,7 +156,7 @@ def check_aci_params(aci_params, aci_method):
 
 
 
-def map_species_scenario_config(scenarios, configs, run_config):
+def _map_species_scenario_config(scenarios, configs, run_config):
     """Checks to see if species provided in scenarios have associated configs.
 
     Parameters
@@ -190,8 +181,8 @@ def map_species_scenario_config(scenarios, configs, run_config):
     species_included_first_scenario = []
     n_species_first_scenario = len(scenarios[0].list_of_species)
     required_aerosol_species = {
-        AciMethod.SMITH2018: [Category.SULFUR, Category.BC, Category.OC],
-        AciMethod.STEVENS2015: [Category.SULFUR],
+        ACIMethod.SMITH2018: [Category.SULFUR, Category.BC, Category.OC],
+        ACIMethod.STEVENS2015: [Category.SULFUR],
     }
     aerosol_species_included = []
     aci_desired = False
@@ -222,7 +213,7 @@ def map_species_scenario_config(scenarios, configs, run_config):
     # so we just need to check that each config has the correct aci_params
     if aci_desired:
         for config in configs:
-            check_aci_params(config.species_configs[aci_index].aci_params, run_config.aci_method)
+            _check_aci_params(config.species_configs[aci_index].aci_params, run_config.aci_method)
     return species_included_first_config
 
 
@@ -266,153 +257,6 @@ def _make_ebm(configs, n_timesteps):
     return eb_matrix_d, forcing_vector_d, stochastic_d
 
 
-def calculate_alpha(
-    cumulative_emissions,
-    airborne_emissions,
-    temperature,
-    iirf_0,
-    iirf_cumulative,
-    iirf_temperature,
-    iirf_airborne,
-    g0,
-    g1,
-    iirf_max = iirf_max,
-):
-    """
-    Calculate greenhouse-gas time constant scaling factor.
-
-    Parameters
-    ----------
-    cumulative_emissions : ndarray
-        GtC cumulative emissions since pre-industrial.
-    airborne_emissions : ndarray
-        GtC total emissions remaining in the atmosphere.
-    temperature : ndarray or float
-        K temperature anomaly since pre-industrial.
-    iirf_0 : ndarray
-        pre-industrial time-integrated airborne fraction.
-    iirf_cumulative : ndarray
-        sensitivity of time-integrated airborne fraction with atmospheric
-        carbon stock.
-    iirf_temperature : ndarray
-        sensitivity of time-integrated airborne fraction with temperature
-        anomaly.
-    iirf_airborne : ndarray
-        sensitivity of time-integrated airborne fraction with airborne
-        emissions.
-    g0 : ndarray
-        parameter for alpha TODO: description
-    g1 : ndarray
-        parameter for alpha TODO: description
-    iirf_max : float
-        maximum allowable value to time-integrated airborne fraction
-
-    Notes
-    -----
-    Where array input is taken, the arrays always have the dimensions of
-    (scenario, species, time, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
-
-    Returns
-    -------
-    alpha : float
-        scaling factor for lifetimes
-    """
-
-    iirf = iirf_0 + iirf_cumulative * (cumulative_emissions-airborne_emissions) + iirf_temperature * temperature + iirf_airborne * airborne_emissions
-    iirf = (iirf>iirf_max) * iirf_max + iirf * (iirf<iirf_max)
-    alpha = g0 * np.exp(iirf / g1)
-
-    return alpha
-
-def step_concentration(
-    emissions,
-    gas_boxes_old,
-    airborne_emissions_old,
-    burden_per_emission,
-    lifetime,
-    alpha_lifetime,
-    partition_fraction,
-    pre_industrial_concentration,
-    timestep=1,
-    natural_emissions_adjustment=0,
-):
-    """
-    Calculates concentrations from emissions of any greenhouse gas.
-
-    Parameters
-    ----------
-    emissions : ndarray
-        emissions rate (emissions unit per year) in timestep.
-    gas_boxes_old : ndarray
-        the greenhouse gas atmospheric burden in each lifetime box at the end of
-        the previous timestep.
-    airborne_emissions_old : ndarray
-        The total airborne emissions at the beginning of the timestep. This is
-        the concentrations above the pre-industrial control. It is also the sum
-        of gas_boxes_old if this is an array.
-    burden_per_emission : ndarray
-        how much atmospheric concentrations grow (e.g. in ppm) per unit (e.g.
-        GtCO2) emission.
-    lifetime : ndarray
-        atmospheric burden lifetime of greenhouse gas (yr). For multiple
-        lifetimes gases, it is the lifetime of each box.
-    alpha_lifetime : ndarray
-        scaling factor for `lifetime`. Necessary where there is a state-
-        dependent feedback.
-    partition_fraction : ndarray
-        the partition fraction of emissions into each gas box. If array, the
-        entries should be individually non-negative and sum to one.
-    pre_industrial_concentration : ndarray
-        pre-industrial concentration of gas(es) in question.
-    timestep : float, default=1
-        emissions timestep in years.
-    natural_emissions_adjustment : ndarray or float, default=0
-        Amount to adjust emissions by for natural emissions given in the total
-        in emissions files.
-
-    Notes
-    -----
-    Emissions are given in time intervals and concentrations are also reported
-    on the same time intervals: the airborne_emissions values are on time
-    boundaries and these are averaged before being returned.
-
-    Where array input is taken, the arrays always have the dimensions of
-    (scenario, species, time, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
-
-    Returns
-    -------
-    concentration_out : ndarray
-        greenhouse gas concentrations at the centre of the timestep.
-    gas_boxes_new : ndarray
-        the greenhouse gas atmospheric burden in each lifetime box at the end of
-        the timestep.
-    airborne_emissions_new : ndarray
-        airborne emissions (concentrations above pre-industrial control level)
-        at the end of the timestep.
-    """
-
-    decay_rate = timestep/(alpha_lifetime * lifetime)
-    decay_factor = np.exp(-decay_rate)
-
-    gas_boxes_new = (
-        partition_fraction *
-        (emissions-natural_emissions_adjustment) *
-        1 / decay_rate *
-        (1 - decay_factor) * timestep + gas_boxes_old * decay_factor
-    )
-    airborne_emissions_new = np.sum(gas_boxes_new, axis=GAS_BOX_AXIS, keepdims=True)
-    concentration_out = (
-        pre_industrial_concentration +
-        burden_per_emission * (
-            airborne_emissions_new + airborne_emissions_old
-        ) / 2
-    )
-
-    return concentration_out, gas_boxes_new, airborne_emissions_new
 
 
 def calculate_ghg_forcing(
@@ -900,7 +744,7 @@ class FAIR():
                 )
         check_type_of_elements(self.scenarios, Scenario, 'scenarios')
         check_type_of_elements(self.configs, Config, 'configs')
-        self.species = map_species_scenario_config(self.scenarios, self.configs, self.run_config)
+        self.species = _map_species_scenario_config(self.scenarios, self.configs, self.run_config)
         if self.n_timesteps != len(self.time):
             raise TimeMismatchError(
                 f"time vector provided is of length {len(self.time)} whereas "
@@ -922,9 +766,9 @@ class FAIR():
         #self.config_indices = []
         for ispec, specie in enumerate(self.species):
             self.species_index_mapping[specie.name] = ispec
-            if specie.category in GREENHOUSE_GAS:
+            if specie.category in AggregatedCategory.GREENHOUSE_GAS:
                 self.ghg_indices.append(ispec)
-            if specie.category in AEROSOL:
+            if specie.category in AggregatedCategory.AEROSOL:
                 self.ari_indices.append(ispec)
             if specie.category == Category.AEROSOL_CLOUD_INTERACTIONS:
                 self.aci_index = ispec
@@ -938,7 +782,7 @@ class FAIR():
     def _fill_concentration(self):
         """After the emissions to concentrations step we want to put the concs into each GreenhouseGas"""
         for ispec, species_name in enumerate(self.species_index_mapping):
-            if self.species[ispec].category in GREENHOUSE_GAS: # and self.species[ispec].run_mode == RunMode.EMISSIONS: # don't think necessary as should just be replacing with same thing. We want the alpha for CH4 though.
+            if self.species[ispec].category in AggregatedCategory.GREENHOUSE_GAS: # and self.species[ispec].run_mode == RunMode.EMISSIONS: # don't think necessary as should just be replacing with same thing. We want the alpha for CH4 though.
                 for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
                     scen_spec = self.scenarios[iscen].list_of_species[ispec]
                     scen_spec.concentration = self.concentration_array[:, iscen, :, ispec, 0]
@@ -1010,7 +854,7 @@ class FAIR():
                 self.efficacy_array[:, 0, iconf, ispec, 0] = conf_spec.efficacy
                 self.baseline_emissions_array[:, :, iconf, ispec, :] = conf_spec.baseline_emissions
                 self.forcing_temperature_feedback_array[:, :, iconf, ispec, :] = conf_spec.forcing_temperature_feedback
-                if self.species[ispec].category in GREENHOUSE_GAS:
+                if self.species[ispec].category in AggregatedCategory.GREENHOUSE_GAS:
                     partition_fraction = np.asarray(conf_spec.partition_fraction)
                     if np.ndim(partition_fraction) == 1:
                         self.partition_fraction_array[:, :, iconf, ispec, :] = conf_spec.partition_fraction
@@ -1027,18 +871,18 @@ class FAIR():
                     self.g1_array[:, :, iconf, ispec, :] = conf_spec.g1
                     self.baseline_concentration_array[:, :, iconf, ispec, :] = conf_spec.baseline_concentration
                     self.natural_emissions_adjustment_array[:, :, iconf, ispec, 0] = conf_spec.natural_emissions_adjustment
-                if self.species[ispec].category in HALOGEN:  # TODO: probably needs similar to above here.
+                if self.species[ispec].category in AggregatedCategory.HALOGEN:  # TODO: probably needs similar to above here.
                     self.fractional_release_array[:, :, iconf, ispec, 0] = conf_spec.fractional_release
                     self.br_atoms_array[:, :, :, ispec, 0] = conf_spec.br_atoms
                     self.cl_atoms_array[:, :, :, ispec, 0] = conf_spec.cl_atoms
-                if self.species[ispec].category in AEROSOL:
+                if self.species[ispec].category in AggregatedCategory.AEROSOL:
                     self.erfari_emissions_to_forcing_array[:, 0, iconf, ispec, :] = conf_spec.erfari_emissions_to_forcing
                 if self.species[ispec].category == Category.AEROSOL_CLOUD_INTERACTIONS:
                     self.erfaci_scale_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['scale']
                     self.erfaci_shape_sulfur_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['Sulfur']
-                    if aci_method==AciMethod.SMITH2018:
+                    if aci_method==ACIMethod.SMITH2018:
                         self.erfaci_shape_bcoc_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['BC+OC']
-                if self.species[ispec].category in OZONE_PRECURSOR:
+                if self.species[ispec].category in AggregatedCategory.OZONE_PRECURSOR:
                     self.ozone_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.ozone_radiative_efficiency
             for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
                 scen_spec = self.scenarios[iscen].list_of_species[ispec]
@@ -1090,6 +934,7 @@ class FAIR():
                 self.iirf_airborne_array,
                 self.g0_array,
                 self.g1_array,
+                self.run_config.iirf_max
             )
 #            alpha_lifetime_array[np.isnan(alpha_lifetime_array)]=1  # CF4 seems to have an issue. Should we raise warning?
             self.concentration_array[[i_timestep], ...], gas_boxes, self.airborne_emissions_array[[i_timestep], ...] = step_concentration(

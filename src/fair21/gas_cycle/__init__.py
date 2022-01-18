@@ -4,50 +4,6 @@ Module containing gas cycle functions
 
 import numpy as np
 
-from ..constants import GAS_BOX_AXIS
-from ..constants.gases import burden_per_emission, lifetime
-from ..defaults.gases import (
-    pre_industrial_concentration,
-    partition_fraction,
-    iirf_horizon,
-    iirf_max
-)
-
-def calculate_g(
-    lifetime,
-    partition_fraction,
-    iirf_horizon=iirf_horizon,
-
-):
-    """Calculate the `g` components of the gas cycle.
-    See Leach et al. (2021), eq. (5)
-    Parameters
-    ----------
-    lifetime : ndarray
-        atmospheric burden lifetime of the greenhouse gas (yr).
-    partition_fraction : ndarray
-        proportion of emissions of gas that go into each atmospheric box.
-        The sum across the GAS_BOX_AXIS dimension should be 1.
-    iirf_horizon : float, default=100
-        time horizon (yr) for time integrated impulse response function.
-    Notes
-    -----
-    Where array input is taken, the arrays always have the dimensions of
-    (scenario, species, time, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
-    Returns
-    -------
-    g0 : float
-    g1 : float
-    """
-
-    g1 = np.sum(partition_fraction * lifetime * (1 - (1 + iirf_horizon/lifetime) * np.exp(-iirf_horizon/lifetime)), axis=GAS_BOX_AXIS, keepdims=True)
-    g0 = np.exp(-1 * np.sum(partition_fraction*lifetime*(1 - np.exp(-iirf_horizon/lifetime)), axis=GAS_BOX_AXIS, keepdims=True)/g1)
-
-    return g0, g1
-
-
 def calculate_alpha(
     cumulative_emissions,
     airborne_emissions,
@@ -58,7 +14,7 @@ def calculate_alpha(
     iirf_airborne,
     g0,
     g1,
-    iirf_max = iirf_max,
+    iirf_max,
 ):
     """
     Calculate greenhouse-gas time constant scaling factor.

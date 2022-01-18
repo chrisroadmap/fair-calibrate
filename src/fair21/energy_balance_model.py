@@ -2,7 +2,7 @@ import numpy as np
 import scipy.linalg
 import scipy.stats
 
-from exceptions import IncompatibleConfigError
+from .exceptions import IncompatibleConfigError
 
 class EnergyBalanceModel:
     """Energy balance model that converts forcing to temperature.

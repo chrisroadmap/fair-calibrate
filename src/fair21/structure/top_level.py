@@ -98,3 +98,19 @@ class SpeciesID():
         # 2. check valid run mode for each species given
         if self.run_mode not in valid_run_modes[self.category]:
             raise InvalidRunModeError(f"cannot run {self.category} in {self.run_mode} mode")
+
+
+class ACIMethod(Enum):
+    STEVENS2015 = auto()
+    SMITH2018 = auto()
+
+
+@dataclass
+class RunConfig():
+    n_gas_boxes: int=4
+    n_temperature_boxes: int=3
+    temperature_prescribed: bool=False
+    aci_method: ACIMethod=ACIMethod.SMITH2018
+    br_cl_ratio: float=45
+    iirf_horizon: float=100
+    iirf_max: float=99.95

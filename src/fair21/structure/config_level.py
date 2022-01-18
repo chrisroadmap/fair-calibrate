@@ -5,7 +5,8 @@ from typing import Iterable  # sort this out
 
 import numpy as np
 
-from .top_level import SpeciesID, AggregatedCategory
+from .top_level import SpeciesID, Category, AggregatedCategory, RunConfig
+from ..earth_params import mass_atmosphere, molecular_weight_air
 
 @dataclass
 class ClimateResponse():
@@ -69,6 +70,7 @@ class SpeciesConfig():
     efficacy: float=1
     aci_params: dict=None
     forcing_temperature_feedback: float=0
+    run_config: RunConfig=RunConfig()
 
     def __post_init__(self):
         # validate input - the whole partition_fraction and lifetime thing
@@ -84,19 +86,19 @@ class SpeciesConfig():
         if self.species_id.category in AggregatedCategory.GREENHOUSE_GAS:
             self.g1 = np.sum(
                 np.asarray(self.partition_fraction) * np.asarray(self.lifetime) *
-                (1 - (1 + IIRF_HORIZON/np.asarray(self.lifetime)) *
-                np.exp(-IIRF_HORIZON/np.asarray(self.lifetime)))
+                (1 - (1 + self.run_config.iirf_horizon/np.asarray(self.lifetime)) *
+                np.exp(-self.run_config.iirf_horizon/np.asarray(self.lifetime)))
             )
             self.g0 = np.exp(-1 * np.sum(np.asarray(self.partition_fraction)*
                 np.asarray(self.lifetime)*
-                (1 - np.exp(-IIRF_HORIZON/np.asarray(self.lifetime))))/
+                (1 - np.exp(-self.run_config.iirf_horizon/np.asarray(self.lifetime))))/
                 self.g1
             )
-            self.burden_per_emission = 1 / (M_ATMOS / 1e18 * self.molecular_weight / MOLWT_AIR)
+            self.burden_per_emission = 1 / (mass_atmosphere / 1e18 * self.molecular_weight / molecular_weight_air)
             if self.iirf_0 is None:
                 self.iirf_0 = (
                     np.sum(np.asarray(self.lifetime) *
-                    (1 - np.exp(-IIRF_HORIZON / np.asarray(self.lifetime)))
+                    (1 - np.exp(-self.run_config.iirf_horizon / np.asarray(self.lifetime)))
                     * np.asarray(self.partition_fraction))
                 )
 

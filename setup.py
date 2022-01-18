@@ -11,7 +11,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 # using climate-assessment as a template here
 REQUIREMENTS_INSTALL = ["numpy", "pandas", "scipy"]
 REQUIREMENTS_NOTEBOOKS = ["notebook", "ipywidgets", "climateforcing"]
-REQUIREMENTS_TESTS = ["codecov", "pytest-cov", "pytest-console-scripts", "pytest>=4.0"]
+REQUIREMENTS_TESTS = ["codecov", "pytest-cov", "pytest-console-scripts", "pytest>=4.0", "matplotlib"]
 REQUIREMENTS_DOCS = ["sphinx>=1.4", "sphinx_rtd_theme"]
 REQUIREMENTS_DEPLOY = ["twine>=1.11.0", "setuptools>=41.0", "wheel>=0.31.0"] # plus conda
 
