@@ -18,29 +18,17 @@ from .exceptions import (
     UnexpectedInputError,
     WrongArrayShapeError
 )
+from .forcing.aerosol.erfari import calculate_erfari_forcing
+from .forcing.aerosol.erfaci import calculate_erfaci_forcing, _check_aci_params
+from .forcing.ghg import calculate_ghg_forcing
+from .forcing.ozone import calculate_ozone_forcing
 from .gas_cycle import calculate_alpha
 from .gas_cycle.forward import step_concentration
 from .structure.top_level import RunConfig, ACIMethod, Category, RunMode, AggregatedCategory
 from .structure.scenario_level import Scenario
 from .structure.config_level import Config
 
-# each Scenario will contain a list of Species
-# each Config will contain settings, as well as options relating to each Species
-# FAIR can contain one or more Scenarios and one or more Configs
-
-
-
-
-
-
-
-
-
-
-
-
-
-def check_duplicate_names(things_to_check, name='the list you supplied'):
+def _check_duplicate_names(things_to_check, name='the list you supplied'):
     output_list = []
     for thing in things_to_check:
         if thing.name in output_list:
@@ -51,27 +39,114 @@ def check_duplicate_names(things_to_check, name='the list you supplied'):
         else:
             output_list.append(thing.name)
 
+def _check_type_of_elements(things_to_check, desired_type, name='the list you supplied'):
+    for thing in things_to_check:
+        if not isinstance(thing, desired_type):
+            raise TypeError(
+                f"{name} contains an element of type {type(thing)} "
+                f"where it should be a list of {desired_type} objects"
+            )
 
-# from default_configs import CO2, CH4, ...
+def _make_ebm(configs, n_timesteps):
+    eb_matrix_d = []
+    forcing_vector_d = []
+    stochastic_d = []
+    for iconf, config in enumerate(configs):
+        conf_clim = config.climate_response
+        ebm = EnergyBalanceModel(
+            ocean_heat_capacity=conf_clim.ocean_heat_capacity,
+            ocean_heat_transfer=conf_clim.ocean_heat_transfer,
+            deep_ocean_efficacy=conf_clim.deep_ocean_efficacy,
+            stochastic_run=conf_clim.stochastic_run,
+            sigma_eta=conf_clim.sigma_eta,
+            sigma_xi=conf_clim.sigma_xi,
+            gamma_autocorrelation=conf_clim.gamma_autocorrelation,
+            seed=conf_clim.seed,
+            n_timesteps=n_timesteps,
+        )
+        eb_matrix_d.append(ebm.eb_matrix_d)
+        forcing_vector_d.append(ebm.forcing_vector_d)
+        stochastic_d.append(ebm.stochastic_d)
+    return eb_matrix_d, forcing_vector_d, stochastic_d
 
-#@dataclass
-#class CO2(GasConfig):
-#    species: Species=Species("CO2")
-#    ... all the rest
-def verify_scenario_consistency(scenarios):
-    """Checks to see if all supplied scenarios are self-consistent.
+def _make_time_deltas(time):
+    time_inner_bounds = 0.5*(time[1:] + time[:-1])
+    time_lower_bound = time[0] - (time_inner_bounds[0] - time[0])
+    time_upper_bound = time[-1] + (time[-1] - time_inner_bounds[-1])
+    time_bounds = np.concatenate(([time_lower_bound], time_inner_bounds, [time_upper_bound]))
+    time_deltas = np.diff(time_bounds)
+    return time_deltas
 
-    Parameters
-    ----------
+def _map_species_scenario_config(scenarios, configs, run_config):
+    # at this point we have checked self-consistency, so we only need to check
+    # the first element of each.
+    species_included_first_config = []
+    n_species_first_config = len(configs[0].species_configs)
+    for ispec, species in enumerate(configs[0].species_configs):
+        species_included_first_config.append(configs[0].species_configs[ispec].species_id)
+    species_included_first_scenario = []
+    n_species_first_scenario = len(scenarios[0].list_of_species)
+    required_aerosol_species = {
+        ACIMethod.SMITH2018: [Category.SULFUR, Category.BC, Category.OC],
+        ACIMethod.STEVENS2015: [Category.SULFUR],
+    }
+    aerosol_species_included = []
+    aci_desired = False
+    for ispec, species in enumerate(scenarios[0].list_of_species):
+        species_included_first_scenario.append(scenarios[0].list_of_species[ispec].species_id)
+        if scenarios[0].list_of_species[ispec].species_id.category in required_aerosol_species[run_config.aci_method] and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
+            aerosol_species_included.append(scenarios[0].list_of_species[ispec].species_id.category)
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.AEROSOL_CLOUD_INTERACTIONS:
+            aci_desired = True
+            aci_index = ispec
+    # check config/scenario species consistency
+    if species_included_first_config != species_included_first_scenario:
+        raise SpeciesMismatchError(
+            f"The list of Species provided to Scenario.list_of_species is "
+            f"{[species_id.name for species_id in species_included_first_scenario]}. "
+            f"This differs from that provided to Config.species_configs "
+            f"{[species_id.name for species_id in species_included_first_config]}."
+        )
+    # check aerosol species provided are consistent with desired indirect forcing mode
+    if aerosol_species_included != required_aerosol_species[run_config.aci_method] and aci_desired:
+        raise IncompatibleConfigError(
+            f"For aerosol-cloud interactions using the {run_config.aci_method}, "
+            f"all of {[species_id.name for species_id in required_aerosol_species[run_config.aci_method]]} "
+            f"must be provided in the scenario."
+        )
+    # by the time we get here, we should have checked that scearios and configs species line up
+    # and configs where ACI is defined
+    # so we just need to check that each config has the correct aci_params
+    if aci_desired:
+        for config in configs:
+            _check_aci_params(config.species_configs[aci_index].aci_params, run_config.aci_method)
+    return species_included_first_config
 
-    Returns
-    -------
-    return n_timesteps_first_scenario_species : int
-        Number of timesteps that the scenario emissions/concentration/forcing
-        is defined with.
-    """
-    check_type_of_elements(scenarios, Scenario, name="scenarios")
-    check_duplicate_names(scenarios, "Scenario")
+def _verify_config_consistency(configs):
+# TODO: check EBM configs are the same length as each other and agree with RunConfig()
+    _check_type_of_elements(configs, Config, name="configs")
+    _check_duplicate_names(configs, 'Config')
+    # we shouldn't need to do any further checking on the climate_response
+    # as this is handled in the @dataclass constructor.
+    n_species_first_config = len(configs[0].species_configs)
+    for iconf, config in enumerate(configs):
+        if iconf==0:
+            species_included_first_config = []
+            for ispec in range(n_species_first_config):
+                species_included_first_config.append(configs[0].species_configs[ispec].species_id.name)
+        species_included = []
+        n_species = len(configs[iconf].species_configs)
+        for ispec in range(n_species):
+            species_included.append(configs[iconf].species_configs[ispec].species_id.name)
+        if species_included != species_included_first_config:
+            raise SpeciesMismatchError(
+                f"Each Config must contain the same list of SpeciesConfigs, in the "
+                f"same order")
+
+
+def _verify_scenario_consistency(scenarios):
+    _check_type_of_elements(scenarios, Scenario, name="scenarios")
+    _check_duplicate_names(scenarios, "Scenario")
     n_species_first_scenario = len(scenarios[0].list_of_species)
     n_timesteps_first_scenario_species = None
     for iscen, scenario in enumerate(scenarios):
@@ -118,576 +193,6 @@ def verify_scenario_consistency(scenarios):
     return n_timesteps_first_scenario_species
 
 
-def verify_config_consistency(configs):
-# TODO: check EBM configs are the same length as each other and agree with RunConfig()
-    """Checks to see if all supplied configs are self-consistent."""
-    check_type_of_elements(configs, Config, name="configs")
-    check_duplicate_names(configs, 'Config')
-    # we shouldn't need to do any further checking on the climate_response
-    # as this is handled in the @dataclass constructor.
-    n_species_first_config = len(configs[0].species_configs)
-    for iconf, config in enumerate(configs):
-        if iconf==0:
-            species_included_first_config = []
-            for ispec in range(n_species_first_config):
-                species_included_first_config.append(configs[0].species_configs[ispec].species_id.name)
-        species_included = []
-        n_species = len(configs[iconf].species_configs)
-        for ispec in range(n_species):
-            species_included.append(configs[iconf].species_configs[ispec].species_id.name)
-        if species_included != species_included_first_config:
-            raise SpeciesMismatchError(
-                f"Each Config must contain the same list of SpeciesConfigs, in the "
-                f"same order")
-
-
-def _check_aci_params(aci_params, aci_method):
-    required_params = {
-        ACIMethod.SMITH2018: ['scale', 'Sulfur', 'BC+OC'],
-        ACIMethod.STEVENS2015: ['scale', 'Sulfur']
-    }
-    for param in required_params[aci_method]:
-        if param not in aci_params:
-            raise IncompatibleConfigError(
-                f"For aerosol-cloud interactions using the {aci_method}, "
-                f"the aci_params in the construction of Config must include "
-                f"{required_params[aci_method]}."
-            )
-
-
-
-def _map_species_scenario_config(scenarios, configs, run_config):
-    """Checks to see if species provided in scenarios have associated configs.
-
-    Parameters
-    ----------
-
-    Returns
-    -------
-    species_index_mapping : dict
-
-    Raises
-    ------
-    SpeciesMismatchError
-    DuplicationError
-    IncompatibleConfigError
-    """
-    # at this point we have checked self-consistency, so we only need to check
-    # the first element of each.
-    species_included_first_config = []
-    n_species_first_config = len(configs[0].species_configs)
-    for ispec, species in enumerate(configs[0].species_configs):
-        species_included_first_config.append(configs[0].species_configs[ispec].species_id)
-    species_included_first_scenario = []
-    n_species_first_scenario = len(scenarios[0].list_of_species)
-    required_aerosol_species = {
-        ACIMethod.SMITH2018: [Category.SULFUR, Category.BC, Category.OC],
-        ACIMethod.STEVENS2015: [Category.SULFUR],
-    }
-    aerosol_species_included = []
-    aci_desired = False
-    for ispec, species in enumerate(scenarios[0].list_of_species):
-        species_included_first_scenario.append(scenarios[0].list_of_species[ispec].species_id)
-        if scenarios[0].list_of_species[ispec].species_id.category in required_aerosol_species[run_config.aci_method] and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
-            aerosol_species_included.append(scenarios[0].list_of_species[ispec].species_id.category)
-        if scenarios[0].list_of_species[ispec].species_id.category == Category.AEROSOL_CLOUD_INTERACTIONS:
-            aci_desired = True
-            aci_index = ispec
-    # check config/scenario species consistency
-    if species_included_first_config != species_included_first_scenario:
-        raise SpeciesMismatchError(
-            f"The list of Species provided to Scenario.list_of_species is "
-            f"{[species_id.name for species_id in species_included_first_scenario]}. "
-            f"This differs from that provided to Config.species_configs "
-            f"{[species_id.name for species_id in species_included_first_config]}."
-        )
-    # check aerosol species provided are consistent with desired indirect forcing mode
-    if aerosol_species_included != required_aerosol_species[run_config.aci_method] and aci_desired:
-        raise IncompatibleConfigError(
-            f"For aerosol-cloud interactions using the {run_config.aci_method}, "
-            f"all of {[species_id.name for species_id in required_aerosol_species[run_config.aci_method]]} "
-            f"must be provided in the scenario."
-        )
-    # by the time we get here, we should have checked that scearios and configs species line up
-    # and configs where ACI is defined
-    # so we just need to check that each config has the correct aci_params
-    if aci_desired:
-        for config in configs:
-            _check_aci_params(config.species_configs[aci_index].aci_params, run_config.aci_method)
-    return species_included_first_config
-
-
-def check_type_of_elements(things_to_check, desired_type, name='the list you supplied'):
-    for thing in things_to_check:
-        if not isinstance(thing, desired_type):
-            raise TypeError(
-                f"{name} contains an element of type {type(thing)} "
-                f"where it should be a list of {desired_type} objects"
-            )
-
-def _make_time_deltas(time):
-    time_inner_bounds = 0.5*(time[1:] + time[:-1])
-    time_lower_bound = time[0] - (time_inner_bounds[0] - time[0])
-    time_upper_bound = time[-1] + (time[-1] - time_inner_bounds[-1])
-    time_bounds = np.concatenate(([time_lower_bound], time_inner_bounds, [time_upper_bound]))
-    time_deltas = np.diff(time_bounds)
-    return time_deltas
-
-
-def _make_ebm(configs, n_timesteps):
-    eb_matrix_d = []
-    forcing_vector_d = []
-    stochastic_d = []
-    for iconf, config in enumerate(configs):
-        conf_clim = config.climate_response
-        ebm = EnergyBalanceModel(
-            ocean_heat_capacity=conf_clim.ocean_heat_capacity,
-            ocean_heat_transfer=conf_clim.ocean_heat_transfer,
-            deep_ocean_efficacy=conf_clim.deep_ocean_efficacy,
-            stochastic_run=conf_clim.stochastic_run,
-            sigma_eta=conf_clim.sigma_eta,
-            sigma_xi=conf_clim.sigma_xi,
-            gamma_autocorrelation=conf_clim.gamma_autocorrelation,
-            seed=conf_clim.seed,
-            n_timesteps=n_timesteps,
-        )
-        eb_matrix_d.append(ebm.eb_matrix_d)
-        forcing_vector_d.append(ebm.forcing_vector_d)
-        stochastic_d.append(ebm.stochastic_d)
-    return eb_matrix_d, forcing_vector_d, stochastic_d
-
-
-
-
-def calculate_ghg_forcing(
-    concentration,
-    pre_industrial_concentration,
-    forcing_scaling,
-    radiative_efficiency,
-    gas_index_mapping,
-    a1 = -2.4785e-07,
-    b1 = 0.00075906,
-    c1 = -0.0021492,
-    d1 = 5.2488,
-    a2 = -0.00034197,
-    b2 = 0.00025455,
-    c2 = -0.00024357,
-    d2 = 0.12173,
-    a3 = -8.9603e-05,
-    b3 = -0.00012462,
-    d3 = 0.045194,
-    ):
-    """Greenhouse gas forcing from CO2, CH4 and N2O including band overlaps.
-
-    Modified Etminan relationship from Meinshausen et al. (2020)
-    https://gmd.copernicus.org/articles/13/3571/2020/
-    table 3
-
-    Parameters
-    ----------
-    concentration : ndarray
-        concentration of greenhouse gases. "CO2", "CH4" and "N2O" must be
-        included in units of [ppm, ppb, ppb]. Other GHGs are units of ppt.
-    pre_industrial_concentration : ndarray
-        pre-industrial concentration of the gases (see above).
-    forcing_scaling : ndarray
-        scaling of the calculated radiative forcing (e.g. for conversion to
-        effective radiative forcing and forcing uncertainty).
-    radiative_efficiency : ndarray
-        radiative efficiency to use for linear-forcing gases, in W m-2 ppb-1
-    gas_index_mapping : dict
-        provides a mapping of which gas corresponds to which array index along
-        the SPECIES_AXIS.
-    a1 : float, default=-2.4785e-07
-        fitting parameter (see Meinshausen et al. 2020)
-    b1 : float, default=0.00075906
-        fitting parameter (see Meinshausen et al. 2020)
-    c1 : float, default=-0.0021492
-        fitting parameter (see Meinshausen et al. 2020)
-    d1 : float, default=5.2488
-        fitting parameter (see Meinshausen et al. 2020)
-    a2 : float, default=-0.00034197
-        fitting parameter (see Meinshausen et al. 2020)
-    b2 : float, default=0.00025455
-        fitting parameter (see Meinshausen et al. 2020)
-    c2 : float, default=-0.00024357
-        fitting parameter (see Meinshausen et al. 2020)
-    d2 : float, default=0.12173
-        fitting parameter (see Meinshausen et al. 2020)
-    a3 : float, default=-8.9603e-05
-        fitting parameter (see Meinshausen et al. 2020)
-    b3 : float, default=-0.00012462
-        fitting parameter (see Meinshausen et al. 2020)
-    d3 : float, default=0.045194
-        fitting parameter (see Meinshausen et al. 2020)
-
-    Returns
-    -------
-    effective_radiative_forcing : ndarray
-        effective radiative forcing (W/m2) from greenhouse gases
-
-    Notes
-    -----
-    Where array input is taken, the arrays always have the dimensions of
-    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
-
-    References
-    ----------
-    [1] Meinshausen et al. 2020
-    [2] Myhre et al. 1998
-    """
-    erf_out = np.ones_like(concentration) * np.nan
-
-    # extracting indices upfront means we're not always searching through array and makes things more readable.
-    # expanding the co2_pi array to the same shape as co2 allows efficient conditional indexing
-
-
-    co2 = concentration[:, :, :, [gas_index_mapping["CO2"]], ...]
-    co2_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["CO2"]], ...] * np.ones_like(co2)
-    ch4 = concentration[:, :, :, [gas_index_mapping["CH4"]], ...]
-    ch4_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["CH4"]], ...]
-    n2o = concentration[:, :, :, [gas_index_mapping["N2O"]], ...]
-    n2o_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["N2O"]], ...]
-
-    # CO2
-    ca_max = co2_pi - b1/(2*a1)
-    where_central = np.asarray((co2_pi < co2) & (co2 <= ca_max)).nonzero()
-    where_low = np.asarray((co2 <= co2_pi)).nonzero()
-    where_high = np.asarray((co2 > ca_max)).nonzero()
-    alpha_p = np.ones_like(co2) * np.nan
-    alpha_p[where_central] = d1 + a1*(co2[where_central] - co2_pi[where_central])**2 + b1*(co2[where_central] - co2_pi[where_central])
-    alpha_p[where_low] = d1
-    alpha_p[where_high] = d1 - b1**2/(4*a1)
-    alpha_n2o = c1*np.sqrt(n2o)
-    erf_out[:, :, :, [gas_index_mapping["CO2"]], :] = (alpha_p + alpha_n2o) * np.log(co2/co2_pi) * (forcing_scaling[:, :, :, [gas_index_mapping["CO2"]], :])
-
-    # CH4
-    erf_out[:, :, :, [gas_index_mapping["CH4"]], :] = (
-        (a3*np.sqrt(ch4) + b3*np.sqrt(n2o) + d3) *
-        (np.sqrt(ch4) - np.sqrt(ch4_pi))
-    )  * (forcing_scaling[:, :, :, [gas_index_mapping["CH4"]], :])
-
-    # N2O
-    erf_out[:, :, :, [gas_index_mapping["N2O"]], :] = (
-        (a2*np.sqrt(co2) + b2*np.sqrt(n2o) + c2*np.sqrt(ch4) + d2) *
-        (np.sqrt(n2o) - np.sqrt(n2o_pi))
-    )  * (forcing_scaling[:, :, :, [gas_index_mapping["N2O"]], :])
-
-    # Then, linear forcing for other gases
-    minor_gas_index = list(range(concentration.shape[SPECIES_AXIS]))
-    for major_gas in ['CO2', 'CH4', 'N2O']:
-        minor_gas_index.remove(gas_index_mapping[major_gas])
-    if len(minor_gas_index) > 0:
-        erf_out[:, :, :, minor_gas_index, :] = (
-            (concentration[:, :, :, minor_gas_index, :] - pre_industrial_concentration[:, :, :, minor_gas_index, :])
-            * radiative_efficiency[:, :, :, minor_gas_index, :] * 0.001
-        ) * (forcing_scaling[:, :, :, minor_gas_index, :])
-
-    return erf_out
-
-
-def calculate_erfari_forcing(
-    emissions,
-    pre_industrial_emissions,
-    forcing_scaling,
-    radiative_efficiency,
-    aerosol_index_mapping,
-):
-    """
-    Calculate effective radiative forcing from aerosol-radiation interactions.
-
-    Inputs
-    ------
-    emissions : ndarray
-        input emissions
-    pre_industrial_emissions : ndarray
-        pre-industrial emissions
-    forcing_scaling : ndarray
-        scaling of the calculated radiative forcing (e.g. for conversion to
-        effective radiative forcing and forcing uncertainty).
-    radiative_efficiency : ndarray
-        radiative efficiency (W m-2 (emission_unit yr-1)-1) of each species.
-    aerosol_index_mapping : dict
-        provides a mapping of which aerosol species corresponds to which array
-        index along the SPECIES_AXIS.
-
-    Returns
-    -------
-    effective_radiative_forcing : ndarray
-        effective radiative forcing (W/m2) from aerosol-radiation interactions
-
-    Notes
-    -----
-    Where array input is taken, the arrays always have the dimensions of
-    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
-    """
-
-    ari_index = list(aerosol_index_mapping.values())
-    if len(ari_index) > 0:
-        erf_out = np.ones((emissions.shape[0], emissions.shape[1], emissions.shape[2], len(ari_index), 0))
-        erf_out = (
-            (emissions[:, :, :, ari_index, :] - pre_industrial_emissions[:, :, :, ari_index, :])
-            * radiative_efficiency[:, :, :, ari_index, :]
-        ) * forcing_scaling[:, :, :, ari_index, :]
-
-    return erf_out
-
-
-def calculate_erfaci_forcing(
-    emissions,
-    pre_industrial_emissions,
-    forcing_scaling,
-    scale,
-    shape_sulfur,
-    shape_bcoc,
-    aerosol_index_mapping,
-):
-    """Calculate effective radiative forcing from aerosol-cloud interactions.
-
-    This uses the relationship to calculate ERFaci described in Smith et al.
-    (2021).
-
-    Inputs
-    ------
-    emissions : ndarray
-        input emissions
-    pre_industrial_emissions : ndarray
-        pre-industrial emissions
-    forcing_scaling : ndarray
-        scaling of the calculated radiative forcing (e.g. for conversion to
-        effective radiative forcing and forcing uncertainty).
-    scale : ndarray
-        scaling factor to apply to the logarithm
-    shape_sulfur : ndarray
-        scale factor for sulfur emissions
-    shape_bcoc : ndarray
-        scale factor for BC+OC emissions
-    radiative_efficiency : ndarray
-        radiative efficiency (W m-2 (emission_unit yr-1)-1) of each species.
-    aerosol_index_mapping : dict
-        provides a mapping of which aerosol species corresponds to which array
-        index along the SPECIES_AXIS.
-
-    Returns
-    -------
-    effective_radiative_forcing : ndarray
-        effective radiative forcing (W/m2) from aerosol-cloud interactions
-
-    Notes
-    -----
-    Where array input is taken, the arrays always have the dimensions of
-    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
-    """
-
-    so2 = emissions[:, :, :, [aerosol_index_mapping["Sulfur"]], ...]
-    so2_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["Sulfur"]], ...]
-    bc = emissions[:, :, :, [aerosol_index_mapping["BC"]], ...]
-    bc_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["BC"]], ...]
-    oc = emissions[:, :, :, [aerosol_index_mapping["OC"]], ...]
-    oc_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["OC"]], ...]
-    aci_index = aerosol_index_mapping["Aerosol-Cloud Interactions"]
-
-
-    # TODO: raise an error if sulfur, BC and OC are not all there
-    radiative_effect = -scale * np.log(
-        1 + so2/shape_sulfur +
-        (bc + oc)/shape_bcoc
-    )
-    pre_industrial_radiative_effect = -scale * np.log(
-        1 + so2_pi/shape_sulfur +
-        (bc_pi + oc_pi)/shape_bcoc
-    )
-
-    erf_out = (radiative_effect - pre_industrial_radiative_effect) * forcing_scaling
-    return erf_out
-
-
-def calculate_eesc(
-    concentration,
-    baseline_concentration,
-    fractional_release,
-    cl_atoms,
-    br_atoms,
-    species_index_mapping,
-    br_cl_ratio,
-):
-    """Calculate equivalent effective stratospheric chlorine.
-
-    Parameters
-    ----------
-    concentration : ndarray
-        concentrations in timestep
-    baseline_concentration : ndarray
-        baseline, perhaps pre-industrial concentrations
-    fractional_release : ndarray
-        fractional release describing the proportion of available ODS that
-        actually contributes to ozone depletion.
-    cl_atoms : ndarray
-        Chlorine atoms in each species
-    br_atoms : ndarray
-        Bromine atoms in each species
-    species_index_mapping : dict
-        provides a mapping of which gas corresponds to which array index along
-        the SPECIES_AXIS.
-    br_cl_ratio : float, default=45
-        how much more effective bromine is as an ozone depletor than chlorine.
-
-    Returns
-    -------
-    eesc_out : ndarray
-        equivalent effective stratospheric chlorine
-
-    Notes
-    -----
-    Where array input is taken, the arrays always have the dimensions of
-    (scenario, species, time, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
-    """
-
-    # EESC is in terms of CFC11-eq
-    cfc11_fr = fractional_release[:, :, :, [species_index_mapping["CFC-11"]], :]
-    eesc_out = (
-        cl_atoms * (concentration - baseline_concentration) * fractional_release / cfc11_fr +
-        br_cl_ratio * br_atoms * (concentration - baseline_concentration) * fractional_release / cfc11_fr
-    ) * cfc11_fr
-    return eesc_out
-
-
-def calculate_ozone_forcing(
-    emissions,
-    concentration,
-    baseline_emissions,
-    baseline_concentration,
-    fractional_release,
-    cl_atoms,
-    br_atoms,
-    forcing_scaling,
-    ozone_radiative_efficiency,
-    temperature,
-    temperature_feedback,
-    br_cl_ratio,
-    species_index_mapping,
-):
-
-    """Determines ozone effective radiative forcing.
-
-    Calculates total ozone forcing from precursor emissions and
-    concentrations based on AerChemMIP and CMIP6 Historical behaviour in
-    Skeie et al. (2020) and Thornhill et al. (2021).
-
-    In this hard-coded treatment, ozone forcing depends on concentrations of
-    CH4, N2O, ozone-depleting halogens, and emissions of CO, NVMOC and NOx,
-    but any combination of emissions and concentrations are allowed.
-
-    Parameters
-    ----------
-    emissions : ndarry
-        emissions in timestep
-    concentration: ndarray
-        concentrations in timestep
-    pre_industrial_emissions : ndarray
-        pre-industrial emissions
-    pre_industrial_concentration : ndarray
-        pre-industrial concentrations
-    fractional_release : ndarray
-        fractional release describing the proportion of available ODS that
-        actually contributes to ozone depletion.
-    cl_atoms : ndarray
-        Chlorine atoms in each species
-    br_atoms : ndarray
-        Bromine atoms in each species
-    forcing_scaling : ndarray
-        scaling of the calculated radiative forcing (e.g. for conversion to
-        effective radiative forcing and forcing uncertainty).
-    radiative_efficiency : ndarray
-        the radiative efficiency at which ozone precursor emissions or
-        concentrations are converted to ozone radiative forcing. The unit is
-        W m-2 (<native emissions or concentration unit>)-1, where the
-        emissions unit is usually Mt/yr for short-lived forcers, ppb for CH4
-        and N2O concentrations, and ppt for halogenated species. Note this is
-        not the same radiative efficiency that is used in the ghg forcing.
-    species_index_mapping : ndarray
-        provides a mapping of which gas corresponds to which array index along
-        the SPECIES_AXIS.
-    temperature : ndarray or float
-        global mean surface temperature anomaly used to calculate the feedback.
-        In the forward model this will be one timestep behind; a future TODO
-        could be to iterate this.
-    temperature_feedback : float
-        temperature feedback on ozone forcing (W m-2 K-1)
-    br_cl_ratio : float, default=45
-        how much more effective bromine is as an ozone depletor than chlorine.
-
-    Returns
-    -------
-    erf_ozone : dict
-        ozone forcing due to each component, and in total.
-
-    Notes
-    -----
-    Where array input is taken, the arrays always have the dimensions of
-    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
-    """
-
-    array_shape = emissions.shape
-    n_timesteps, n_scenarios, n_configs, n_species, _ = array_shape
-
-    # revisit this if we ever want to dump out intermediate calculations like the feedback strength.
-    _erf = np.ones((n_timesteps, n_scenarios, n_configs, 4, 1)) * np.nan
-
-    # Halogen GHGs expressed as EESC
-    eesc = calculate_eesc(
-        concentration,
-        baseline_concentration,
-        fractional_release,
-        cl_atoms,
-        br_atoms,
-        species_index_mapping,
-        br_cl_ratio,
-    )
-    _erf[:, :, :, 0, :] = np.nansum(eesc * ozone_radiative_efficiency * forcing_scaling, axis=SPECIES_AXIS)
-
-    # Non-Halogen GHGs, with a concentration-given ozone radiative_efficiency
-    o3_species_conc = []
-    for species in ["CH4", "N2O"]:
-        if species in species_index_mapping:
-            o3_species_conc.append(species_index_mapping[species])
-    _erf[:, :, :, 1, :] = np.sum(
-        (concentration[:, :, :, o3_species_conc, :] - baseline_concentration[:, :, :, o3_species_conc, :]) *
-    ozone_radiative_efficiency[:, :, :, o3_species_conc, :], axis=SPECIES_AXIS)
-
-    # Emissions-based SLCF_OZONE_PRECURSORs
-    o3_species_emis = []
-    for species in ["CO", "VOC", "NOx"]:
-        if species in species_index_mapping:
-            o3_species_emis.append(species_index_mapping[species])
-    _erf[:, :, :, 2, :] = np.sum(
-        (emissions[:, :, :, o3_species_emis, :] - baseline_emissions[:, :, :, o3_species_emis, :]) *
-    ozone_radiative_efficiency[:, :, :, o3_species_emis, :], axis=SPECIES_AXIS)
-
-    # Temperature feedback
-    _erf[:, :, :, [3], :] = (
-        temperature_feedback * temperature * np.sum(_erf[:, :, :, :3, :], axis=SPECIES_AXIS, keepdims=True)
-    )
-    #print(_erf[:, 7, :, 3, :].squeeze())
-    #print(temperature.shape) 1 8 66 1
-    #print(temperature[:, 7, :, :].squeeze())
-    erf_out = np.sum(_erf, axis=SPECIES_AXIS, keepdims=True)
-    return erf_out
-
-
-#### MAIN CLASS ####
-
-
 class FAIR():
     def __init__(
         self,
@@ -697,7 +202,7 @@ class FAIR():
         run_config: RunConfig=RunConfig()
     ):
         if isinstance(scenarios, list):
-            self.n_timesteps = verify_scenario_consistency(scenarios)
+            self.n_timesteps = _verify_scenario_consistency(scenarios)
             self.scenarios = scenarios
         elif scenarios is None:
             self.scenarios = []
@@ -705,7 +210,7 @@ class FAIR():
             raise TypeError("scenarios should be a list of Scenarios or None")
 
         if isinstance(configs, list):
-            verify_config_consistency(configs)
+            _verify_config_consistency(configs)
             self.configs = configs
         elif configs is None:
             self.configs = []
@@ -716,41 +221,24 @@ class FAIR():
             self.define_time(time)
         self.run_config = run_config
 
-    def add_scenario(self, scenario: Scenario):
-        self.scenarios.append(scenario)
-        verify_scenario_consistency(self.scenarios)
-
-    def remove_scenario(self, scenario: Scenario):
-        self.scenarios.remove(scenario)
-
     def add_config(self, config: Config):
         self.configs.append(config)
-        verify_config_consistency(self.configs)
+        _verify_config_consistency(self.configs)
 
-    def remove_config(self, config: Config):
-        self.configs.remove(config)
+    def add_scenario(self, scenario: Scenario):
+        self.scenarios.append(scenario)
+        _verify_scenario_consistency(self.scenarios)
 
     def define_time(self, time: np.ndarray):
         if not hasattr(time, '__iter__'):
             raise TimeNotIterableError("Time must be an iterable data type")
         self.time = np.asarray(time)
 
-    def _pre_run_checks(self):
-        # Check if necessary inputs are defined
-        for attr in ('scenarios', 'configs', 'time'):
-            if not hasattr(self, attr):
-                raise MissingInputError(
-                    f"{attr} was not provided when trying to run"
-                )
-        check_type_of_elements(self.scenarios, Scenario, 'scenarios')
-        check_type_of_elements(self.configs, Config, 'configs')
-        self.species = _map_species_scenario_config(self.scenarios, self.configs, self.run_config)
-        if self.n_timesteps != len(self.time):
-            raise TimeMismatchError(
-                f"time vector provided is of length {len(self.time)} whereas "
-                f"the supplied Scenario inputs are of length "
-                f"{self.n_timesteps}."
-            )
+    def remove_config(self, config: Config):
+        self.configs.remove(config)
+
+    def remove_scenario(self, scenario: Scenario):
+        self.scenarios.remove(scenario)
 
     def _assign_indices(self):
         # Now that we know that scenarios and configs are consistent, we can
@@ -898,7 +386,22 @@ class FAIR():
         self.airborne_emissions_array = np.zeros((n_timesteps, n_scenarios, n_configs, n_species, 1))
         self.stochastic_forcing = np.ones((n_timesteps, n_scenarios, n_configs)) * np.nan
 
-#### MAIN RUN ####
+    def _pre_run_checks(self):
+        # Check if necessary inputs are defined
+        for attr in ('scenarios', 'configs', 'time'):
+            if not hasattr(self, attr):
+                raise MissingInputError(
+                    f"{attr} was not provided when trying to run"
+                )
+        _check_type_of_elements(self.scenarios, Scenario, 'scenarios')
+        _check_type_of_elements(self.configs, Config, 'configs')
+        self.species = _map_species_scenario_config(self.scenarios, self.configs, self.run_config)
+        if self.n_timesteps != len(self.time):
+            raise TimeMismatchError(
+                f"time vector provided is of length {len(self.time)} whereas "
+                f"the supplied Scenario inputs are of length "
+                f"{self.n_timesteps}."
+            )
 
     def run(self):
         self._pre_run_checks()

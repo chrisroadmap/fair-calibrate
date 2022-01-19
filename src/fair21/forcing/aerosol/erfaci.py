@@ -1,14 +1,25 @@
 import numpy as np
 
-from ...defaults.aerosol import beta, shape
+from ...exceptions import IncompatibleConfigError
+from ...structure.top_level import ACIMethod
 
-# TODO: a generalised log relationship and inclusion of temperature
-# feedback. This relationship is untested as yet on ESMs.
+def _check_aci_params(aci_params, aci_method):
+    required_params = {
+        ACIMethod.SMITH2018: ['scale', 'Sulfur', 'BC+OC'],
+        ACIMethod.STEVENS2015: ['scale', 'Sulfur']
+    }
+    for param in required_params[aci_method]:
+        if param not in aci_params:
+            raise IncompatibleConfigError(
+                f"For aerosol-cloud interactions using the {aci_method}, "
+                f"the aci_params in the construction of Config must include "
+                f"{required_params[aci_method]}."
+            )
 
-def smith2021(
+def calculate_erfaci_forcing(
     emissions,
     pre_industrial_emissions,
-    tropospheric_adjustment,
+    forcing_scaling,
     scale,
     shape_sulfur,
     shape_bcoc,
@@ -25,8 +36,9 @@ def smith2021(
         input emissions
     pre_industrial_emissions : ndarray
         pre-industrial emissions
-    tropospheric_adjustment : ndarray
-        conversion factor from radiative forcing to effective radiative forcing.
+    forcing_scaling : ndarray
+        scaling of the calculated radiative forcing (e.g. for conversion to
+        effective radiative forcing and forcing uncertainty).
     scale : ndarray
         scaling factor to apply to the logarithm
     shape_sulfur : ndarray
@@ -71,43 +83,5 @@ def smith2021(
         (bc_pi + oc_pi)/shape_bcoc
     )
 
-    erf_out = (radiative_effect - pre_industrial_radiative_effect) * (1 + tropospheric_adjustment)
+    erf_out = (radiative_effect - pre_industrial_radiative_effect) * forcing_scaling
     return erf_out
-
-
-### NEEDS UPDATING
-def stevens2015(
-    emissions,
-    pre_industrial_emissions,
-    beta=beta["Stevens2015"],
-    shape_sulfur=shape["Stevens2015"]
-):
-    """ERF from aerosol-cloud interactions
-
-    This uses the relationship to calculate ERFaci described in Stevens (2015).
-
-    Inputs
-    ------
-    emissions : dict of `np.ndarray` or float
-        emissions of short_lived_forcers
-    pre_industrial_emissions : dict
-        pre-industrial values of emissions
-    beta : float
-        scaling factor converting to ERFaci.
-    shape_sulfur : float
-        natural emissions of SO2 (parallels to `shape` parameter of Smith et al.
-        2021).
-
-    Returns
-    -------
-    erf_aci :
-        Effective radiative forcing due to aerosol-cloud interactions.
-    """
-
-    radiative_effect = -beta * np.log(
-        1 + emissions["Sulfur"]/shape_sulfur
-    )
-    pre_industrial_radiative_effect = -beta * np.log(
-        1 + pre_industrial_emissions["Sulfur"]/shape_sulfur
-    )
-    return radiative_effect - pre_industrial_radiative_effect

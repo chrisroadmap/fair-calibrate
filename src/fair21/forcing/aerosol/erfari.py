@@ -1,10 +1,9 @@
 import numpy as np
 
-
-def linear(
+def calculate_erfari_forcing(
     emissions,
     pre_industrial_emissions,
-    tropospheric_adjustment,
+    forcing_scaling,
     radiative_efficiency,
     aerosol_index_mapping,
 ):
@@ -17,8 +16,9 @@ def linear(
         input emissions
     pre_industrial_emissions : ndarray
         pre-industrial emissions
-    tropospheric_adjustment : ndarray
-        conversion factor from radiative forcing to effective radiative forcing.
+    forcing_scaling : ndarray
+        scaling of the calculated radiative forcing (e.g. for conversion to
+        effective radiative forcing and forcing uncertainty).
     radiative_efficiency : ndarray
         radiative efficiency (W m-2 (emission_unit yr-1)-1) of each species.
     aerosol_index_mapping : dict
@@ -44,6 +44,6 @@ def linear(
         erf_out = (
             (emissions[:, :, :, ari_index, :] - pre_industrial_emissions[:, :, :, ari_index, :])
             * radiative_efficiency[:, :, :, ari_index, :]
-        ) * (1 + tropospheric_adjustment[:, :, :, ari_index, :])
+        ) * forcing_scaling[:, :, :, ari_index, :]
 
     return erf_out

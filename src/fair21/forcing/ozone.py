@@ -3,23 +3,17 @@ Module for ozone forcing
 """
 
 import numpy as np
-from ..constants import SPECIES_AXIS
-from ..constants.gases import BR_ATOMS, CL_ATOMS
-from ..defaults.ozone import radiative_efficiency, br_cl_ratio, fractional_release
-from ..defaults.forcing import tropospheric_adjustment
-from ..defaults.gases import pre_industrial_concentration
-from ..defaults.species import pre_industrial_emissions
-from ..defaults import gas_list, slcf_list
 
-# important enough to stand alone
+from ..constants import SPECIES_AXIS
+
 def calculate_eesc(
     concentration,
-    pre_industrial_concentration,
+    baseline_concentration,
     fractional_release,
     cl_atoms,
     br_atoms,
     species_index_mapping,
-    br_cl_ratio=br_cl_ratio,
+    br_cl_ratio,
 ):
     """Calculate equivalent effective stratospheric chlorine.
 
@@ -27,8 +21,8 @@ def calculate_eesc(
     ----------
     concentration : ndarray
         concentrations in timestep
-    pre_industrial_concentration : ndarray
-        pre-industrial concentrations
+    baseline_concentration : ndarray
+        baseline, perhaps pre-industrial concentrations
     fractional_release : ndarray
         fractional release describing the proportion of available ODS that
         actually contributes to ozone depletion.
@@ -56,30 +50,30 @@ def calculate_eesc(
     """
 
     # EESC is in terms of CFC11-eq
-    cfc11_fr = fractional_release[:, :, :, species_index_mapping["CFC-11"], :]
-
+    cfc11_fr = fractional_release[:, :, :, [species_index_mapping["CFC-11"]], :]
     eesc_out = (
-        cl_atoms * (concentration - pre_industrial_concentration) * fractional_release / cfc11_fr +
-        br_cl_ratio * br_atoms * (concentration - pre_industrial_concentration) * fractional_release / cfc11_fr
+        cl_atoms * (concentration - baseline_concentration) * fractional_release / cfc11_fr +
+        br_cl_ratio * br_atoms * (concentration - baseline_concentration) * fractional_release / cfc11_fr
     ) * cfc11_fr
     return eesc_out
 
 
-def thornhill_skeie(
+def calculate_ozone_forcing(
     emissions,
     concentration,
-    pre_industrial_emissions,
-    pre_industrial_concentration,
+    baseline_emissions,
+    baseline_concentration,
     fractional_release,
     cl_atoms,
     br_atoms,
-    tropospheric_adjustment,
-    radiative_efficiency,
+    forcing_scaling,
+    ozone_radiative_efficiency,
+    temperature,
+    temperature_feedback,
+    br_cl_ratio,
     species_index_mapping,
-    temperature=0,
-    temperature_feedback=-0.037,
-    br_cl_ratio=br_cl_ratio,
 ):
+
     """Determines ozone effective radiative forcing.
 
     Calculates total ozone forcing from precursor emissions and
@@ -107,8 +101,9 @@ def thornhill_skeie(
         Chlorine atoms in each species
     br_atoms : ndarray
         Bromine atoms in each species
-    tropospheric_adjustment : ndarray
-        conversion factor from radiative forcing to effective radiative forcing.
+    forcing_scaling : ndarray
+        scaling of the calculated radiative forcing (e.g. for conversion to
+        effective radiative forcing and forcing uncertainty).
     radiative_efficiency : ndarray
         the radiative efficiency at which ozone precursor emissions or
         concentrations are converted to ozone radiative forcing. The unit is
@@ -145,46 +140,44 @@ def thornhill_skeie(
     n_timesteps, n_scenarios, n_configs, n_species, _ = array_shape
 
     # revisit this if we ever want to dump out intermediate calculations like the feedback strength.
-    _erf = np.ones((n_timesteps, n_scenarios, 1, 4, 1)) * np.nan
+    _erf = np.ones((n_timesteps, n_scenarios, n_configs, 4, 1)) * np.nan
 
-    # Halogens expressed as EESC
+    # Halogen GHGs expressed as EESC
     eesc = calculate_eesc(
         concentration,
-        pre_industrial_concentration,
+        baseline_concentration,
         fractional_release,
         cl_atoms,
         br_atoms,
         species_index_mapping,
-        br_cl_ratio=br_cl_ratio,
+        br_cl_ratio,
     )
+    _erf[:, :, :, 0, :] = np.nansum(eesc * ozone_radiative_efficiency * forcing_scaling, axis=SPECIES_AXIS)
 
-    _erf[:, :, :, 0, :] = np.nansum(eesc * radiative_efficiency * tropospheric_adjustment, axis=SPECIES_AXIS)
-
-    # Non-Halogens
-    # I'm going to say it's OK to hard-code the gases here; we do it for ERF after all.
-    o3_species_conc = [
-        species_index_mapping["CH4"],
-        species_index_mapping["N2O"]
-    ]
-    o3_species_emis = [
-        species_index_mapping["CO"],
-        species_index_mapping["VOC"],
-        species_index_mapping["NOx"],
-    ]
-
+    # Non-Halogen GHGs, with a concentration-given ozone radiative_efficiency
+    o3_species_conc = []
+    for species in ["CH4", "N2O"]:
+        if species in species_index_mapping:
+            o3_species_conc.append(species_index_mapping[species])
     _erf[:, :, :, 1, :] = np.sum(
-        (concentration[:, :, :, o3_species_conc, :] - pre_industrial_concentration[:, :, :, o3_species_conc, :]) *
-    radiative_efficiency[:, :, :, o3_species_conc, :], axis=SPECIES_AXIS)
+        (concentration[:, :, :, o3_species_conc, :] - baseline_concentration[:, :, :, o3_species_conc, :]) *
+    ozone_radiative_efficiency[:, :, :, o3_species_conc, :], axis=SPECIES_AXIS)
 
+    # Emissions-based SLCF_OZONE_PRECURSORs
+    o3_species_emis = []
+    for species in ["CO", "VOC", "NOx"]:
+        if species in species_index_mapping:
+            o3_species_emis.append(species_index_mapping[species])
     _erf[:, :, :, 2, :] = np.sum(
-        (emissions[:, :, :, o3_species_conc, :] - pre_industrial_emissions[:, :, :, o3_species_conc, :]) *
-    radiative_efficiency[:, :, :, o3_species_conc, :], axis=SPECIES_AXIS)
+        (emissions[:, :, :, o3_species_emis, :] - baseline_emissions[:, :, :, o3_species_emis, :]) *
+    ozone_radiative_efficiency[:, :, :, o3_species_emis, :], axis=SPECIES_AXIS)
 
     # Temperature feedback
-    _erf[:, :, :, 3, :] = (
-        temperature_feedback * temperature * np.sum(_erf[:, :, :, :3, :], axis=SPECIES_AXIS)
+    _erf[:, :, :, [3], :] = (
+        temperature_feedback * temperature * np.sum(_erf[:, :, :, :3, :], axis=SPECIES_AXIS, keepdims=True)
     )
-
+    #print(_erf[:, 7, :, 3, :].squeeze())
+    #print(temperature.shape) 1 8 66 1
+    #print(temperature[:, 7, :, :].squeeze())
     erf_out = np.sum(_erf, axis=SPECIES_AXIS, keepdims=True)
-
     return erf_out
