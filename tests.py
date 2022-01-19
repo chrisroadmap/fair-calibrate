@@ -56,6 +56,8 @@ species_ids = {
     'voc': SpeciesID('VOC', Category.SLCF_OZONE_PRECURSOR),
     'co': SpeciesID('CO', Category.SLCF_OZONE_PRECURSOR),
     'nox': SpeciesID('NOx', Category.SLCF_OZONE_PRECURSOR),
+    'aviation nox': SpeciesID('Aviation NOx', Category.AVIATION_NOX),
+    'contrails': SpeciesID('Contrails', Category.CONTRAILS),
     'aerosol-cloud interactions': SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS),
     'solar': SpeciesID('Solar', Category.SOLAR),
     'volcanic': SpeciesID('Volcanic', Category.VOLCANIC)
@@ -74,7 +76,7 @@ emitted_species = [
     'NF3', 'SF6', 'SO2F2',
     'HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32', 'HFC-365mfc',
     'HFC-4310mee']
-species_to_include = emitted_species + ['aerosol-cloud interactions', 'ozone']
+species_to_include = emitted_species + ['aerosol-cloud interactions', 'ozone', 'contrails']
 scenarios_to_include = ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']
 
 scenarios = []
@@ -86,6 +88,8 @@ for iscen, scenario in enumerate(scenarios_to_include):
     list_of_species = []
     for ispec, species in enumerate(emitted_species):
         species_rcmip_name = species.replace("-", "")
+        if species == 'Aviation NOx':
+            species_rcmip_name = 'NOx|MAGICC Fossil and Industrial|Aircraft'
         emis_in = df.loc[
             (df['Scenario']==scenario) & (df['Variable'].str.endswith("|"+species_rcmip_name)) & (df['Region']=='World'), '1750':'2100'
         ].interpolate(axis=1).values.squeeze()
@@ -97,6 +101,7 @@ for iscen, scenario in enumerate(scenarios_to_include):
     # declare that we want ACI and ozone
     list_of_species.append(Species(species_ids['aerosol-cloud interactions']))
     list_of_species.append(Species(species_ids['ozone']))
+    list_of_species.append(Species(species_ids['contrails']))
     scenarios.append(Scenario(scenario, list_of_species))
 
 df = pd.read_csv("data/calibration/4xCO2_cummins.csv")

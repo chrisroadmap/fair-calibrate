@@ -21,6 +21,7 @@ from .exceptions import (
 from .forcing.aerosol.erfari import calculate_erfari_forcing
 from .forcing.aerosol.erfaci import calculate_erfaci_forcing, _check_aci_params
 from .forcing.ghg import calculate_ghg_forcing
+from .forcing.linear import calculate_linear_forcing
 from .forcing.ozone import calculate_ozone_forcing
 from .gas_cycle import calculate_alpha
 from .gas_cycle.forward import step_concentration
@@ -249,8 +250,10 @@ class FAIR():
         self.configs_index_mapping = {}
         self.ghg_indices = []
         self.ari_indices = []
+        self.aviation_nox_index = None
         self.aci_index = None
         self.ozone_index = None
+        self.contrails_index = None
         #self.config_indices = []
         for ispec, specie in enumerate(self.species):
             self.species_index_mapping[specie.name] = ispec
@@ -258,10 +261,14 @@ class FAIR():
                 self.ghg_indices.append(ispec)
             if specie.category in AggregatedCategory.AEROSOL:
                 self.ari_indices.append(ispec)
+            if specie.category == Category.AVIATION_NOX:
+                self.aviation_nox_index = ispec
             if specie.category == Category.AEROSOL_CLOUD_INTERACTIONS:
                 self.aci_index = ispec
             if specie.category == Category.OZONE:
                 self.ozone_index = ispec
+            if specie.category == Category.CONTRAILS:
+                self.contrails_index = ispec
         for iscen, scenario in enumerate(self.scenarios):
             self.scenarios_index_mapping[scenario.name] = iscen
         for iconf, config in enumerate(self.configs):
@@ -330,6 +337,7 @@ class FAIR():
         self.erfaci_shape_sulfur_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
         self.erfaci_shape_bcoc_array = np.ones((1, 1, n_configs, 1, 1)) * np.inf
         self.ozone_radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.contrails_emissions_to_forcing_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
         # TODO: make a more general temperature-forcing feedback for all species
         self.forcing_temperature_feedback_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: start from non-zero temperature
@@ -372,6 +380,8 @@ class FAIR():
                         self.erfaci_shape_bcoc_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['BC+OC']
                 if self.species[ispec].category in AggregatedCategory.OZONE_PRECURSOR:
                     self.ozone_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.ozone_radiative_efficiency
+                if self.species[ispec].category == Category.AVIATION_NOX:
+                    self.contrails_emissions_to_forcing_array[0, 0, iconf, 0, 0] = conf_spec.contrails_emissions_to_forcing
             for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
                 scen_spec = self.scenarios[iscen].list_of_species[ispec]
                 if self.species[ispec].run_mode == RunMode.EMISSIONS:
@@ -466,7 +476,7 @@ class FAIR():
                 self.species_index_mapping
             )[0:1, :, :, self.ghg_indices, :]
 
-            # 4. aerosol emissions to forcing
+            # 4. aerosol direct emissions to forcing
             self.forcing_array[i_timestep:i_timestep+1, :, :, self.ari_indices, :] = calculate_erfari_forcing(
                 self.emissions_array[[i_timestep], ...],
                 self.baseline_emissions_array,
@@ -475,6 +485,7 @@ class FAIR():
                 self.species_index_mapping
             )[0:1, :, :, self.ari_indices, :]
 
+            # 5. aerosol indirect emissions to forcing
             if self.aci_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = calculate_erfaci_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -486,7 +497,7 @@ class FAIR():
                     self.species_index_mapping
                 )[0:1, :, :, self.aci_index, :]
 
-            # 5. ozone emissions and concentrations to forcing
+            # 6. ozone emissions and concentrations to forcing
             if self.ozone_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.ozone_index], :] = calculate_ozone_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -504,15 +515,26 @@ class FAIR():
                     self.species_index_mapping
                 )
 
+            # 7. contrails
+            if self.contrails_index is not None:
+                self.forcing_array[i_timestep, :, :, self.contrails_index, :] = calculate_linear_forcing(
+                    self.emissions_array[i_timestep, :, :, self.aviation_nox_index, :],
+                    self.baseline_emissions_array[0, :, :, self.aviation_nox_index, :],
+                    self.forcing_scaling_array[0, :, :, self.aviation_nox_index, :],
+                    self.contrails_emissions_to_forcing_array[0, :, :, 0, :],
+                )
 
-            # contrails here
-            # BC on snow here
-            # strat water vapour here
-            # land use here
-            # solar here
-            # volcanic here
+            # 8. LAPSI
 
-            # 99. sum up all of the forcing calculated previously
+            # 9. strat water vapour here
+
+            # 10. land use here
+
+            # 11. solar here
+
+            # 12.volcanic here
+
+            # 13. sum up all of the forcing calculated previously
             self.forcing_sum_array[[i_timestep], ...] = np.nansum(
                 self.forcing_array[[i_timestep], ...], axis=SPECIES_AXIS, keepdims=True
             )
@@ -520,7 +542,7 @@ class FAIR():
                 self.forcing_array[[i_timestep], ...]*self.efficacy_array, axis=SPECIES_AXIS, keepdims=True
             )
 
-            # 100. run the energy balance model
+            # 14. run the energy balance model
             # TODO: skip if temperature prescribed
             # TODO: remove loop
             for iscen, scenario in enumerate(self.scenarios):

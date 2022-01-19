@@ -59,6 +59,7 @@ class SpeciesConfig():
     natural_emissions_adjustment: float=0
     baseline_concentration: float=0
     erfari_emissions_to_forcing: float=0
+    contrails_emissions_to_forcing: float=0
     lapsi_emissions_to_forcing: float=0
     baseline_emissions: float=0
     ozone_radiative_efficiency: float=None
@@ -115,6 +116,10 @@ class SpeciesConfig():
         if self.species_id.category == Category.AEROSOL_CLOUD_INTERACTIONS:
             if not isinstance(self.aci_params, dict):
                 raise TypeError("For aerosol-cloud interactions, you must supply a dict of parameters using the aci_params keyword")
+
+        if self.species_id.category == Category.AVIATION_NOX:
+            if not isinstance(self.contrails_emissions_to_forcing, Number):
+                raise ValueError("contrails_emissions_to_forcing should be a number")
 
         if not isinstance(self.forcing_temperature_feedback, Number):
             raise ValueError("forcing_temperature_feedback should be a number")

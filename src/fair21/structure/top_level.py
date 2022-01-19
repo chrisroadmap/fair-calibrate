@@ -16,6 +16,7 @@ class Category(Enum):
     OC = auto()
     OTHER_AEROSOL = auto()
     SLCF_OZONE_PRECURSOR = auto()
+    AVIATION_NOX = auto()
     OZONE = auto()
     AEROSOL_CLOUD_INTERACTIONS = auto()
     CONTRAILS = auto()
@@ -39,6 +40,7 @@ class AggregatedCategory():
         Category.SULFUR,
         Category.BC,
         Category.OC,
+        Category.AVIATION_NOX,
         Category.OZONE,
         Category.AEROSOL_CLOUD_INTERACTIONS,
         Category.CONTRAILS,
@@ -70,6 +72,7 @@ valid_run_modes = {
     Category.OC: (RunMode.EMISSIONS, RunMode.FORCING),
     Category.OTHER_AEROSOL: (RunMode.EMISSIONS, RunMode.FORCING),
     Category.SLCF_OZONE_PRECURSOR: (RunMode.EMISSIONS, RunMode.FORCING),
+    Category.AVIATION_NOX: (RunMode.EMISSIONS,),
     Category.OZONE: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.AEROSOL_CLOUD_INTERACTIONS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.CONTRAILS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),

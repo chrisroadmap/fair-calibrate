@@ -383,6 +383,10 @@ default_species_config = {
         ozone_radiative_efficiency = 3.29e-4,
         baseline_emissions = 60.0218262241548
     ),
+    'aviation nox' : SpeciesConfig(
+        species_id = SpeciesID('Aviation NOx', Category.AVIATION_NOX, run_mode=RunMode.EMISSIONS),
+        contrails_emissions_to_forcing = 0.014664524317963392,   # W/m2/(MtNO2-aviation)
+    ),
     'aerosol-cloud interactions': SpeciesConfig(
         species_id = SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS, run_mode=RunMode.FROM_OTHER_SPECIES),
         aci_params={"scale": 2.09841432, "Sulfur": 260.34644166, "BC+OC": 111.05064063}
@@ -390,5 +394,8 @@ default_species_config = {
     'ozone': SpeciesConfig(
         species_id = SpeciesID('Ozone', Category.OZONE, run_mode=RunMode.FROM_OTHER_SPECIES),
         forcing_temperature_feedback = -0.037
+    ),
+    'contrails': SpeciesConfig(
+        species_id = SpeciesID('Contrails', Category.CONTRAILS, run_mode=RunMode.FROM_OTHER_SPECIES)
     )
 }
