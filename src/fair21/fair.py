@@ -93,6 +93,8 @@ def _map_species_scenario_config(scenarios, configs, run_config):
     }
     aerosol_species_included = []
     aci_desired = False
+    contrails_from_emissions_desired = False
+    aviation_nox_emissions_supplied = False
     for ispec, species in enumerate(scenarios[0].list_of_species):
         species_included_first_scenario.append(scenarios[0].list_of_species[ispec].species_id)
         if scenarios[0].list_of_species[ispec].species_id.category in required_aerosol_species[run_config.aci_method] and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
@@ -100,6 +102,10 @@ def _map_species_scenario_config(scenarios, configs, run_config):
         if scenarios[0].list_of_species[ispec].species_id.category == Category.AEROSOL_CLOUD_INTERACTIONS:
             aci_desired = True
             aci_index = ispec
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.CONTRAILS and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.FROM_OTHER_SPECIES:
+            contrails_from_emissions_desired = True
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.AVIATION_NOX and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
+            aviation_nox_emissions_supplied = True
     # check config/scenario species consistency
     if species_included_first_config != species_included_first_scenario:
         raise SpeciesMismatchError(
@@ -115,6 +121,12 @@ def _map_species_scenario_config(scenarios, configs, run_config):
             f"all of {[species_id.name for species_id in required_aerosol_species[run_config.aci_method]]} "
             f"must be provided in the scenario."
         )
+    # if contrail forcing from emissions is desired, we need aviation NOx emissions
+    if contrails_from_emissions_desired and not aviation_nox_emissions_supplied:
+        raise IncompatibleConfigError(
+            f"For contrails forcing from emissions, aviation NOx emissions "
+            f"must be supplied."
+        )
     # by the time we get here, we should have checked that scearios and configs species line up
     # and configs where ACI is defined
     # so we just need to check that each config has the correct aci_params
@@ -122,6 +134,8 @@ def _map_species_scenario_config(scenarios, configs, run_config):
         for config in configs:
             _check_aci_params(config.species_configs[aci_index].aci_params, run_config.aci_method)
     return species_included_first_config
+
+
 
 def _verify_config_consistency(configs):
 # TODO: check EBM configs are the same length as each other and agree with RunConfig()
@@ -517,11 +531,11 @@ class FAIR():
 
             # 7. contrails
             if self.contrails_index is not None:
-                self.forcing_array[i_timestep, :, :, self.contrails_index, :] = calculate_linear_forcing(
-                    self.emissions_array[i_timestep, :, :, self.aviation_nox_index, :],
-                    self.baseline_emissions_array[0, :, :, self.aviation_nox_index, :],
-                    self.forcing_scaling_array[0, :, :, self.aviation_nox_index, :],
-                    self.contrails_emissions_to_forcing_array[0, :, :, 0, :],
+                self.forcing_array[i_timestep, :, :, [self.contrails_index], :] = calculate_linear_forcing(
+                    self.emissions_array[i_timestep, :, :, [self.aviation_nox_index], :],
+                    self.baseline_emissions_array[0, :, :, [self.aviation_nox_index], :],
+                    self.forcing_scaling_array[0, :, :, [self.aviation_nox_index], :],
+                    self.contrails_emissions_to_forcing_array[:, :, :, 0, :],
                 )
 
             # 8. LAPSI

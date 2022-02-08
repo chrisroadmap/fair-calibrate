@@ -14,8 +14,8 @@ def calculate_linear_forcing(
     ------
     emissions : ndarray
         input emissions
-    pre_industrial_emissions : ndarray
-        pre-industrial emissions
+    baseline_emissions : ndarray
+        baseline, possibly pre-industrial, emissions
     forcing_scaling : ndarray
         scaling of the calculated radiative forcing (e.g. for conversion to
         effective radiative forcing and forcing uncertainty).
@@ -32,7 +32,6 @@ def calculate_linear_forcing(
     retain the singleton dimension in order to preserve clarity of
     calculation and speed.
     """
-
     erf_out = (emissions - baseline_emissions) * radiative_efficiency * forcing_scaling
 
     return erf_out

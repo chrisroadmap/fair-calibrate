@@ -75,7 +75,7 @@ emitted_species = [
     'CF4', 'C2F6', 'C3F8', 'c-C4F8', 'C4F10', 'C5F12', 'C6F14', 'C7F16', 'C8F18',
     'NF3', 'SF6', 'SO2F2',
     'HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32', 'HFC-365mfc',
-    'HFC-4310mee']
+    'HFC-4310mee', 'Aviation NOx']
 species_to_include = emitted_species + ['aerosol-cloud interactions', 'ozone', 'contrails']
 scenarios_to_include = ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']
 
@@ -137,8 +137,8 @@ print (f"{len(scenarios) * len(configs)} ensemble members in {end - start}s.")
 import matplotlib.pyplot as pl
 # pl.plot(np.arange(1750.5, 2101), fair.temperature[:, 7, :, 0, 0])
 # pl.show()
-# pl.plot(np.arange(1750.5, 2101), fair.forcing_array[:, 7, :, -1, 0])
-# pl.show()
+pl.plot(np.arange(1750.5, 2101), fair.forcing_array[:, 7, :, 50, 0])
+pl.show()
 pl.plot(np.arange(1750.5, 2101), fair.concentration_array[:, 2, :, 1, 0])
 pl.show()
 
