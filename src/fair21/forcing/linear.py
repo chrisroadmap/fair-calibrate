@@ -2,6 +2,9 @@
 Module for a generic linear emissions to forcing calculation.
 """
 
+import numpy as np
+from ..constants import SPECIES_AXIS
+
 def calculate_linear_forcing(
     emissions,
     baseline_emissions,
@@ -32,6 +35,9 @@ def calculate_linear_forcing(
     retain the singleton dimension in order to preserve clarity of
     calculation and speed.
     """
-    erf_out = (emissions - baseline_emissions) * radiative_efficiency * forcing_scaling
-
+    erf_out = np.nansum(
+        (emissions - baseline_emissions) * radiative_efficiency * forcing_scaling,
+        axis=SPECIES_AXIS,
+        keepdims=True
+    )
     return erf_out

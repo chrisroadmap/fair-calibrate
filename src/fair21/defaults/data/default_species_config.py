@@ -357,11 +357,12 @@ default_species_config = {
         species_id = SpeciesID('BC', Category.BC, run_mode=RunMode.EMISSIONS),
         erfari_emissions_to_forcing = 0.0507748226795483,
         baseline_emissions = 2.09777075542297,
+        lapsi_emissions_to_forcing = 0.011585926
     ),
     'oc': SpeciesConfig(
         species_id = SpeciesID('OC', Category.OC, run_mode=RunMode.EMISSIONS),
         erfari_emissions_to_forcing = -0.006214374446217472,
-        baseline_emissions = 15.4476681469614,
+        baseline_emissions = 15.4476681469614
     ),
     'nh3': SpeciesConfig(
         species_id = SpeciesID('NH3', Category.OTHER_AEROSOL, run_mode=RunMode.EMISSIONS),
@@ -390,6 +391,9 @@ default_species_config = {
     'aerosol-cloud interactions': SpeciesConfig(
         species_id = SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS, run_mode=RunMode.FROM_OTHER_SPECIES),
         aci_params={"scale": 2.09841432, "Sulfur": 260.34644166, "BC+OC": 111.05064063}
+    ),
+    'light absorbing particles on snow and ice': SpeciesConfig(
+        species_id = SpeciesID('Light absorbing particles on snow and ice', Category.LAPSI, run_mode=RunMode.FROM_OTHER_SPECIES)
     ),
     'ozone': SpeciesConfig(
         species_id = SpeciesID('Ozone', Category.OZONE, run_mode=RunMode.FROM_OTHER_SPECIES),

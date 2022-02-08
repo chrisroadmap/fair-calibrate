@@ -264,6 +264,7 @@ class FAIR():
         self.configs_index_mapping = {}
         self.ghg_indices = []
         self.ari_indices = []
+        self.lapsi_index = None
         self.aviation_nox_index = None
         self.aci_index = None
         self.ozone_index = None
@@ -275,6 +276,8 @@ class FAIR():
                 self.ghg_indices.append(ispec)
             if specie.category in AggregatedCategory.AEROSOL:
                 self.ari_indices.append(ispec)
+            if specie.category == Category.LAPSI:
+                self.lapsi_index = ispec
             if specie.category == Category.AVIATION_NOX:
                 self.aviation_nox_index = ispec
             if specie.category == Category.AEROSOL_CLOUD_INTERACTIONS:
@@ -352,6 +355,7 @@ class FAIR():
         self.erfaci_shape_bcoc_array = np.ones((1, 1, n_configs, 1, 1)) * np.inf
         self.ozone_radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.contrails_emissions_to_forcing_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
+        self.lapsi_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: make a more general temperature-forcing feedback for all species
         self.forcing_temperature_feedback_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: start from non-zero temperature
@@ -364,6 +368,7 @@ class FAIR():
                 self.efficacy_array[:, 0, iconf, ispec, 0] = conf_spec.efficacy
                 self.baseline_emissions_array[:, :, iconf, ispec, :] = conf_spec.baseline_emissions
                 self.forcing_temperature_feedback_array[:, :, iconf, ispec, :] = conf_spec.forcing_temperature_feedback
+                self.lapsi_emissions_to_forcing_array[:, :, iconf, ispec, :] = conf_spec.lapsi_emissions_to_forcing
                 if self.species[ispec].category in AggregatedCategory.GREENHOUSE_GAS:
                     partition_fraction = np.asarray(conf_spec.partition_fraction)
                     if np.ndim(partition_fraction) == 1:
@@ -538,7 +543,14 @@ class FAIR():
                     self.contrails_emissions_to_forcing_array[:, :, :, 0, :],
                 )
 
-            # 8. LAPSI
+            # 8. LAPSI - as with contrails, can be refactored with aerosol direct I think
+            if self.lapsi_index is not None:
+                self.forcing_array[i_timestep:i_timestep+1, :, :, [self.lapsi_index], :] = calculate_linear_forcing(
+                    self.emissions_array[[i_timestep], ...],
+                    self.baseline_emissions_array,
+                    self.forcing_scaling_array,
+                    self.lapsi_emissions_to_forcing_array,
+                )
 
             # 9. strat water vapour here
 
