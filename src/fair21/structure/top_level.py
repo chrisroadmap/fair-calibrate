@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from ..exceptions import InvalidRunModeError
 
 class Category(Enum):
     """Types of Species encountered in climate scenarios."""
@@ -21,6 +22,7 @@ class Category(Enum):
     AEROSOL_CLOUD_INTERACTIONS = auto()
     CONTRAILS = auto()
     LAPSI = auto()
+    H2O_STRATOSPHERIC = auto()
     LAND_USE = auto()
     VOLCANIC = auto()
     SOLAR = auto()
@@ -45,6 +47,7 @@ class AggregatedCategory():
         Category.AEROSOL_CLOUD_INTERACTIONS,
         Category.CONTRAILS,
         Category.LAPSI,
+        Category.H2O_STRATOSPHERIC,
         Category.LAND_USE,
         Category.SOLAR,
         Category.VOLCANIC
@@ -77,6 +80,7 @@ valid_run_modes = {
     Category.AEROSOL_CLOUD_INTERACTIONS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.CONTRAILS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.LAPSI: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
+    Category.H2O_STRATOSPHERIC: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.LAND_USE: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.SOLAR: (RunMode.FORCING,),
     Category.VOLCANIC: (RunMode.FORCING,),
@@ -94,7 +98,14 @@ class SpeciesID():
         if self.run_mode is None:
             if self.category in [Category.SOLAR, Category.VOLCANIC]:
                 self.run_mode = RunMode.FORCING
-            elif self.category in [Category.OZONE, Category.AEROSOL_CLOUD_INTERACTIONS, Category.CONTRAILS, Category.LAPSI, Category.LAND_USE]:
+            elif self.category in [
+                Category.OZONE,
+                Category.AEROSOL_CLOUD_INTERACTIONS,
+                Category.CONTRAILS,
+                Category.H2O_STRATOSPHERIC,
+                Category.LAPSI,
+                Category.LAND_USE
+            ]:
                 self.run_mode = RunMode.FROM_OTHER_SPECIES
             else:
                 self.run_mode = RunMode.EMISSIONS

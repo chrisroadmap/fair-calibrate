@@ -95,6 +95,9 @@ def _map_species_scenario_config(scenarios, configs, run_config):
     aci_desired = False
     contrails_from_emissions_desired = False
     aviation_nox_emissions_supplied = False
+    h2o_stratospheric_desired = False
+    ch4_supplied = False
+    # For species that depend on other species in certain RunModes, check everything that we need is present.
     for ispec, species in enumerate(scenarios[0].list_of_species):
         species_included_first_scenario.append(scenarios[0].list_of_species[ispec].species_id)
         if scenarios[0].list_of_species[ispec].species_id.category in required_aerosol_species[run_config.aci_method] and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
@@ -106,12 +109,19 @@ def _map_species_scenario_config(scenarios, configs, run_config):
             contrails_from_emissions_desired = True
         if scenarios[0].list_of_species[ispec].species_id.category == Category.AVIATION_NOX and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
             aviation_nox_emissions_supplied = True
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.H2O_STRATOSPHERIC and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.FROM_OTHER_SPECIES:
+            h2o_stratospheric_desired = True
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.CH4:
+            ch4_supplied = True
     # check config/scenario species consistency
+    # TODO: this error message is quite helpful, but could be further improved by
+    # pointing out exactly where they differ.
     if species_included_first_config != species_included_first_scenario:
         raise SpeciesMismatchError(
-            f"The list of Species provided to Scenario.list_of_species is "
+            f"The list of Species provided to Scenario.list_of_species is:\n"
             f"{[species_id.name for species_id in species_included_first_scenario]}. "
-            f"This differs from that provided to Config.species_configs "
+            f"\n\n"
+            f"This differs from that provided to Config.species_configs:\n"
             f"{[species_id.name for species_id in species_included_first_config]}."
         )
     # check aerosol species provided are consistent with desired indirect forcing mode
@@ -121,18 +131,24 @@ def _map_species_scenario_config(scenarios, configs, run_config):
             f"all of {[species_id.name for species_id in required_aerosol_species[run_config.aci_method]]} "
             f"must be provided in the scenario."
         )
-    # if contrail forcing from emissions is desired, we need aviation NOx emissions
-    if contrails_from_emissions_desired and not aviation_nox_emissions_supplied:
-        raise IncompatibleConfigError(
-            f"For contrails forcing from emissions, aviation NOx emissions "
-            f"must be supplied."
-        )
     # by the time we get here, we should have checked that scearios and configs species line up
     # and configs where ACI is defined
     # so we just need to check that each config has the correct aci_params
     if aci_desired:
         for config in configs:
             _check_aci_params(config.species_configs[aci_index].aci_params, run_config.aci_method)
+    # if contrail forcing from emissions is desired, we need aviation NOx emissions
+    if contrails_from_emissions_desired and not aviation_nox_emissions_supplied:
+        raise IncompatibleConfigError(
+            f"For contrails forcing from emissions, aviation NOx emissions "
+            f"must be supplied."
+        )
+    # if stratospheric water vapouur desired, we need methane to exist in the scenario
+    if h2o_stratospheric_desired and not ch4_supplied:
+        raise IncompatibleConfigError(
+            f"For stratospheric water vapour forcing, CH4 emissions, "
+            f"concentrations, or forcing must be supplied."
+        )
     return species_included_first_config
 
 
@@ -265,6 +281,7 @@ class FAIR():
         self.ghg_indices = []
         self.ari_indices = []
         self.lapsi_index = None
+        self.h2o_stratospheric_index = None
         self.aviation_nox_index = None
         self.aci_index = None
         self.ozone_index = None
@@ -278,6 +295,8 @@ class FAIR():
                 self.ari_indices.append(ispec)
             if specie.category == Category.LAPSI:
                 self.lapsi_index = ispec
+            if specie.category == Category.H2O_STRATOSPHERIC:
+                self.h2o_stratospheric_index = ispec
             if specie.category == Category.AVIATION_NOX:
                 self.aviation_nox_index = ispec
             if specie.category == Category.AEROSOL_CLOUD_INTERACTIONS:
@@ -356,6 +375,7 @@ class FAIR():
         self.ozone_radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.contrails_emissions_to_forcing_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
         self.lapsi_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.stratospheric_h2o_factor_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: make a more general temperature-forcing feedback for all species
         self.forcing_temperature_feedback_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: start from non-zero temperature
@@ -369,6 +389,7 @@ class FAIR():
                 self.baseline_emissions_array[:, :, iconf, ispec, :] = conf_spec.baseline_emissions
                 self.forcing_temperature_feedback_array[:, :, iconf, ispec, :] = conf_spec.forcing_temperature_feedback
                 self.lapsi_emissions_to_forcing_array[:, :, iconf, ispec, :] = conf_spec.lapsi_emissions_to_forcing
+                self.stratospheric_h2o_factor_array[0, 0, iconf, ispec, 0] = conf_spec.h2o_stratospheric_factor
                 if self.species[ispec].category in AggregatedCategory.GREENHOUSE_GAS:
                     partition_fraction = np.asarray(conf_spec.partition_fraction)
                     if np.ndim(partition_fraction) == 1:
@@ -553,6 +574,13 @@ class FAIR():
                 )
 
             # 9. strat water vapour here
+            if self.h2o_stratospheric_index is not None:
+                self.forcing_array[i_timestep:i_timestep+1, :, :, [self.h2o_stratospheric_index], :] = calculate_linear_forcing(
+                    self.forcing_array[[i_timestep], ...],
+                    self.forcing_array[0:1, ...],
+                    self.forcing_scaling_array[:, :, :, [self.h2o_stratospheric_index], :],
+                    self.stratospheric_h2o_factor_array,
+                )
 
             # 10. land use here
 

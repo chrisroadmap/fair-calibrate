@@ -28,6 +28,7 @@ default_species_config = {
         baseline_concentration = 729.2,
         tropospheric_adjustment = -0.14,
         ozone_radiative_efficiency = 1.75e-4,
+        h2o_stratospheric_factor = 0.091914639065882,
     ),
     'n2o': SpeciesConfig(
         species_id = SpeciesID('N2O', Category.N2O, run_mode=RunMode.EMISSIONS),
@@ -394,6 +395,9 @@ default_species_config = {
     ),
     'light absorbing particles on snow and ice': SpeciesConfig(
         species_id = SpeciesID('Light absorbing particles on snow and ice', Category.LAPSI, run_mode=RunMode.FROM_OTHER_SPECIES)
+    ),
+    'h2o stratospheric': SpeciesConfig(
+        species_id = SpeciesID('H2O Stratospheric', Category.H2O_STRATOSPHERIC, run_mode=RunMode.FROM_OTHER_SPECIES)
     ),
     'ozone': SpeciesConfig(
         species_id = SpeciesID('Ozone', Category.OZONE, run_mode=RunMode.FROM_OTHER_SPECIES),

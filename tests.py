@@ -60,6 +60,7 @@ species_ids = {
     'contrails': SpeciesID('Contrails', Category.CONTRAILS),
     'aerosol-cloud interactions': SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS),
     'lapsi': SpeciesID('Light absorbing particles on snow and ice', Category.LAPSI),
+    'h2o stratospheric': SpeciesID('H2O Stratospheric', Category.H2O_STRATOSPHERIC),
     'solar': SpeciesID('Solar', Category.SOLAR),
     'volcanic': SpeciesID('Volcanic', Category.VOLCANIC)
 }
@@ -81,7 +82,8 @@ species_to_include = emitted_species + [
     'aerosol-cloud interactions',
     'ozone',
     'contrails',
-    'light absorbing particles on snow and ice'
+    'light absorbing particles on snow and ice',
+    'h2o stratospheric'
 ]
 scenarios_to_include = ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']
 
@@ -109,6 +111,7 @@ for iscen, scenario in enumerate(scenarios_to_include):
     list_of_species.append(Species(species_ids['ozone']))
     list_of_species.append(Species(species_ids['contrails']))
     list_of_species.append(Species(species_ids['lapsi']))
+    list_of_species.append(Species(species_ids['h2o stratospheric']))
     scenarios.append(Scenario(scenario, list_of_species))
 
 df = pd.read_csv("data/calibration/4xCO2_cummins.csv")
@@ -144,9 +147,9 @@ print (f"{len(scenarios) * len(configs)} ensemble members in {end - start}s.")
 import matplotlib.pyplot as pl
 # pl.plot(np.arange(1750.5, 2101), fair.temperature[:, 7, :, 0, 0])
 # pl.show()
-pl.plot(np.arange(1750.5, 2101), fair.forcing_array[:, 7, :, 51, 0])
+pl.plot(np.arange(1750.5, 2101), fair.forcing_array[:, 7, :, 52, 0])
 pl.show()
-pl.plot(np.arange(1750.5, 2101), fair.concentration_array[:, 2, :, 1, 0])
+pl.plot(np.arange(1750.5, 2101), fair.concentration_array[:, 3, :, 0, 0])
 pl.show()
 
 
