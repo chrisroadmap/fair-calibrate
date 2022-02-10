@@ -30,7 +30,8 @@ class Category(Enum):
 
 class AggregatedCategory():
     """Groups of Category that share common properties."""
-    GREENHOUSE_GAS = [Category.CO2_FFI, Category.CO2_AFOLU, Category.CO2, Category.CH4, Category.N2O, Category.CFC_11, Category.OTHER_HALOGEN, Category.F_GAS]
+    CO2_SOURCE = [Category.CO2_FFI, Category.CO2_AFOLU] 
+    GREENHOUSE_GAS = [Category.CO2, Category.CH4, Category.N2O, Category.CFC_11, Category.OTHER_HALOGEN, Category.F_GAS]
     HALOGEN = [Category.CFC_11, Category.OTHER_HALOGEN]
     AEROSOL = [Category.SULFUR, Category.BC, Category.OC, Category.OTHER_AEROSOL]
     OZONE_PRECURSOR = [Category.CH4, Category.N2O, Category.SLCF_OZONE_PRECURSOR] + HALOGEN

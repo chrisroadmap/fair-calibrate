@@ -113,6 +113,7 @@ for iscen, scenario in enumerate(scenarios_to_include):
             emis_in = emis_in / 1000
         list_of_species.append(Species(species_ids[species.lower()], emissions=emis_in))
     # declare that we want ACI and ozone
+    list_of_species.append(Species(species_ids['co2']))
     list_of_species.append(Species(species_ids['aerosol-cloud interactions']))
     list_of_species.append(Species(species_ids['ozone']))
     list_of_species.append(Species(species_ids['contrails']))
