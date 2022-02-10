@@ -5,8 +5,15 @@ import numpy as np
 
 # TODO: radiative efficiency for the big three should be calculated internally
 default_species_config = {
+    'co2_afolu' : SpeciesConfig(
+        species_id = SpeciesID(name='CO2 AFOLU', category=Category.CO2_AFOLU, run_mode.RunMode.EMISSIONS),
+        land_use_cumulative_emissions_to_forcing = 0,
+    ),
+    'co2_ffi': SpeciesConfig(
+        species_id = SpeciesID(name='CO2 fossil fuel and industrial', category=Category.CO2_FFI, run_mode.RunMode.EMISSIONS),
+    ),
     'co2' : SpeciesConfig(
-        species_id = SpeciesID(name='CO2', category=Category.CO2, run_mode=RunMode.EMISSIONS),
+        species_id = SpeciesID(name='CO2', category=Category.CO2, run_mode=RunMode.FROM_OTHER_SPECIES),
         molecular_weight = 44.009,
         lifetime = np.array([1e9, 394.4, 36.54, 4.304]),
         partition_fraction = np.array([0.2173, 0.2240, 0.2824, 0.2763]),

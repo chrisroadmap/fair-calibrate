@@ -97,6 +97,10 @@ def _map_species_scenario_config(scenarios, configs, run_config):
     aviation_nox_emissions_supplied = False
     h2o_stratospheric_desired = False
     ch4_supplied = False
+    land_use_desired = False
+    co2_desired = False
+    co2_afolu_supplied = False
+    co2_ffi_supplied = False
     # For species that depend on other species in certain RunModes, check everything that we need is present.
     for ispec, species in enumerate(scenarios[0].list_of_species):
         species_included_first_scenario.append(scenarios[0].list_of_species[ispec].species_id)
@@ -113,6 +117,22 @@ def _map_species_scenario_config(scenarios, configs, run_config):
             h2o_stratospheric_desired = True
         if scenarios[0].list_of_species[ispec].species_id.category == Category.CH4:
             ch4_supplied = True
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.LAND_USE and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.FROM_OTHER_SPECIES:
+            land_use_desired = True
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.CO2 and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.FROM_OTHER_SPECIES:
+            co2_desired = True
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.CO2_AFOLU and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
+            co2_afolu_supplied = True
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.CO2_FFI and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
+            co2_ffi_supplied = True
+#
+#
+#
+# START HERE
+#
+#
+#
+#
     # check config/scenario species consistency
     # TODO: this error message is quite helpful, but could be further improved by
     # pointing out exactly where they differ.
@@ -286,6 +306,10 @@ class FAIR():
         self.aci_index = None
         self.ozone_index = None
         self.contrails_index = None
+        self.land_use_index = None
+        self.co2_ffi_index = None
+        self.co2_afolu_index = None
+        self.co2_index = None
         #self.config_indices = []
         for ispec, specie in enumerate(self.species):
             self.species_index_mapping[specie.name] = ispec
@@ -305,6 +329,14 @@ class FAIR():
                 self.ozone_index = ispec
             if specie.category == Category.CONTRAILS:
                 self.contrails_index = ispec
+            if specie.category == Category.LAND_USE:
+                self.land_use_index = ispec
+            if specie.category == Category.CO2_FFI:
+                self.co2_ffi_index = ispec
+            if specie.category == Category.CO2_AFOLU:
+                self.co2_afolu_index = ispec
+            if specie.category == Category.CO2:
+                self.co2 = ispec
         for iscen, scenario in enumerate(self.scenarios):
             self.scenarios_index_mapping[scenario.name] = iscen
         for iconf, config in enumerate(self.configs):
@@ -583,6 +615,14 @@ class FAIR():
                 )
 
             # 10. land use here
+            # TODO: separate treatment depending on how land use is formulated
+            if self.land_use_index is not None:
+                self.forcing_array[i_timestep:i_timestep+1, :, :, [self.land_use_index], :] = calculate_land_use_forcing(
+                    self.cumulative_emissions_array[[i_timestep], ...],
+                    self.cumulative_emissions_array[0:1, ...],
+                    self.forcing_scaling_array[:, :, :, [self.land_use_index], :],
+                    self.land_use_cumulative_emissions_to_forcing_array,
+                )
 
             # 11. solar here
 

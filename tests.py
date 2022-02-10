@@ -8,7 +8,8 @@ from fair21.defaults import species_config_from_default
 
 # top level
 species_ids = {
-    'co2': SpeciesID('CO2', Category.CO2),
+    'co2_ffi': SpeciesID('CO2 Fossil fuel and industrial', Category.CO2_FFI),
+    'co2_afolu': SpeciesID('CO2 AFOLU', Category.CO2_AFOLU),
     'ch4': SpeciesID('CH4', Category.CH4),
     'n2o': SpeciesID('N2O', Category.N2O),
     'cfc-11': SpeciesID('CFC-11', Category.CFC_11),
@@ -69,7 +70,7 @@ species_ids = {
 # time for some verifiable scenarios
 # this looks like it's case sensitive - yes it will be
 emitted_species = [
-    'CO2', 'CH4', 'N2O',
+    'CO2_FFI', 'CO2_AFOLU', 'CH4', 'N2O',
     'Sulfur', 'BC', 'OC', 'NH3', 'NOx', 'VOC', 'CO',
     'CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115',
     'CCl4', 'CHCl3', 'CH2Cl2', 'CH3Cl', 'CH3CCl3', 'CH3Br',
@@ -79,6 +80,7 @@ emitted_species = [
     'HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32', 'HFC-365mfc',
     'HFC-4310mee', 'Aviation NOx']
 species_to_include = emitted_species + [
+    'CO2',
     'aerosol-cloud interactions',
     'ozone',
     'contrails',
@@ -98,6 +100,10 @@ for iscen, scenario in enumerate(scenarios_to_include):
         species_rcmip_name = species.replace("-", "")
         if species == 'Aviation NOx':
             species_rcmip_name = 'NOx|MAGICC Fossil and Industrial|Aircraft'
+        elif species == 'CO2_FFI':
+            species_rcmip_name = 'CO2|MAGICC Fossil and Industrial'
+        elif species == 'CO2_AFOLU':
+            species_rcmip_name = 'CO2|MAGICC AFOLU'
         emis_in = df.loc[
             (df['Scenario']==scenario) & (df['Variable'].str.endswith("|"+species_rcmip_name)) & (df['Region']=='World'), '1750':'2100'
         ].interpolate(axis=1).values.squeeze()

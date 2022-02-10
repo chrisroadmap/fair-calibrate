@@ -35,6 +35,8 @@ class AggregatedCategory():
     AEROSOL = [Category.SULFUR, Category.BC, Category.OC, Category.OTHER_AEROSOL]
     OZONE_PRECURSOR = [Category.CH4, Category.N2O, Category.SLCF_OZONE_PRECURSOR] + HALOGEN
     NO_DUPLICATES_ALLOWED = [
+        Category.CO2_FFI,
+        Category.CO2_AFOLU,
         Category.CO2,
         Category.CH4,
         Category.N2O,
@@ -64,7 +66,7 @@ class RunMode(Enum):
 valid_run_modes = {
     Category.CO2_FFI: (RunMode.EMISSIONS,),
     Category.CO2_AFOLU: (RunMode.EMISSIONS,),
-    Category.CO2: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
+    Category.CO2: (RunMode.CONCENTRATION, RunMode.FORCING, RunMode.FROM_OTHER_SPECIES),  # we will only allow CO2 emissions to be given for FFI and AFOLU separately.
     Category.CH4: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
     Category.N2O: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
     Category.CFC_11: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
