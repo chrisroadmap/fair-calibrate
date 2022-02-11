@@ -144,6 +144,7 @@ for imodel, model in enumerate(models):
             gamma_autocorrelation = df.loc[condition, 'gamma'].values[0],
             sigma_eta = df.loc[condition, 'sigma_eta'].values[0],
             sigma_xi = df.loc[condition, 'sigma_xi'].values[0],
+            stochastic_run = True
             )
         species_config = [species_config_from_default(species) for species in species_to_include]
         configs.append(Config(config_name, climate_response, species_config))
@@ -156,11 +157,11 @@ end = time.time()
 print (f"{len(scenarios) * len(configs)} ensemble members in {end - start}s.")
 
 import matplotlib.pyplot as pl
-pl.plot(np.arange(1750.5, 2101), fair.temperature[:, 7, :, 0, 0])
+pl.plot(np.arange(1750.5, 2101), fair.temperature[:, 0, :, 0, 0])
 pl.show()
-pl.plot(np.arange(1750.5, 2101), fair.forcing_array[:, 7, :, 55, 0])
+pl.plot(np.arange(1750.5, 2101), fair.forcing_array[:, 0, :, 55, 0])
 pl.show()
-pl.plot(np.arange(1750.5, 2101), fair.concentration_array[:, 3, :, 49, 0])
+pl.plot(np.arange(1750.5, 2101), fair.concentration_array[:, 0, :, 49, 0])
 pl.show()
 
 import sys
