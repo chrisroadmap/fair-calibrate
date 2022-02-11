@@ -418,4 +418,10 @@ default_species_config = {
     'land use': SpeciesConfig(
         species_id = SpeciesID('Land Use', Category.LAND_USE, run_mode=RunMode.FROM_OTHER_SPECIES)
     ),
+    'solar': SpeciesConfig(
+        species_id = SpeciesID('Solar', Category.SOLAR, run_mode=RunMode.FORCING)
+    ),
+    'volcanic': SpeciesConfig(
+        species_id = SpeciesID('Volcanic', Category.VOLCANIC, run_mode=RunMode.FORCING)
+    )
 }

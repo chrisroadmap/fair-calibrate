@@ -334,6 +334,10 @@ class FAIR():
                 self.co2_afolu_index = ispec
             if specie.category == Category.CO2:
                 self.co2_index = ispec
+            if specie.category == Category.SOLAR:
+                self.solar_index = ispec
+            if specie.category == Category.VOLCANIC:
+                self.volcanic_index = ispec
         for iscen, scenario in enumerate(self.scenarios):
             self.scenarios_index_mapping[scenario.name] = iscen
         for iconf, config in enumerate(self.configs):
@@ -462,12 +466,13 @@ class FAIR():
                 if self.species[ispec].run_mode == RunMode.FORCING:
                     self.forcing_array[:, iscen, :, ispec, 0] = scen_spec.forcing[:, None]
 
+        # add aggregated CO2 emissions
         if self.co2_ffi_index is not None and self.co2_afolu_index is not None:
-            print(self.co2_index, self.co2_ffi_index, self.co2_afolu_index)
             self.emissions_array[:, :, :, self.co2_index, :] = (
                 self.emissions_array[:, :, :, self.co2_ffi_index, :] +
                 self.emissions_array[:, :, :, self.co2_afolu_index, :]
             )
+
         self.cumulative_emissions_array = np.cumsum(self.emissions_array * self.time_deltas[:, None, None, None, None], axis=TIME_AXIS)
         self.alpha_lifetime_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1))
         self.airborne_emissions_array = np.zeros((n_timesteps, n_scenarios, n_configs, n_species, 1))
@@ -629,9 +634,9 @@ class FAIR():
                     self.land_use_cumulative_emissions_to_forcing_array,
                 )
 
-            # 11. solar here
-
-            # 12.volcanic here
+            # 11. 12.
+            # solar and volcanic forcing have been pre-filled, but in future we
+            # should allow volcanic to have a temperature dependence
 
             # 13. sum up all of the forcing calculated previously
             self.forcing_sum_array[[i_timestep], ...] = np.nansum(

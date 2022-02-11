@@ -88,15 +88,20 @@ species_to_include = emitted_species + [
     'contrails',
     'light absorbing particles on snow and ice',
     'h2o stratospheric',
-    'land use'
+    'land use',
+    'solar',
+    'volcanic'
 ]
 scenarios_to_include = ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']
 
 scenarios = []
 
 # grab some emissions
-# TODO: RCMIP to fair converter
-df = pd.read_csv('data/rcmip/rcmip-emissions-annual-means-v5-1-0.csv')
+# TODO: RCMIP to fair converter - something that is smart about dates, and can interpolate
+# including to sub-annual timesteps
+df_emis = pd.read_csv('data/rcmip/rcmip-emissions-annual-means-v5-1-0.csv')
+df_forc = pd.read_csv('data/forcing/table_A3.3_historical_ERF_1750-2019_best_estimate.csv')
+
 for iscen, scenario in enumerate(scenarios_to_include):
     list_of_species = []
     for ispec, species in enumerate(emitted_species):
@@ -107,8 +112,8 @@ for iscen, scenario in enumerate(scenarios_to_include):
             species_rcmip_name = 'CO2|MAGICC Fossil and Industrial'
         elif species == 'CO2_AFOLU':
             species_rcmip_name = 'CO2|MAGICC AFOLU'
-        emis_in = df.loc[
-            (df['Scenario']==scenario) & (df['Variable'].str.endswith("|"+species_rcmip_name)) & (df['Region']=='World'), '1750':'2100'
+        emis_in = df_emis.loc[
+            (df_emis['Scenario']==scenario) & (df_emis['Variable'].str.endswith("|"+species_rcmip_name)) & (df_emis['Region']=='World'), '1750':'2100'
         ].interpolate(axis=1).values.squeeze()
 
         # CO2 and N2O units need to behave: TODO, sort this out
@@ -124,6 +129,14 @@ for iscen, scenario in enumerate(scenarios_to_include):
     list_of_species.append(Species(species_ids['h2o stratospheric']))
     list_of_species.append(Species(species_ids['land use']))
     scenarios.append(Scenario(scenario, list_of_species))
+
+    # this is something that really needs improving compared to fair1.6
+    solar_forcing = np.zeros(351)
+    solar_forcing[:270] = df_forc['solar'].values
+    volcanic_forcing = np.zeros(351)
+    volcanic_forcing[:270] = df_forc['volcanic'].values
+    list_of_species.append(Species(species_ids['solar'], forcing=solar_forcing))
+    list_of_species.append(Species(species_ids['volcanic'], forcing=volcanic_forcing))
 
 df = pd.read_csv("data/calibration/4xCO2_cummins.csv")
 models = df['model'].unique()
@@ -159,9 +172,9 @@ print (f"{len(scenarios) * len(configs)} ensemble members in {end - start}s.")
 import matplotlib.pyplot as pl
 pl.plot(np.arange(1750.5, 2101), fair.temperature[:, 0, :, 0, 0])
 pl.show()
-pl.plot(np.arange(1750.5, 2101), fair.forcing_array[:, 0, :, 55, 0])
+pl.plot(np.arange(1750.5, 2101), fair.forcing_array[:, 0, :, 57, 0])
 pl.show()
-pl.plot(np.arange(1750.5, 2101), fair.concentration_array[:, 0, :, 49, 0])
+pl.plot(np.arange(1750.5, 2101), fair.concentration_array[:, 2, :, 2, 0])
 pl.show()
 
 import sys
