@@ -125,14 +125,6 @@ def _map_species_scenario_config(scenarios, configs, run_config):
             co2_afolu_supplied = True
         if scenarios[0].list_of_species[ispec].species_id.category == Category.CO2_FFI and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
             co2_ffi_supplied = True
-#
-#
-#
-# START HERE
-#
-#
-#
-#
     # check config/scenario species consistency
     # TODO: this error message is quite helpful, but could be further improved by
     # pointing out exactly where they differ.
@@ -163,14 +155,19 @@ def _map_species_scenario_config(scenarios, configs, run_config):
             f"For contrails forcing from emissions, aviation NOx emissions "
             f"must be supplied."
         )
-    # if stratospheric water vapouur desired, we need methane to exist in the scenario
+    # if stratospheric water vapour desired, we need methane to exist in the scenario
     if h2o_stratospheric_desired and not ch4_supplied:
         raise IncompatibleConfigError(
             f"For stratospheric water vapour forcing, CH4 emissions, "
             f"concentrations, or forcing must be supplied."
         )
+    # CO2 emissions from AFOLU and FFI need to be provided
+    if co2_desired and not co2_ffi_supplied and not co2_afolu_supplied:
+        raise IncompatibleConfigError(
+            f"For CO2 emissions-driven, CO2 emissions from FFI and AFOLU must "
+            f"both be supplied."
+        )
     return species_included_first_config
-
 
 
 def _verify_config_consistency(configs):
@@ -336,7 +333,7 @@ class FAIR():
             if specie.category == Category.CO2_AFOLU:
                 self.co2_afolu_index = ispec
             if specie.category == Category.CO2:
-                self.co2 = ispec
+                self.co2_index = ispec
         for iscen, scenario in enumerate(self.scenarios):
             self.scenarios_index_mapping[scenario.name] = iscen
         for iconf, config in enumerate(self.configs):
@@ -408,6 +405,7 @@ class FAIR():
         self.contrails_emissions_to_forcing_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
         self.lapsi_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.stratospheric_h2o_factor_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.land_use_cumulative_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: make a more general temperature-forcing feedback for all species
         self.forcing_temperature_feedback_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: start from non-zero temperature
@@ -422,6 +420,7 @@ class FAIR():
                 self.forcing_temperature_feedback_array[:, :, iconf, ispec, :] = conf_spec.forcing_temperature_feedback
                 self.lapsi_emissions_to_forcing_array[:, :, iconf, ispec, :] = conf_spec.lapsi_emissions_to_forcing
                 self.stratospheric_h2o_factor_array[0, 0, iconf, ispec, 0] = conf_spec.h2o_stratospheric_factor
+                self.land_use_cumulative_emissions_to_forcing_array[0, 0, iconf, ispec, 0] = conf_spec.land_use_cumulative_emissions_to_forcing
                 if self.species[ispec].category in AggregatedCategory.GREENHOUSE_GAS:
                     partition_fraction = np.asarray(conf_spec.partition_fraction)
                     if np.ndim(partition_fraction) == 1:
@@ -463,6 +462,12 @@ class FAIR():
                 if self.species[ispec].run_mode == RunMode.FORCING:
                     self.forcing_array[:, iscen, :, ispec, 0] = scen_spec.forcing[:, None]
 
+        if self.co2_ffi_index is not None and self.co2_afolu_index is not None:
+            print(self.co2_index, self.co2_ffi_index, self.co2_afolu_index)
+            self.emissions_array[:, :, :, self.co2_index, :] = (
+                self.emissions_array[:, :, :, self.co2_ffi_index, :] +
+                self.emissions_array[:, :, :, self.co2_afolu_index, :]
+            )
         self.cumulative_emissions_array = np.cumsum(self.emissions_array * self.time_deltas[:, None, None, None, None], axis=TIME_AXIS)
         self.alpha_lifetime_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1))
         self.airborne_emissions_array = np.zeros((n_timesteps, n_scenarios, n_configs, n_species, 1))
@@ -617,7 +622,7 @@ class FAIR():
             # 10. land use here
             # TODO: separate treatment depending on how land use is formulated
             if self.land_use_index is not None:
-                self.forcing_array[i_timestep:i_timestep+1, :, :, [self.land_use_index], :] = calculate_land_use_forcing(
+                self.forcing_array[i_timestep:i_timestep+1, :, :, [self.land_use_index], :] = calculate_linear_forcing(
                     self.cumulative_emissions_array[[i_timestep], ...],
                     self.cumulative_emissions_array[0:1, ...],
                     self.forcing_scaling_array[:, :, :, [self.land_use_index], :],

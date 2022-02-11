@@ -4,13 +4,15 @@ from ...structure.top_level import SpeciesID, Category, RunMode
 import numpy as np
 
 # TODO: radiative efficiency for the big three should be calculated internally
+# TODO: many of these default values need to be revisited, and decided whether
+#       we want to fix on SSP emissions or the final dataset used in AR6
 default_species_config = {
     'co2_afolu' : SpeciesConfig(
-        species_id = SpeciesID(name='CO2 AFOLU', category=Category.CO2_AFOLU, run_mode.RunMode.EMISSIONS),
-        land_use_cumulative_emissions_to_forcing = 0,
+        species_id = SpeciesID(name='CO2 AFOLU', category=Category.CO2_AFOLU, run_mode=RunMode.EMISSIONS),
+        land_use_cumulative_emissions_to_forcing = -0.000287290278097,
     ),
     'co2_ffi': SpeciesConfig(
-        species_id = SpeciesID(name='CO2 fossil fuel and industrial', category=Category.CO2_FFI, run_mode.RunMode.EMISSIONS),
+        species_id = SpeciesID(name='CO2 fossil fuel and industrial', category=Category.CO2_FFI, run_mode=RunMode.EMISSIONS),
     ),
     'co2' : SpeciesConfig(
         species_id = SpeciesID(name='CO2', category=Category.CO2, run_mode=RunMode.FROM_OTHER_SPECIES),
@@ -412,5 +414,8 @@ default_species_config = {
     ),
     'contrails': SpeciesConfig(
         species_id = SpeciesID('Contrails', Category.CONTRAILS, run_mode=RunMode.FROM_OTHER_SPECIES)
-    )
+    ),
+    'land use': SpeciesConfig(
+        species_id = SpeciesID('Land Use', Category.LAND_USE, run_mode=RunMode.FROM_OTHER_SPECIES)
+    ),
 }

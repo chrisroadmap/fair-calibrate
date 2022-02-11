@@ -30,7 +30,7 @@ class Category(Enum):
 
 class AggregatedCategory():
     """Groups of Category that share common properties."""
-    CO2_SOURCE = [Category.CO2_FFI, Category.CO2_AFOLU] 
+    CO2_SOURCE = [Category.CO2_FFI, Category.CO2_AFOLU]
     GREENHOUSE_GAS = [Category.CO2, Category.CH4, Category.N2O, Category.CFC_11, Category.OTHER_HALOGEN, Category.F_GAS]
     HALOGEN = [Category.CFC_11, Category.OTHER_HALOGEN]
     AEROSOL = [Category.SULFUR, Category.BC, Category.OC, Category.OTHER_AEROSOL]
@@ -102,6 +102,7 @@ class SpeciesID():
             if self.category in [Category.SOLAR, Category.VOLCANIC]:
                 self.run_mode = RunMode.FORCING
             elif self.category in [
+                Category.CO2,
                 Category.OZONE,
                 Category.AEROSOL_CLOUD_INTERACTIONS,
                 Category.CONTRAILS,

@@ -8,8 +8,9 @@ from fair21.defaults import species_config_from_default
 
 # top level
 species_ids = {
-    'co2_ffi': SpeciesID('CO2 Fossil fuel and industrial', Category.CO2_FFI),
+    'co2_ffi': SpeciesID('CO2 fossil fuel and industrial', Category.CO2_FFI),
     'co2_afolu': SpeciesID('CO2 AFOLU', Category.CO2_AFOLU),
+    'co2': SpeciesID('CO2', Category.CO2),
     'ch4': SpeciesID('CH4', Category.CH4),
     'n2o': SpeciesID('N2O', Category.N2O),
     'cfc-11': SpeciesID('CFC-11', Category.CFC_11),
@@ -62,6 +63,7 @@ species_ids = {
     'aerosol-cloud interactions': SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS),
     'lapsi': SpeciesID('Light absorbing particles on snow and ice', Category.LAPSI),
     'h2o stratospheric': SpeciesID('H2O Stratospheric', Category.H2O_STRATOSPHERIC),
+    'land use': SpeciesID('Land Use', Category.LAND_USE),
     'solar': SpeciesID('Solar', Category.SOLAR),
     'volcanic': SpeciesID('Volcanic', Category.VOLCANIC)
 }
@@ -80,12 +82,13 @@ emitted_species = [
     'HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32', 'HFC-365mfc',
     'HFC-4310mee', 'Aviation NOx']
 species_to_include = emitted_species + [
-    'CO2',
+    'co2',
     'aerosol-cloud interactions',
     'ozone',
     'contrails',
     'light absorbing particles on snow and ice',
-    'h2o stratospheric'
+    'h2o stratospheric',
+    'land use'
 ]
 scenarios_to_include = ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']
 
@@ -109,7 +112,7 @@ for iscen, scenario in enumerate(scenarios_to_include):
         ].interpolate(axis=1).values.squeeze()
 
         # CO2 and N2O units need to behave: TODO, sort this out
-        if species in ('CO2', 'N2O'):
+        if species in ('CO2_FFI', 'CO2_AFOLU', 'N2O'):
             emis_in = emis_in / 1000
         list_of_species.append(Species(species_ids[species.lower()], emissions=emis_in))
     # declare that we want ACI and ozone
@@ -119,6 +122,7 @@ for iscen, scenario in enumerate(scenarios_to_include):
     list_of_species.append(Species(species_ids['contrails']))
     list_of_species.append(Species(species_ids['lapsi']))
     list_of_species.append(Species(species_ids['h2o stratospheric']))
+    list_of_species.append(Species(species_ids['land use']))
     scenarios.append(Scenario(scenario, list_of_species))
 
 df = pd.read_csv("data/calibration/4xCO2_cummins.csv")
@@ -152,13 +156,12 @@ end = time.time()
 print (f"{len(scenarios) * len(configs)} ensemble members in {end - start}s.")
 
 import matplotlib.pyplot as pl
-# pl.plot(np.arange(1750.5, 2101), fair.temperature[:, 7, :, 0, 0])
-# pl.show()
-pl.plot(np.arange(1750.5, 2101), fair.forcing_array[:, 7, :, 52, 0])
+pl.plot(np.arange(1750.5, 2101), fair.temperature[:, 7, :, 0, 0])
 pl.show()
-pl.plot(np.arange(1750.5, 2101), fair.concentration_array[:, 3, :, 0, 0])
+pl.plot(np.arange(1750.5, 2101), fair.forcing_array[:, 7, :, 55, 0])
 pl.show()
-
+pl.plot(np.arange(1750.5, 2101), fair.concentration_array[:, 3, :, 49, 0])
+pl.show()
 
 import sys
 sys.exit()

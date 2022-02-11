@@ -62,6 +62,7 @@ class SpeciesConfig():
     contrails_emissions_to_forcing: float=0
     lapsi_emissions_to_forcing: float=0
     h2o_stratospheric_factor: float=0
+    land_use_cumulative_emissions_to_forcing: float=0
     baseline_emissions: float=0
     ozone_radiative_efficiency: float=None
     cl_atoms: int=0
