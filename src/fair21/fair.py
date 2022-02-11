@@ -464,7 +464,7 @@ class FAIR():
                 if self.species[ispec].run_mode == RunMode.CONCENTRATION:
                     self.concentration_array[:, iscen, :, ispec, 0] = scen_spec.concentration[:, None]
                 if self.species[ispec].run_mode == RunMode.FORCING:
-                    self.forcing_array[:, iscen, :, ispec, 0] = scen_spec.forcing[:, None]
+                    self.forcing_array[:, iscen, :, ispec, 0] = scen_spec.forcing[:, None] * self.forcing_scaling_array[0, 0, :, ispec, 0]
 
         # add aggregated CO2 emissions
         if self.co2_ffi_index is not None and self.co2_afolu_index is not None:
