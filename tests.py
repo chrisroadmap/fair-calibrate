@@ -177,6 +177,8 @@ pl.show()
 pl.plot(np.arange(1750.5, 2101), fair.concentration_array[:, 2, :, 2, 0])
 pl.show()
 
+print(fair.concentration_array[-1,0,0,:,0])
+
 import sys
 sys.exit()
 

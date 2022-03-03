@@ -3,6 +3,7 @@ Module containing gas cycle functions
 """
 
 import numpy as np
+import warnings
 
 def calculate_alpha(
     cumulative_emissions,
@@ -60,6 +61,14 @@ def calculate_alpha(
 
     iirf = iirf_0 + iirf_cumulative * (cumulative_emissions-airborne_emissions) + iirf_temperature * temperature + iirf_airborne * airborne_emissions
     iirf = (iirf>iirf_max) * iirf_max + iirf * (iirf<iirf_max)
-    alpha = g0 * np.exp(iirf / g1)
 
+    # overflow and invalid value errors occur with very large and small values
+    # in the exponential. This happens with very long lifetime GHGs. Usually
+    # these GHGs don't have a temperature dependence on IIRF but even if they
+    # did the lifetimes are so long that it is unlikely to have an effect.
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        alpha = g0 * np.exp(iirf / g1)
+        alpha[np.isnan(alpha)]=1
+    #print(alpha[0,0,0,25,0])
     return alpha

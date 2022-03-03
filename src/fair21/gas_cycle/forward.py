@@ -2,6 +2,8 @@
 Module for the forward (emissions to concentration) model.
 """
 
+import warnings
+
 import numpy as np
 
 from ..constants import GAS_BOX_AXIS
@@ -75,7 +77,11 @@ def step_concentration(
         at the end of the timestep.
     """
 
-    decay_rate = timestep/(alpha_lifetime * lifetime)
+    # this is needed because we set alphas to one and not nan, so non-GHGs
+    # cause a warning.
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        decay_rate = timestep/(alpha_lifetime * lifetime)
     decay_factor = np.exp(-decay_rate)
 
     gas_boxes_new = (

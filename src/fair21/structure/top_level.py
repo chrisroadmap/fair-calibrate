@@ -131,4 +131,4 @@ class RunConfig():
     aci_method: ACIMethod=ACIMethod.SMITH2018
     br_cl_ratio: float=45
     iirf_horizon: float=100
-    iirf_max: float=99.95
+    iirf_max: float=99.5
