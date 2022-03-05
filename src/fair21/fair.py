@@ -314,7 +314,7 @@ class FAIR():
             self.species_index_mapping[specie.name] = ispec
             if specie.category in AggregatedCategory.GREENHOUSE_GAS:
                 self.ghg_indices.append(ispec)
-                if specie.run_mode == RunMode.EMISSIONS:
+                if specie.run_mode in (RunMode.EMISSIONS, RunMode.FROM_OTHER_SPECIES):
                     self.ghg_emissions_indices.append(ispec)
                 elif specie.run_mode == RunMode.CONCENTRATION:
                     self.ghg_concentration_indices.append(ispec)
@@ -340,6 +340,10 @@ class FAIR():
                 self.co2_afolu_index = ispec
             if specie.category == Category.CO2:
                 self.co2_index = ispec
+            if specie.category == Category.CH4:
+                self.ch4_index = ispec
+            if specie.category == Category.N2O:
+                self.n2o_index = ispec
             if specie.category == Category.SOLAR:
                 self.solar_index = ispec
             if specie.category == Category.VOLCANIC:
@@ -541,31 +545,39 @@ class FAIR():
             )[0:1, :, :, self.ghg_indices, :]
 
             # 2a. emissions to concentrations for GHG emissions
-            self.concentration_array[[i_timestep], ...], gas_boxes, self.airborne_emissions_array[[i_timestep], ...] = step_concentration(
-                self.emissions_array[[i_timestep], ...],
-                gas_boxes,
-                self.airborne_emissions_array[[i_timestep-1], ...],
-                self.burden_per_emission_array,
-                self.lifetime_array,
-                alpha_lifetime=alpha_lifetime_array,
-                pre_industrial_concentration=self.baseline_concentration_array,
+            ae_timestep = i_timestep-1 if i_timestep>0 else 0
+            #self.concentration_array[i_timestep:i_timestep+1, :, :, self.ghg_emissions_indices, :], X, Y= step_concentration(#
+            (
+                self.concentration_array[i_timestep:i_timestep+1, :, :, self.ghg_emissions_indices, :],
+                gas_boxes[0:1, :, :, self.ghg_emissions_indices, :],
+                self.airborne_emissions_array[i_timestep:i_timestep+1, :, :, self.ghg_emissions_indices, :]
+            ) = step_concentration(
+                self.emissions_array[i_timestep:i_timestep+1, :, :, self.ghg_emissions_indices, :],
+                gas_boxes[0:1, :, :, self.ghg_emissions_indices, :],
+                # need to be i_timestep-1 below
+                self.airborne_emissions_array[ae_timestep:ae_timestep+1, :, :, self.ghg_emissions_indices, :],
+                self.burden_per_emission_array[0:1, :, :, self.ghg_emissions_indices, :],
+                self.lifetime_array[0:1, :, :, self.ghg_emissions_indices, :],
+                alpha_lifetime=alpha_lifetime_array[0:1, :, :, self.ghg_emissions_indices, :],
+                pre_industrial_concentration=self.baseline_concentration_array[0:1, :, :, self.ghg_emissions_indices, :],
                 timestep=self.time_deltas[i_timestep],
-                partition_fraction=self.partition_fraction_array,
-                natural_emissions_adjustment=self.natural_emissions_adjustment_array,
+                partition_fraction=self.partition_fraction_array[0:1, :, :, self.ghg_emissions_indices, :],
+                natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_emissions_indices, :],
             )
             self.alpha_lifetime_array[[i_timestep], ...] = alpha_lifetime_array
-
-            # 2. concentrations to emissions for ghg emissions:
+            # 2b. concentrations to emissions for ghg emissions:
             # TODO:
 
             # 3. Greenhouse gas concentrations to forcing
-            self.forcing_array[i_timestep:i_timestep+1, :, :, self.ghg_indices] = calculate_ghg_forcing(
-                self.concentration_array[[i_timestep], ...],
+            #self.forcing_array[i_timestep:i_timestep+1, :, :, self.ghg_indices, :] = calculate_ghg_forcing(
+            self.forcing_array[i_timestep:i_timestep+1, :, :, self.ghg_indices, :] = calculate_ghg_forcing(
+                self.concentration_array[i_timestep:i_timestep+1, ...],
                 self.baseline_concentration_array,
                 self.forcing_scaling_array,
                 self.radiative_efficiency_array,
                 self.species_index_mapping
             )[0:1, :, :, self.ghg_indices, :]
+
 
             # 4. aerosol direct emissions to forcing
             self.forcing_array[i_timestep:i_timestep+1, :, :, self.ari_indices, :] = calculate_erfari_forcing(
@@ -646,6 +658,7 @@ class FAIR():
             # 11. 12.
             # solar and volcanic forcing have been pre-filled, but in future we
             # should allow volcanic to have a temperature dependence
+
 
             # 13. sum up all of the forcing calculated previously
             self.forcing_sum_array[[i_timestep], ...] = np.nansum(

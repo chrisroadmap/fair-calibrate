@@ -38,12 +38,10 @@ def calculate_erfari_forcing(
     calculation and speed.
     """
 
-    ari_index = list(aerosol_index_mapping.values())
-    if len(ari_index) > 0:
-        erf_out = np.ones((emissions.shape[0], emissions.shape[1], emissions.shape[2], len(ari_index), 0))
-        erf_out = (
-            (emissions[:, :, :, ari_index, :] - pre_industrial_emissions[:, :, :, ari_index, :])
-            * radiative_efficiency[:, :, :, ari_index, :]
-        ) * forcing_scaling[:, :, :, ari_index, :]
+    erf_out = np.ones((emissions.shape[0], emissions.shape[1], emissions.shape[2], emissions.shape[3], 0)) * np.nan
+    erf_out = (
+        (emissions[:, :, :, :, :] - pre_industrial_emissions[:, :, :, :, :])
+        * radiative_efficiency[:, :, :, :, :]
+    ) * forcing_scaling[:, :, :, :, :]
 
     return erf_out

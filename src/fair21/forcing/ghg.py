@@ -81,8 +81,11 @@ def calculate_ghg_forcing(
     [1] Meinshausen et al. 2020
     [2] Myhre et al. 1998
     """
-    erf_out = np.ones_like(concentration) * np.nan
 
+    erf_out = np.ones_like(concentration) * np.nan
+    #print(ghg_index)
+    #import sys; sys.exit()
+    #erf_out = np.ones((emissions.shape[0], emissions.shape[1], emissions.shape[2], len(ari_index), 0))
     # extracting indices upfront means we're not always searching through array and makes things more readable.
     # expanding the co2_pi array to the same shape as co2 allows efficient conditional indexing
 

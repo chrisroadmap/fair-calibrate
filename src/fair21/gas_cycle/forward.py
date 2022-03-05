@@ -83,7 +83,6 @@ def step_concentration(
         warnings.simplefilter('ignore')
         decay_rate = timestep/(alpha_lifetime * lifetime)
     decay_factor = np.exp(-decay_rate)
-
     gas_boxes_new = (
         partition_fraction *
         (emissions-natural_emissions_adjustment) *
