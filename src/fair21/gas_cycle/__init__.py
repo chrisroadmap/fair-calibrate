@@ -70,5 +70,4 @@ def calculate_alpha(
         warnings.simplefilter('ignore')
         alpha = g0 * np.exp(iirf / g1)
         alpha[np.isnan(alpha)]=1
-    #print(alpha[0,0,0,25,0])
     return alpha

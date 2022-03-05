@@ -296,6 +296,8 @@ class FAIR():
         self.species_index_mapping = {}
         self.configs_index_mapping = {}
         self.ghg_indices = []
+        self.ghg_emissions_indices = []
+        self.ghg_concentration_indices = []
         self.ari_indices = []
         self.lapsi_index = None
         self.h2o_stratospheric_index = None
@@ -312,6 +314,10 @@ class FAIR():
             self.species_index_mapping[specie.name] = ispec
             if specie.category in AggregatedCategory.GREENHOUSE_GAS:
                 self.ghg_indices.append(ispec)
+                if specie.run_mode == RunMode.EMISSIONS:
+                    self.ghg_emissions_indices.append(ispec)
+                elif specie.run_mode == RunMode.CONCENTRATION:
+                    self.ghg_concentration_indices.append(ispec)
             if specie.category in AggregatedCategory.AEROSOL:
                 self.ari_indices.append(ispec)
             if specie.category == Category.LAPSI:
@@ -511,6 +517,7 @@ class FAIR():
         # move to initialise_arrays?
         gas_boxes = np.zeros((1, n_scenarios, n_configs, n_species, self.run_config.n_gas_boxes))
         temperature_boxes = np.zeros((1, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes+1))
+        alpha_lifetime_array = np.ones((1, n_scenarios, n_configs, n_species, 1))
 
         # initialise the energy balance model and get critical vectors
         # which itself needs to be run once per "config" and dimensioned correctly
@@ -518,8 +525,9 @@ class FAIR():
 
         # Main loop
         for i_timestep in range(n_timesteps):
-            # 1. ghg emissions to concentrations
-            alpha_lifetime_array = calculate_alpha(
+            # 1. state-dependent gas cycle
+            # I have no idea why dropping the last dimension here works.
+            alpha_lifetime_array[0:1, :, :, self.ghg_indices] = calculate_alpha(
                 self.cumulative_emissions_array[[i_timestep], ...],
                 self.airborne_emissions_array[[i_timestep-1], ...],
                 temperature_boxes[:, :, :, :, 1:2],
@@ -530,8 +538,9 @@ class FAIR():
                 self.g0_array,
                 self.g1_array,
                 self.run_config.iirf_max
-            )
-#            alpha_lifetime_array[np.isnan(alpha_lifetime_array)]=1  # CF4 seems to have an issue. Should we raise warning?
+            )[0:1, :, :, self.ghg_indices, :]
+
+            # 2a. emissions to concentrations for GHG emissions
             self.concentration_array[[i_timestep], ...], gas_boxes, self.airborne_emissions_array[[i_timestep], ...] = step_concentration(
                 self.emissions_array[[i_timestep], ...],
                 gas_boxes,
