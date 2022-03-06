@@ -3,6 +3,7 @@ import typing
 
 from .top_level import Category, RunMode, AggregatedCategory
 from .species_level import Species
+from ..exceptions import IncompatibleConfigError
 
 @dataclass
 class Scenario():

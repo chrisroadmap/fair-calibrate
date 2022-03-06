@@ -4,7 +4,7 @@ Module for inverting concentrations.
 
 import numpy as np
 
-from ..constants.general import GAS_BOX_AXIS
+from ..constants import GAS_BOX_AXIS
 
 def unstep_concentration(
     concentration,

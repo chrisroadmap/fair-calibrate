@@ -25,6 +25,7 @@ from .forcing.linear import calculate_linear_forcing
 from .forcing.ozone import calculate_ozone_forcing
 from .gas_cycle import calculate_alpha
 from .gas_cycle.forward import step_concentration
+from .gas_cycle.inverse import unstep_concentration
 from .structure.top_level import RunConfig, ACIMethod, Category, RunMode, AggregatedCategory
 from .structure.scenario_level import Scenario
 from .structure.config_level import Config
@@ -129,12 +130,13 @@ def _map_species_scenario_config(scenarios, configs, run_config):
     # TODO: this error message is quite helpful, but could be further improved by
     # pointing out exactly where they differ.
     if species_included_first_config != species_included_first_scenario:
+        # TODO: make better formatted error message
         raise SpeciesMismatchError(
-            f"The list of Species provided to Scenario.list_of_species is:\n"
-            f"{[species_id.name for species_id in species_included_first_scenario]}. "
+            f"The list of Species provided to Scenario.list_of_species is: (name, category, run_mode)\n"
+            f"{[(species_id.name, species_id.category.name, species_id.run_mode.name) for species_id in species_included_first_scenario]}. "
             f"\n\n"
-            f"This differs from that provided to Config.species_configs:\n"
-            f"{[species_id.name for species_id in species_included_first_config]}."
+            f"This differs from that provided to Config.species_configs: (name, category, run_mode)\n"
+            f"{[(species_id.name, species_id.category.name, species_id.run_mode.name) for species_id in species_included_first_config]}."
         )
     # check aerosol species provided are consistent with desired indirect forcing mode
     if aerosol_species_included != required_aerosol_species[run_config.aci_method] and aci_desired:
@@ -488,6 +490,10 @@ class FAIR():
         self.airborne_emissions_array = np.zeros((n_timesteps, n_scenarios, n_configs, n_species, 1))
         self.stochastic_forcing = np.ones((n_timesteps, n_scenarios, n_configs)) * np.nan
 
+        # concentration-driven GHG emissions and cumulative emissions are calculated dynamically and initialised to be zero
+        self.emissions_array[:,:,:,self.ghg_concentration_indices,:] = 0
+        self.cumulative_emissions_array[:,:,:,self.ghg_concentration_indices,:] = 0
+
     def _pre_run_checks(self):
         # Check if necessary inputs are defined
         for attr in ('scenarios', 'configs', 'time'):
@@ -529,8 +535,14 @@ class FAIR():
 
         # Main loop
         for i_timestep in range(n_timesteps):
-            # 1. state-dependent gas cycle
-            # I have no idea why dropping the last dimension here works.
+
+            # 1. calculate scaling of atmospheric lifetimes (alpha)
+            # concentration-driven GHGs need cumulative emissions updating each timestep
+            self.cumulative_emissions_array[i_timestep, :, :, self.ghg_concentration_indices, :] = (
+                self.cumulative_emissions_array[i_timestep-1, :, :, self.ghg_concentration_indices, :] +
+                self.emissions_array[i_timestep-1, :, :, self.ghg_concentration_indices, :]
+            )
+            # A quirk of numpy requires dropping the last dimension here.
             alpha_lifetime_array[0:1, :, :, self.ghg_indices] = calculate_alpha(
                 self.cumulative_emissions_array[[i_timestep], ...],
                 self.airborne_emissions_array[[i_timestep-1], ...],
@@ -543,10 +555,10 @@ class FAIR():
                 self.g1_array,
                 self.run_config.iirf_max
             )[0:1, :, :, self.ghg_indices, :]
+            self.alpha_lifetime_array[[i_timestep], ...] = alpha_lifetime_array
 
-            # 2a. emissions to concentrations for GHG emissions
+            # 2. GHG emissions to concentrations
             ae_timestep = i_timestep-1 if i_timestep>0 else 0
-            #self.concentration_array[i_timestep:i_timestep+1, :, :, self.ghg_emissions_indices, :], X, Y= step_concentration(#
             (
                 self.concentration_array[i_timestep:i_timestep+1, :, :, self.ghg_emissions_indices, :],
                 gas_boxes[0:1, :, :, self.ghg_emissions_indices, :],
@@ -554,7 +566,6 @@ class FAIR():
             ) = step_concentration(
                 self.emissions_array[i_timestep:i_timestep+1, :, :, self.ghg_emissions_indices, :],
                 gas_boxes[0:1, :, :, self.ghg_emissions_indices, :],
-                # need to be i_timestep-1 below
                 self.airborne_emissions_array[ae_timestep:ae_timestep+1, :, :, self.ghg_emissions_indices, :],
                 self.burden_per_emission_array[0:1, :, :, self.ghg_emissions_indices, :],
                 self.lifetime_array[0:1, :, :, self.ghg_emissions_indices, :],
@@ -564,12 +575,26 @@ class FAIR():
                 partition_fraction=self.partition_fraction_array[0:1, :, :, self.ghg_emissions_indices, :],
                 natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_emissions_indices, :],
             )
-            self.alpha_lifetime_array[[i_timestep], ...] = alpha_lifetime_array
-            # 2b. concentrations to emissions for ghg emissions:
-            # TODO:
 
-            # 3. Greenhouse gas concentrations to forcing
-            #self.forcing_array[i_timestep:i_timestep+1, :, :, self.ghg_indices, :] = calculate_ghg_forcing(
+            # 3. GHG concentrations to emissions:
+            (
+                self.emissions_array[i_timestep:i_timestep+1, :, :, self.ghg_concentration_indices, :],
+                gas_boxes[0:1, :, :, self.ghg_concentration_indices, :],
+                self.airborne_emissions_array[i_timestep:i_timestep+1, :, :, self.ghg_concentration_indices, :]
+            ) = unstep_concentration(
+                self.concentration_array[i_timestep:i_timestep+1, :, :, self.ghg_concentration_indices, :],
+                gas_boxes[0:1, :, :, self.ghg_concentration_indices, :],
+                self.airborne_emissions_array[ae_timestep:ae_timestep+1, :, :, self.ghg_concentration_indices, :],
+                self.burden_per_emission_array[0:1, :, :, self.ghg_concentration_indices, :],
+                self.lifetime_array[0:1, :, :, self.ghg_concentration_indices, :],
+                alpha_lifetime=alpha_lifetime_array[0:1, :, :, self.ghg_concentration_indices, :],
+                pre_industrial_concentration=self.baseline_concentration_array[0:1, :, :, self.ghg_concentration_indices, :],
+                timestep=self.time_deltas[i_timestep],
+                partition_fraction=self.partition_fraction_array[0:1, :, :, self.ghg_concentration_indices, :],
+                natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_concentration_indices, :],
+            )
+
+            # 4. greenhouse gas concentrations to forcing
             self.forcing_array[i_timestep:i_timestep+1, :, :, self.ghg_indices, :] = calculate_ghg_forcing(
                 self.concentration_array[i_timestep:i_timestep+1, ...],
                 self.baseline_concentration_array,
@@ -578,8 +603,7 @@ class FAIR():
                 self.species_index_mapping
             )[0:1, :, :, self.ghg_indices, :]
 
-
-            # 4. aerosol direct emissions to forcing
+            # 5. aerosol direct emissions to forcing
             self.forcing_array[i_timestep:i_timestep+1, :, :, self.ari_indices, :] = calculate_erfari_forcing(
                 self.emissions_array[[i_timestep], ...],
                 self.baseline_emissions_array,
@@ -588,7 +612,7 @@ class FAIR():
                 self.species_index_mapping
             )[0:1, :, :, self.ari_indices, :]
 
-            # 5. aerosol indirect emissions to forcing
+            # 6. aerosol indirect emissions to forcing
             if self.aci_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = calculate_erfaci_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -600,7 +624,7 @@ class FAIR():
                     self.species_index_mapping
                 )[0:1, :, :, self.aci_index, :]
 
-            # 6. ozone emissions and concentrations to forcing
+            # 7. ozone emissions and concentrations to forcing
             if self.ozone_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.ozone_index], :] = calculate_ozone_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -618,7 +642,7 @@ class FAIR():
                     self.species_index_mapping
                 )
 
-            # 7. contrails
+            # 8. contrail emissions from aviation NOx to forcing
             if self.contrails_index is not None:
                 self.forcing_array[i_timestep, :, :, [self.contrails_index], :] = calculate_linear_forcing(
                     self.emissions_array[i_timestep, :, :, [self.aviation_nox_index], :],
@@ -627,7 +651,9 @@ class FAIR():
                     self.contrails_emissions_to_forcing_array[:, :, :, 0, :],
                 )
 
-            # 8. LAPSI - as with contrails, can be refactored with aerosol direct I think
+            # 9. BC emissions to LAPSI forcing
+            # TODO: can be refactored with aerosol direct I think
+            # TODO: include OC
             if self.lapsi_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.lapsi_index], :] = calculate_linear_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -636,7 +662,7 @@ class FAIR():
                     self.lapsi_emissions_to_forcing_array,
                 )
 
-            # 9. strat water vapour here
+            # 10. CH4 forcing to stratospheric water vapour forcing
             if self.h2o_stratospheric_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.h2o_stratospheric_index], :] = calculate_linear_forcing(
                     self.forcing_array[[i_timestep], ...],
@@ -645,7 +671,7 @@ class FAIR():
                     self.stratospheric_h2o_factor_array,
                 )
 
-            # 10. land use here
+            # 11. CO2 cumulative emissions to land use change forcing
             # TODO: separate treatment depending on how land use is formulated
             if self.land_use_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.land_use_index], :] = calculate_linear_forcing(
@@ -655,10 +681,7 @@ class FAIR():
                     self.land_use_cumulative_emissions_to_forcing_array,
                 )
 
-            # 11. 12.
-            # solar and volcanic forcing have been pre-filled, but in future we
-            # should allow volcanic to have a temperature dependence
-
+            # 12. In future we should allow volcanic forcing to have a temperature dependence
 
             # 13. sum up all of the forcing calculated previously
             self.forcing_sum_array[[i_timestep], ...] = np.nansum(
@@ -684,13 +707,3 @@ class FAIR():
         self._fill_concentration()
         self._fill_forcing()
         self._fill_temperature()
-
-
-
-
-
-
-
-
-### main
-#for i in range(751):

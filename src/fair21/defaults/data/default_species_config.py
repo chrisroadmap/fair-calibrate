@@ -47,7 +47,6 @@ default_species_config = {
         baseline_concentration = 270.1,
         tropospheric_adjustment = 0.07,
         ozone_radiative_efficiency = 7.1e-4,
-
     ),
     'cfc-11': SpeciesConfig(
         species_id = SpeciesID('CFC-11', Category.CFC_11, run_mode=RunMode.EMISSIONS),
