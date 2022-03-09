@@ -12,7 +12,7 @@ species_ids = {
 }
 
 scenario_species = ['CO2']
-species_to_include = scenario_species + ['CH4', 'N2O']
+species_to_include = scenario_species #+ ['CH4', 'N2O']
 
 scenarios_to_include = ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']
 scenarios = []
@@ -28,8 +28,8 @@ for iscen, scenario in enumerate(scenarios_to_include):
         ].interpolate(axis=1).values.squeeze()
 
         list_of_species.append(Species(species_ids[species.lower()], concentration=conc_in))
-    list_of_species.append(Species(species_ids['ch4'], concentration=np.ones(351)*729.2))
-    list_of_species.append(Species(species_ids['n2o'], concentration=np.ones(351)*270.1))
+    #list_of_species.append(Species(species_ids['ch4'], concentration=np.ones(351)*729.2))
+    #list_of_species.append(Species(species_ids['n2o'], concentration=np.ones(351)*270.1))
     scenarios.append(Scenario(scenario, list_of_species))
 
 df = pd.read_csv("data/calibration/4xCO2_cummins.csv")

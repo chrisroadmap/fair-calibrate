@@ -7,6 +7,25 @@ from ..exceptions import IncompatibleConfigError
 
 @dataclass
 class Scenario():
+    """Defines the scenarios that contain Species for running the model.
+
+    Attributes
+    ----------
+    name : str
+        unique name for the scenario.
+    list_of_species : list of Species
+        list of Species that are included in the Scenario.
+
+    Raises
+    ------
+    TypeError
+        if list_of_species is not a list of Species
+    DuplicationError
+        if the Scenario contains more than one instance of Species where no
+        duplicates are allowed.
+    IncompatibleConfigError
+        raised if neither all nor none of CO2, CH4 and N2O provided.
+    """
     name: str
     list_of_species: typing.List[Species]
 

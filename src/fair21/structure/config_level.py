@@ -10,6 +10,57 @@ from ..earth_params import mass_atmosphere, molecular_weight_air
 
 @dataclass
 class ClimateResponse():
+    """Defines how the climate responds to forcing.
+
+    A broader description is provided in `fair.energy_balance_model`.
+
+    Attributes
+    ----------
+        ocean_heat_capacity : float or array_like
+            Ocean heat capacity of each layer (top first), W m-2 yr K-1
+        ocean_heat_transfer : float or array_like
+            Heat exchange coefficient between ocean layers (top first). The
+            first element of this array is akin to the climate feedback
+            parameter, with the convention that stabilising feedbacks are
+            positive (opposite to most climate sensitivity literature).
+            W m-2 K-1
+        deep_ocean_efficacy : float
+            efficacy of deepest ocean layer. See e.g. [1]_.
+        stochastic_run : bool
+            Activate the stochastic variability component from [2]_.
+        sigma_eta : float
+            Standard deviation of stochastic forcing component from [2]_.
+        sigma_xi : float
+            Standard deviation of stochastic disturbance applied to surface
+            layer. See [2]_.
+        gamma_autocorrelation : float
+            Stochastic forcing continuous-time autocorrelation parameter.
+            See [2]_.
+        seed : int or None
+            Random seed to use for stochastic variability.
+
+    Raises
+    ------
+    WrongArrayShapeError
+        if ocean_heat_capacity and ocean_heat_transfer are not at most 1D
+    IncompatibleConfigError
+        if ocean_heat_capacity and ocean_heat_transfer are different shapes
+    TypeError
+        if deep_ocean_efficacy or any stochasic parameters when
+        stochastic_run=True are not positive numbers.
+
+    References
+    ----------
+    .. [1] Geoffroy, O., Saint-Martin, D., Bellon, G., Voldoire, A., Olivié,
+        D. J. L., & Tytéca, S. (2013). Transient Climate Response in a Two-
+        Layer Energy-Balance Model. Part II: Representation of the Efficacy
+        of Deep-Ocean Heat Uptake and Validation for CMIP5 AOGCMs, Journal
+        of Climate, 26(6), 1859-1876
+
+    .. [2] Cummins, D. P., Stephenson, D. B., & Stott, P. A. (2020). Optimal
+        Estimation of Stochastic Energy Balance Model Parameters, Journal of
+        Climate, 33(18), 7909-7926.
+    """
     ocean_heat_capacity: typing.Union[Iterable, float]
     ocean_heat_transfer: typing.Union[Iterable, float]
     deep_ocean_efficacy: float=1

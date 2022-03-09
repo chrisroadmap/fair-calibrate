@@ -26,6 +26,7 @@ class Category(Enum):
     LAND_USE = auto()
     VOLCANIC = auto()
     SOLAR = auto()
+    OTHER = auto()
 
 
 class AggregatedCategory():
@@ -87,11 +88,27 @@ valid_run_modes = {
     Category.LAND_USE: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.SOLAR: (RunMode.FORCING,),
     Category.VOLCANIC: (RunMode.FORCING,),
+    Category.OTHER: (RunMode.FORCING,),
 }
 
 
 @dataclass
 class SpeciesID():
+    """Defines basic properties of each Species included in the model.
+
+    Attributes
+    ----------
+    name : str
+        A unique name to define this SpeciesID, for example the name of the
+        greenhouse gas or aerosol Species being represented.
+    category : Category
+        The type of Species being represented.
+    run_mode : RunMode, optional
+        How the species is being introduced in the model (emissions-driven,
+        concentration-driven, forcing-driven, or calculated from other Species).
+        If not provided, a default RunMode is selected based on the Category.
+    """
+
     name: str
     category: Category
     run_mode: RunMode=None
@@ -99,7 +116,7 @@ class SpeciesID():
     def __post_init__(self):
         # 1. fill default run_mode
         if self.run_mode is None:
-            if self.category in [Category.SOLAR, Category.VOLCANIC]:
+            if self.category in [Category.SOLAR, Category.VOLCANIC, Category.OTHER]:
                 self.run_mode = RunMode.FORCING
             elif self.category in [
                 Category.CO2,
