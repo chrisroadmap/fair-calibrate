@@ -618,7 +618,8 @@ class FAIR():
                     self.erfaci_scale_array,
                     self.erfaci_shape_sulfur_array,
                     self.erfaci_shape_bcoc_array,
-                    self.species_index_mapping
+                    self.species_index_mapping,
+                    self.run_config.aci_method
                 )[0:1, :, :, self.aci_index, :]
 
             # 7. ozone emissions and concentrations to forcing

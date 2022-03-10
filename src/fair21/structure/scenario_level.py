@@ -30,6 +30,7 @@ class Scenario():
     list_of_species: typing.List[Species]
 
     def __post_init__(self):
+        # basic error checking
         if not isinstance(self.list_of_species, list):
             raise TypeError('list_of_species argument passed to Scenario must be a list of Species')
 

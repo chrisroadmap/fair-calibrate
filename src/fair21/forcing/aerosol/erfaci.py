@@ -24,6 +24,7 @@ def calculate_erfaci_forcing(
     shape_sulfur,
     shape_bcoc,
     aerosol_index_mapping,
+    aci_method,
 ):
     """Calculate effective radiative forcing from aerosol-cloud interactions.
 
@@ -50,6 +51,8 @@ def calculate_erfaci_forcing(
     aerosol_index_mapping : dict
         provides a mapping of which aerosol species corresponds to which array
         index along the SPECIES_AXIS.
+    aci_method : ACIMethod
+        Method used to calculate aerosol forcing.
 
     Returns
     -------
@@ -66,12 +69,17 @@ def calculate_erfaci_forcing(
 
     so2 = emissions[:, :, :, [aerosol_index_mapping["Sulfur"]], ...]
     so2_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["Sulfur"]], ...]
-    bc = emissions[:, :, :, [aerosol_index_mapping["BC"]], ...]
-    bc_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["BC"]], ...]
-    oc = emissions[:, :, :, [aerosol_index_mapping["OC"]], ...]
-    oc_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["OC"]], ...]
-    aci_index = aerosol_index_mapping["Aerosol-Cloud Interactions"]
 
+    if aci_method==ACIMethod.SMITH2018:
+        bc = emissions[:, :, :, [aerosol_index_mapping["BC"]], ...]
+        bc_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["BC"]], ...]
+        oc = emissions[:, :, :, [aerosol_index_mapping["OC"]], ...]
+        oc_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["OC"]], ...]
+        aci_index = aerosol_index_mapping["Aerosol-Cloud Interactions"]
+
+    else:
+        bc = bc_pi = oc = oc_pi = 0
+        shape_bcoc = 100  # anything to avoid divide by zero
 
     # TODO: raise an error if sulfur, BC and OC are not all there
     radiative_effect = -scale * np.log(

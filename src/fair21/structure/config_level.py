@@ -7,6 +7,7 @@ import numpy as np
 
 from .top_level import SpeciesID, Category, AggregatedCategory, RunConfig
 from ..earth_params import mass_atmosphere, molecular_weight_air
+from ..exceptions import IncompatibleConfigError, MissingInputError, WrongArrayShapeError
 
 @dataclass
 class ClimateResponse():
@@ -98,6 +99,84 @@ class ClimateResponse():
 # config level
 @dataclass
 class SpeciesConfig():
+    """Configuration for each Species present in a Scenario.
+
+    Attributes
+    ----------
+    species_id : SpeciesID
+        Previously-defined SpeciesID that defines what we are associating the
+        driving data with.
+    molecular_weight : float, optional
+        Molecular weight, required for greenhouse gases
+    lifetime : float or array_like, optional
+        Atmospheric lifetime of a greenhouse gas (where input is required). If
+        array_like, lifetime corresponds to atmospheric boxes each with a
+        partition_fraction.
+    partition_fraction : float or array_like, optional
+        Fraction of contribution to atmospheric burden for each lifetime box,
+        required for greenhouse gases. Must equal 1 if scalar or sum to 1 if
+        array
+    radiative_efficiency : float, optional
+        Coefficient that converts greenhouse gas concentrations to radiative
+        forcing. Required for greenhouse gases other than CO2, CH4 and N2O.
+    iirf_0 : float, optional
+        baseline time integral of airborne fraction (iIRF) with time horizon
+        defined by RunConfig.iirf_horizon (default 100 years). Only relevant for
+        greenhouse gases. If None it is calculated.
+    iirf_airborne : float, optional
+        change in iIRF with airborne emissions of greenhouse gas
+    iiff_cumulative : float, optional
+        change in iIRF with cumulative emissions of greenhouse gas
+    iirf_temperature : float, optional
+        change in iIRF with temperature anomaly
+    natural_emissions_adjustment : float, optional
+        correction for baseline emissions in emissions datasets that are
+        natural but presented as anthropogenic. Usually relevant when taking in
+        data from CMIP5 and CMIP6.
+    baseline_concentration : float, optional
+        baseline (often but not always pre-industrial) concentration of
+        greenhouse gas used for radiative forcing and atmospheric concentration
+        baselines
+    erfari_emissions_to_forcing : float, optional
+        coefficient of direct aerosol forcing with emissions of a species.
+    contrails_emissions_to_forcing : float, optional
+        coefficient of contrail forcing with emissions of a species.
+    lapsi_emissions_to_forcing : float, optional
+        coefficient of light absorbing particles on snow with emissions of
+        a species.
+    h2o_stratospheric_factor : float, optional
+        coefficient of stratospheric water vapour forcing from methane forcing.
+    land_use_cumulative_emissions_to_forcing : float, optional
+        coefficient of land use change forcing with cumulative emissions of CO2
+        from AFOLU.
+    baseline_emissions : float, optional
+        baseline (often but not always pre-industrial) emissions of a
+        short-lived forcer used for radiative forcing baselines
+    ozone_radiative_efficiency : float, optional
+        coefficient of ozone forcing with emissions or concentration of a
+        precursor.
+    cl_atoms : int, optional
+        Number of chlorine atoms in a halogenated greenhouse gas.
+    br_atoms : int, optional
+        Number of bromine atoms in a halogenated greenhouse gas.
+    fractional_release : float, optional
+        Fraction of halogenated greenhouse gas available for ozone destruction.
+    tropospheric_adjustment : float, optional, default=0
+        adjustment factor that converts from radiative forcing to effective
+        radiative forcing.
+    scale : float, optional, default=1
+        scaling factor for effective radiative forcing, often used in
+        uncertainty assessment.
+    efficacy : float, optional, default=1
+        factor that allows a different temperature effect from a forcing agent
+        (different to scale, as efficacy does not affect total forcing).
+    aci_params : dict, optional
+        parameters to pass to indirect aerosol (ERFaci) forcing.
+    forcing_temperature_feedback: float, optional
+        coefficient of temperature anomaly on forcing (W m-2 K-1).
+    run_config: RunConfig, optional
+        top-level run configuration        
+    """
     species_id: SpeciesID
     molecular_weight: float=None
     lifetime: np.ndarray=None
@@ -129,15 +208,23 @@ class SpeciesConfig():
     def __post_init__(self):
         # validate input - the whole partition_fraction and lifetime thing
         # would be nice to validate if not CO2, CH4 or N2O that radiative_efficiency must be defined.
-#        if self.partition_fraction is not isinstance(Number, Iterable):
-#            raise MissingInputError('partition_fraction must be a number or an array-like type') # custom exception needed
-#                    if len(partition_fraction) != len(lifetime):
-#                        raise IncompatibleConfigError('`partition_fraction` and `lifetime` are different shapes') # custom exception needed
-#                    if ~np.isclose(np.sum(partition_fraction), 1):
-#                        raise PartitionFractionError('partition_fraction should sum to 1') # custom exception needed
-#        elif np.ndim(self.lifetime) > 1:
-#            raise LifetimeError('`lifetime` array dimension is greater than 1')
         if self.species_id.category in AggregatedCategory.GREENHOUSE_GAS:
+            if not isinstance(self.lifetime, (Number, Iterable)):
+                raise MissingInputError('lifetime must be a number or an array-like type')
+            if np.ndim(self.lifetime) > 1:
+                raise WrongArrayShapeError('lifetime must be a scalar or 1D array')
+            if not isinstance(self.partition_fraction, (Number, Iterable)):
+                raise MissingInputError('partition_fraction must be a number or an array-like type')
+            if np.ndim(self.partition_fraction) > 1:
+                raise WrongArrayShapeError('partition_fraction must be a scalar or 1D array')
+            if np.ndim(self.partition_fraction) == 1 and self.partition_fraction.shape != self.lifetime.shape:
+                raise IncompatibleConfigError('partition_fraction and lifetime are different shapes')
+            if ~np.isclose(np.sum(self.partition_fraction), 1):
+                raise PartitionFractionError('partition_fraction should sum to 1')
+            if self.species_id.category not in [Category.CO2, Category.CH4, Category.N2O] and not isinstance(self.radiative_efficiency, Number):
+                raise MissingInputError('radiative_efficiency is required for greenhouse gases other than CO2, CH4 and N2O')
+
+
             self.g1 = np.sum(
                 np.asarray(self.partition_fraction) * np.asarray(self.lifetime) *
                 (1 - (1 + self.run_config.iirf_horizon/np.asarray(self.lifetime)) *
