@@ -65,6 +65,33 @@ def calculate_erfaci_forcing(
     (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
     retain the singleton dimension in order to preserve clarity of
     calculation and speed.
+
+    The Stevens (2015) [1]_ relationship is the second term of their eq. (1):
+
+    :math: F_{aci} = -\beta \log \left \frac{E_{SO2}}{s_{SO2}} + 1 \right
+
+    The Smith et al. (2018) [2]_ relationship as formulated more explicitly in
+    Smith et al. (2021) [3]_ is
+
+    :math: F_{aci} = -\beta \log \left \frac{E_{SO2}}{s_{SO2}} + \frac{E_{BC+OC}}{s_{BC+OC}} + 1 \right
+
+    (note there is a typo in Smith et al. 2021).
+
+    References
+    ----------
+    .. [1] Stevens, B. (2015). Rethinking the Lower Bound on Aerosol Radiative
+        Forcing, Journal of Climate, 28(12), 4794-4819.
+
+    .. [2] Smith, C. J., Forster, P. M.,  Allen, M., Leach, N., Millar, R. J.,
+        Passerello, G. A., and Regayre, L. A. (2018). FAIR v1.3: a simple
+        emissions-based impulse response and carbon cycle model, Geosci. Model
+        Dev., 11, 2273–2297
+
+    .. [3] Smith, C. J., Harris, G. R., Palmer, M. D., Bellouin, N., Collins,
+        W., Myhre, G., Schulz, M., Golaz, J.-C., Ringer, M., Storelvmo, T.,
+        Forster, P. M. (2021). Energy budget constraints on the time history of
+        aerosol forcing and climate sensitivity. Journal of Geophysical
+        Research: Atmospheres, 126, e2020JD033622.
     """
 
     so2 = emissions[:, :, :, [aerosol_index_mapping["Sulfur"]], ...]

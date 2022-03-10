@@ -136,6 +136,27 @@ class SpeciesID():
 
 
 class ACIMethod(Enum):
+    """Defines the aerosol-cloud interactions relationship to use.
+
+    Attributes
+    ----------
+    STEVENS2015 : enum
+        Use relationship based on sulfur emissions from Stevens (2015) [1]_.
+    SMITH2018 : enum
+        Use relationship based on sulfur, organic carbon and black carbon
+        emissions based on FaIRv1.3 (Smith et al. 2018 [2]_).
+
+
+    References
+    ----------
+    .. [1] Stevens, B. (2015). Rethinking the Lower Bound on Aerosol Radiative
+        Forcing, Journal of Climate, 28(12), 4794-4819.
+
+    .. [2] Smith, C. J., Forster, P. M.,  Allen, M., Leach, N., Millar, R. J.,
+        Passerello, G. A., and Regayre, L. A. (2018). FAIR v1.3: a simple
+        emissions-based impulse response and carbon cycle model, Geosci. Model
+        Dev., 11, 2273–2297
+    """
     STEVENS2015 = auto()
     SMITH2018 = auto()
 

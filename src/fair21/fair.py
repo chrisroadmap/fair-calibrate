@@ -423,6 +423,7 @@ class FAIR():
         self.forcing_temperature_feedback_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: start from non-zero temperature
         self.temperature = np.ones((n_timesteps, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
+        self.toa_imbalance = np.ones((n_timesteps, n_scenarios, n_configs, 1, 1)) * np.nan
 
         for ispec, species_name in enumerate(self.species_index_mapping):
             for iconf, config_name in enumerate(self.configs_index_mapping):
@@ -701,7 +702,15 @@ class FAIR():
                     )
                     self.temperature[i_timestep, iscen, iconf, :, :] = temperature_boxes[0, iscen, iconf, 0, 1:]
                     self.stochastic_forcing[i_timestep, iscen, iconf] = temperature_boxes[0, iscen, iconf, 0, 0]
-
+                    self.toa_imbalance[i_timestep, iscen, iconf, :, :] = (
+                        self.forcing_sum_array[i_timestep, iscen, iconf, :, :] -
+                        config.climate_response.ocean_heat_transfer[0]*
+                        self.temperature[i_timestep, iscen, iconf, :, 0] +
+                        (1 - config.climate_response.deep_ocean_efficacy) * config.climate_response.ocean_heat_transfer[2]
+                        * (self.temperature[i_timestep, iscen, iconf, :, 1] -
+                         self.temperature[i_timestep, iscen, iconf, :, 2])
+                    )
+            # TODO: fill in OHC
         self._fill_concentration()
         self._fill_forcing()
         self._fill_temperature()
