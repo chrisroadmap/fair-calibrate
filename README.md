@@ -1,12 +1,18 @@
 # fair2.1-calibrate
-Re-calibration of FaIR v2.0 to updated Cummins calibration and inclusion of ocean heat content
+FaIR version 2.1
+
+What has been done?
+
+- Re-calibration of FaIR v2.0 to updated Cummins calibration and inclusion of ocean heat content
+- Adding back some of the emissions-driven relationships from FaIR v1.6
+- changing the interface to a object oriented design
 
 ## installation
 
 ### requirements
 - `anaconda` for `python3`
-- `python` 3.7, 3.8 or 3.9 (enforced by `pyam`)
-- a reasonably modern version of `R` (4.1.1 used here)
+- `python` 3.7+ (enforced by `dataclass`)
+- for the Cummins calibration, a reasonably modern version of `R` (4.1.1 used here)
 
 ### python and jupyter notebooks
 ```
