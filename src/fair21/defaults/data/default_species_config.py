@@ -393,18 +393,18 @@ default_species_config = {
         ozone_radiative_efficiency = 3.29e-4,
         baseline_emissions = 60.0218262241548
     ),
-    'aviation nox' : SpeciesConfig(
-        species_id = SpeciesID('Aviation NOx', Category.AVIATION_NOX, run_mode=RunMode.EMISSIONS),
+    'nox_aviation' : SpeciesConfig(
+        species_id = SpeciesID('NOx Aviation', Category.NOX_AVIATION, run_mode=RunMode.EMISSIONS),
         contrails_emissions_to_forcing = 0.014664524317963392,   # W/m2/(MtNO2-aviation)
     ),
-    'aerosol-cloud interactions': SpeciesConfig(
+    'aci': SpeciesConfig(
         species_id = SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS, run_mode=RunMode.FROM_OTHER_SPECIES),
         aci_params={"scale": 2.09841432, "Sulfur": 260.34644166, "BC+OC": 111.05064063}
     ),
-    'light absorbing particles on snow and ice': SpeciesConfig(
+    'lapsi': SpeciesConfig(
         species_id = SpeciesID('Light absorbing particles on snow and ice', Category.LAPSI, run_mode=RunMode.FROM_OTHER_SPECIES)
     ),
-    'h2o stratospheric': SpeciesConfig(
+    'h2o_stratospheric': SpeciesConfig(
         species_id = SpeciesID('H2O Stratospheric', Category.H2O_STRATOSPHERIC, run_mode=RunMode.FROM_OTHER_SPECIES)
     ),
     'ozone': SpeciesConfig(
@@ -414,7 +414,7 @@ default_species_config = {
     'contrails': SpeciesConfig(
         species_id = SpeciesID('Contrails', Category.CONTRAILS, run_mode=RunMode.FROM_OTHER_SPECIES)
     ),
-    'land use': SpeciesConfig(
+    'land_use': SpeciesConfig(
         species_id = SpeciesID('Land Use', Category.LAND_USE, run_mode=RunMode.FROM_OTHER_SPECIES)
     ),
     'solar': SpeciesConfig(

@@ -58,7 +58,7 @@ species_ids = {
     'voc': SpeciesID('VOC', Category.SLCF_OZONE_PRECURSOR),
     'co': SpeciesID('CO', Category.SLCF_OZONE_PRECURSOR),
     'nox': SpeciesID('NOx', Category.SLCF_OZONE_PRECURSOR),
-    'aviation nox': SpeciesID('Aviation NOx', Category.AVIATION_NOX),
+    'aviation nox': SpeciesID('Aviation NOx', Category.NOX_AVIATION),
     'contrails': SpeciesID('Contrails', Category.CONTRAILS),
     'aerosol-cloud interactions': SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS),
     'lapsi': SpeciesID('Light absorbing particles on snow and ice', Category.LAPSI),

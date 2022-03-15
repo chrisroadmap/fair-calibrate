@@ -175,7 +175,7 @@ class SpeciesConfig():
     forcing_temperature_feedback: float, optional
         coefficient of temperature anomaly on forcing (W m-2 K-1).
     run_config: RunConfig, optional
-        top-level run configuration        
+        top-level run configuration
     """
     species_id: SpeciesID
     molecular_weight: float=None
@@ -257,7 +257,7 @@ class SpeciesConfig():
             if not isinstance(self.aci_params, dict):
                 raise TypeError("For aerosol-cloud interactions, you must supply a dict of parameters using the aci_params keyword")
 
-        if self.species_id.category == Category.AVIATION_NOX:
+        if self.species_id.category == Category.NOX_AVIATION:
             if not isinstance(self.contrails_emissions_to_forcing, Number):
                 raise ValueError("contrails_emissions_to_forcing should be a number")
 

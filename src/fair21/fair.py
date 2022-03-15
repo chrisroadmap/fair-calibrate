@@ -92,7 +92,7 @@ def _map_species_scenario_config(scenarios, configs, run_config):
     aerosol_species_included = []
     aci_desired = False
     contrails_from_emissions_desired = False
-    aviation_nox_emissions_supplied = False
+    nox_aviation_emissions_supplied = False
     h2o_stratospheric_desired = False
     ch4_supplied = False
     land_use_desired = False
@@ -109,8 +109,8 @@ def _map_species_scenario_config(scenarios, configs, run_config):
             aci_index = ispec
         if scenarios[0].list_of_species[ispec].species_id.category == Category.CONTRAILS and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.FROM_OTHER_SPECIES:
             contrails_from_emissions_desired = True
-        if scenarios[0].list_of_species[ispec].species_id.category == Category.AVIATION_NOX and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
-            aviation_nox_emissions_supplied = True
+        if scenarios[0].list_of_species[ispec].species_id.category == Category.NOX_AVIATION and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
+            nox_aviation_emissions_supplied = True
         if scenarios[0].list_of_species[ispec].species_id.category == Category.H2O_STRATOSPHERIC and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.FROM_OTHER_SPECIES:
             h2o_stratospheric_desired = True
         if scenarios[0].list_of_species[ispec].species_id.category == Category.CH4:
@@ -128,13 +128,13 @@ def _map_species_scenario_config(scenarios, configs, run_config):
     # pointing out exactly where they differ.
     if species_included_first_config != species_included_first_scenario:
         # TODO: make better formatted error message
-        raise SpeciesMismatchError(
-            f"The list of Species provided to Scenario.list_of_species is: (name, category, run_mode)\n"
-            f"{[(species_id.name, species_id.category.name, species_id.run_mode.name) for species_id in species_included_first_scenario]}. "
-            f"\n\n"
-            f"This differs from that provided to Config.species_configs: (name, category, run_mode)\n"
-            f"{[(species_id.name, species_id.category.name, species_id.run_mode.name) for species_id in species_included_first_config]}."
-        )
+        raise SpeciesMismatchError(species_included_first_scenario, species_included_first_config)
+#            f"The list of Species provided to Scenario.list_of_species is: (name, category, run_mode)\n"
+#            f"{[(species_id.name, species_id.category.name, species_id.run_mode.name) for species_id in species_included_first_scenario]}. "
+#            f"\n\n"
+#            f"This differs from that provided to Config.species_configs: (name, category, run_mode)\n"
+#            f"{[(species_id.name, species_id.category.name, species_id.run_mode.name) for species_id in species_included_first_config]}."
+#        )
     # check aerosol species provided are consistent with desired indirect forcing mode
     if aerosol_species_included != required_aerosol_species[run_config.aci_method] and aci_desired:
         raise IncompatibleConfigError(
@@ -149,7 +149,7 @@ def _map_species_scenario_config(scenarios, configs, run_config):
         for config in configs:
             _check_aci_params(config.species_configs[aci_index].aci_params, run_config.aci_method)
     # if contrail forcing from emissions is desired, we need aviation NOx emissions
-    if contrails_from_emissions_desired and not aviation_nox_emissions_supplied:
+    if contrails_from_emissions_desired and not nox_aviation_emissions_supplied:
         raise IncompatibleConfigError(
             f"For contrails forcing from emissions, aviation NOx emissions "
             f"must be supplied."
@@ -300,7 +300,7 @@ class FAIR():
         self.ari_indices = []
         self.lapsi_index = None
         self.h2o_stratospheric_index = None
-        self.aviation_nox_index = None
+        self.nox_aviation_index = None
         self.aci_index = None
         self.ozone_index = None
         self.contrails_index = None
@@ -323,8 +323,8 @@ class FAIR():
                 self.lapsi_index = ispec
             if specie.category == Category.H2O_STRATOSPHERIC:
                 self.h2o_stratospheric_index = ispec
-            if specie.category == Category.AVIATION_NOX:
-                self.aviation_nox_index = ispec
+            if specie.category == Category.NOX_AVIATION:
+                self.nox_aviation_index = ispec
             if specie.category == Category.AEROSOL_CLOUD_INTERACTIONS:
                 self.aci_index = ispec
             if specie.category == Category.OZONE:
@@ -465,7 +465,7 @@ class FAIR():
                         self.erfaci_shape_bcoc_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['BC+OC']
                 if self.species[ispec].category in AggregatedCategory.OZONE_PRECURSOR:
                     self.ozone_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.ozone_radiative_efficiency
-                if self.species[ispec].category == Category.AVIATION_NOX:
+                if self.species[ispec].category == Category.NOX_AVIATION:
                     self.contrails_emissions_to_forcing_array[0, 0, iconf, 0, 0] = conf_spec.contrails_emissions_to_forcing
             for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
                 scen_spec = self.scenarios[iscen].list_of_species[ispec]
@@ -644,9 +644,9 @@ class FAIR():
             # 8. contrail emissions from aviation NOx to forcing
             if self.contrails_index is not None:
                 self.forcing_array[i_timestep, :, :, [self.contrails_index], :] = calculate_linear_forcing(
-                    self.emissions_array[i_timestep, :, :, [self.aviation_nox_index], :],
-                    self.baseline_emissions_array[0, :, :, [self.aviation_nox_index], :],
-                    self.forcing_scaling_array[0, :, :, [self.aviation_nox_index], :],
+                    self.emissions_array[i_timestep, :, :, [self.nox_aviation_index], :],
+                    self.baseline_emissions_array[0, :, :, [self.nox_aviation_index], :],
+                    self.forcing_scaling_array[0, :, :, [self.nox_aviation_index], :],
                     self.contrails_emissions_to_forcing_array[:, :, :, 0, :],
                 )
 
