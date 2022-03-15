@@ -2,6 +2,7 @@
 data/netcdf-scm/cmip_data/
 data/netcdf-scm/*.zip
 data/rcmip/
+data/parameter_sets/
 
 # Apple files
 .DS_Store
