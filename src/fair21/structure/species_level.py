@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .top_level import SpeciesID, RunMode
+from ..exceptions import MissingInputError
 
 # scenario level
 @dataclass
