@@ -1,5 +1,5 @@
-from ...structure.config_level import SpeciesConfig
-from ...structure.top_level import SpeciesID, Category, RunMode
+from ..structure.config_level import SpeciesConfig
+from ..structure.top_level import SpeciesID, Category, RunMode
 
 import numpy as np
 

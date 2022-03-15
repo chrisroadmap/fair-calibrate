@@ -4,7 +4,7 @@ Module for defaults
 
 import copy
 
-from .data.default_species_config import default_species_config
+from .default_species_config import default_species_config
 
 IIRF_HORIZON = 100
 

@@ -2,6 +2,7 @@ import numpy as np
 import scipy.linalg
 import scipy.stats
 
+from .constants import DOUBLING_TIME_1PCT
 from .exceptions import IncompatibleConfigError
 
 class EnergyBalanceModel:
@@ -95,9 +96,9 @@ class EnergyBalanceModel:
         self.n_temperature_boxes = len(self.ocean_heat_capacity)
         if len(self.ocean_heat_transfer) != self.n_temperature_boxes:
             raise IncompatibleConfigError("ocean_heat_capacity and ocean_heat_transfer must be arrays of the same shape.")
-        self.temperature = kwargs.get('temperature', np.zeros((1, self.n_temperature_boxes)))
+        self.temperature = kwargs.get('temperature', np.zeros((1, self.n_temperature_boxes + 1)))
         self.n_timesteps = kwargs.get('n_timesteps', 1)
-        self.nmatrix = self.n_temperature_boxes + self.stochastic_run
+        self.nmatrix = self.n_temperature_boxes + 1
 
 
     def _eb_matrix(self):
@@ -186,14 +187,22 @@ class EnergyBalanceModel:
         """Converts the energy balance to impulse response."""
         eb_matrix = self._eb_matrix()
 
-        # calculate the eigenvectors and eigenvalues, these are the timescales of responses
-        eb_matrix_eigenvalues, eb_matrix_eigenvectors = scipy.linalg.eig(eb_matrix)
+        # calculate the eigenvectors and eigenvalues on the energy balance
+        # (determininstic) part of the matrix, these are the timescales of responses
+        eb_matrix_eigenvalues, eb_matrix_eigenvectors = scipy.linalg.eig(eb_matrix[1:, 1:])
         self.timescales = -1/(np.real(eb_matrix_eigenvalues))
         self.response_coefficients = self.timescales * (eb_matrix_eigenvectors[0,:] * scipy.linalg.inv(eb_matrix_eigenvectors)[:,0]) / self.ocean_heat_capacity[0]
 
 
-    def emergent_parameters(self):
-        """Calculates emergent parameters from the energy balance parameters."""
+    def emergent_parameters(self, forcing_2co2_4co2_ratio=0.5):
+        """Calculates emergent parameters from the energy balance parameters.
+
+        Parameters
+        ----------
+        forcing_2co2_4co2_ratio : float
+            ratio of (effective) radiative forcing converting a quadrupling of
+            CO2 to a doubling of CO2.
+        """
         # requires impulse response step
         if not hasattr(self, 'timescales'):
             self.impulse_response()
@@ -210,6 +219,7 @@ class EnergyBalanceModel:
     def add_forcing(self, forcing, time):
         self.forcing = forcing
         self.time = time
+        self.n_timesteps = len(time)
 
 
     def run(self):
@@ -218,24 +228,21 @@ class EnergyBalanceModel:
         forcing_vector = self._forcing_vector()
 
         # Calculate the matrix exponential
+        eb_matrix = self._eb_matrix()
         eb_matrix_d = scipy.linalg.expm(eb_matrix)
 
         # Solve for temperature
         forcing_vector_d = scipy.linalg.solve(eb_matrix, (eb_matrix_d - np.identity(self.nmatrix)) @ forcing_vector)
 
-        # define stochastic matrix
-        stochastic_d = self.stochastic_d()#np.zeros((n_timesteps, self.nmatrix))
-
         solution = np.zeros((self.n_timesteps, self.nmatrix))
         solution[0, :] = self.temperature[0, :]
         for i in range(1, self.n_timesteps):
-            solution[i, :] = eb_matrix_d @ solution[i-1, :] + forcing_vector_d * self.forcing[i-1] + stochastic_d[i-1, :]
+            solution[i, :] = eb_matrix_d @ solution[i-1, :] + forcing_vector_d * self.forcing[i-1] + self.stochastic_d[i-1, :]
 
         self.temperature = solution[:, 1:]
         self.stochastic_forcing = solution[:, 0]
-
         self.toa_imbalance = self.forcing - self.ocean_heat_transfer[0]*self.temperature[:,0] + (1 - self.deep_ocean_efficacy) * self.ocean_heat_transfer[2] * (self.temperature[:,1] - self.temperature[:,2])
-
+        self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * np.gradient(self.time))
 
     def step_temperature(self, temperature_boxes_old, forcing):
         """Timestep the temperature forward.
