@@ -194,7 +194,7 @@ class SpeciesConfig():
     h2o_stratospheric_factor: float=0
     land_use_cumulative_emissions_to_forcing: float=0
     baseline_emissions: float=0
-    ozone_radiative_efficiency: float=None
+    ozone_radiative_efficiency: float=0
     cl_atoms: int=0
     br_atoms: int=0
     fractional_release: float=None

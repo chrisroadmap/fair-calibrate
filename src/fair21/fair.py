@@ -300,6 +300,7 @@ class FAIR():
         self.ghg_emissions_indices = []
         self.ghg_concentration_indices = []
         self.minor_ghg_indices = []
+        self.halogen_indices = []
         self.ari_index = None
         self.lapsi_index = None
         self.h2o_stratospheric_index = None
@@ -313,15 +314,14 @@ class FAIR():
         self.co2_index = None
         self.ch4_index = None
         self.n2o_index = None
+        self.cfc11_index = None
         self.bc_index = None
         self.so2_index = None
         self.oc_index = None
-        #self.config_indices = []
+
         for ispec, specie in enumerate(self.species):  # specie is a SpeciesID
             self.species_index_mapping[specie.name] = ispec
             self.category_indices.append(specie.category)
-            # All of this below can now be deleted.
-
             if specie.category in AggregatedCategory.GREENHOUSE_GAS:
                 self.ghg_indices.append(ispec)
                 if specie.run_mode in (RunMode.EMISSIONS, RunMode.FROM_OTHER_SPECIES):
@@ -332,6 +332,8 @@ class FAIR():
                 self.slcf_indices.append(ispec)
             if specie.category in AggregatedCategory.MINOR_GREENHOUSE_GAS:
                 self.minor_ghg_indices.append(ispec)
+            if specie.category in AggregatedCategory.HALOGEN:
+                self.halogen_indices.append(ispec)
             if specie.category == Category.AEROSOL_RADIATION_INTERACTIONS:
                 self.ari_index = ispec
             if specie.category == Category.LAPSI:
@@ -358,6 +360,8 @@ class FAIR():
                 self.ch4_index = ispec
             if specie.category == Category.N2O:
                 self.n2o_index = ispec
+            if specie.category == Category.CFC_11:
+                self.cfc_11_index = ispec
             if specie.category == Category.SULFUR:
                 self.so2_index = ispec
             if specie.category == Category.BC:
@@ -485,8 +489,7 @@ class FAIR():
                     self.erfaci_shape_sulfur_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['Sulfur']
                     if aci_method==ACIMethod.SMITH2018:
                         self.erfaci_shape_bcoc_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['BC+OC']
-                if self.species[ispec].category in AggregatedCategory.OZONE_PRECURSOR:
-                    self.ozone_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.ozone_radiative_efficiency
+                self.ozone_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.ozone_radiative_efficiency
                 if self.species[ispec].category == Category.NOX_AVIATION:
                     self.contrails_emissions_to_forcing_array[0, 0, iconf, 0, 0] = conf_spec.contrails_emissions_to_forcing
             for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
@@ -666,7 +669,10 @@ class FAIR():
                     temperature_boxes[:, :, :, :, 1:2],
                     self.forcing_temperature_feedback_array[:, :, :, [self.ozone_index], :],
                     self.run_config.br_cl_ratio,
-                    self.species_index_mapping
+                    self.cfc_11_index,
+                    self.halogen_indices,
+                    self.slcf_indices,
+                    self.ghg_indices,
                 )
 
             # 8. contrail emissions from aviation NOx to forcing

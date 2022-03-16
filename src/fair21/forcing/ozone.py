@@ -12,7 +12,8 @@ def calculate_eesc(
     fractional_release,
     cl_atoms,
     br_atoms,
-    species_index_mapping,
+    cfc_11_index,
+    halogen_indices,
     br_cl_ratio,
 ):
     """Calculate equivalent effective stratospheric chlorine.
@@ -30,9 +31,11 @@ def calculate_eesc(
         Chlorine atoms in each species
     br_atoms : ndarray
         Bromine atoms in each species
-    species_index_mapping : dict
-        provides a mapping of which gas corresponds to which array index along
-        the SPECIES_AXIS.
+    cfc_11_index : int or None
+        array index along SPECIES_AXIS corresponding to CFC-11.
+    halogen_indices : list of int
+        provides a mapping of which halogen species corresponds to which
+        index along the SPECIES_AXIS.
     br_cl_ratio : float, default=45
         how much more effective bromine is as an ozone depletor than chlorine.
 
@@ -50,7 +53,7 @@ def calculate_eesc(
     """
 
     # EESC is in terms of CFC11-eq
-    cfc11_fr = fractional_release[:, :, :, [species_index_mapping["CFC-11"]], :]
+    cfc11_fr = fractional_release[:, :, :, [cfc_11_index], :]
     eesc_out = (
         cl_atoms * (concentration - baseline_concentration) * fractional_release / cfc11_fr +
         br_cl_ratio * br_atoms * (concentration - baseline_concentration) * fractional_release / cfc11_fr
@@ -71,7 +74,10 @@ def calculate_ozone_forcing(
     temperature,
     temperature_feedback,
     br_cl_ratio,
-    species_index_mapping,
+    cfc_11_index,
+    halogen_indices,
+    slcf_indices,
+    ghg_indices
 ):
 
     """Determines ozone effective radiative forcing.
@@ -122,6 +128,17 @@ def calculate_ozone_forcing(
         temperature feedback on ozone forcing (W m-2 K-1)
     br_cl_ratio : float, default=45
         how much more effective bromine is as an ozone depletor than chlorine.
+    cfc_11_index : int or None
+        array index along SPECIES_AXIS corresponding to CFC-11.
+    halogen_indices : list of int
+        provides a mapping of which halogen species corresponds to which
+        index along the SPECIES_AXIS.
+    slcf_indices : list of int
+        provides a mapping of which aerosol species corresponds to which emitted
+        species index along the SPECIES_AXIS.
+    ghg_indices : list of int
+        provides a mapping of which aerosol species corresponds to which
+        atmospheric GHG concentration along the SPECIES_AXIS.
 
     Returns
     -------
@@ -149,35 +166,25 @@ def calculate_ozone_forcing(
         fractional_release,
         cl_atoms,
         br_atoms,
-        species_index_mapping,
+        cfc_11_index,
+        halogen_indices,
         br_cl_ratio,
     )
     _erf[:, :, :, 0, :] = np.nansum(eesc * ozone_radiative_efficiency * forcing_scaling, axis=SPECIES_AXIS)
 
     # Non-Halogen GHGs, with a concentration-given ozone radiative_efficiency
-    o3_species_conc = []
-    for species in ["CH4", "N2O"]:
-        if species in species_index_mapping:
-            o3_species_conc.append(species_index_mapping[species])
     _erf[:, :, :, 1, :] = np.sum(
-        (concentration[:, :, :, o3_species_conc, :] - baseline_concentration[:, :, :, o3_species_conc, :]) *
-    ozone_radiative_efficiency[:, :, :, o3_species_conc, :], axis=SPECIES_AXIS)
+        (concentration[:, :, :, ghg_indices, :] - baseline_concentration[:, :, :, ghg_indices, :]) *
+    ozone_radiative_efficiency[:, :, :, ghg_indices, :], axis=SPECIES_AXIS)
 
-    # Emissions-based SLCF_OZONE_PRECURSORs
-    o3_species_emis = []
-    for species in ["CO", "VOC", "NOx"]:
-        if species in species_index_mapping:
-            o3_species_emis.append(species_index_mapping[species])
+    # Emissions-based precursors
     _erf[:, :, :, 2, :] = np.sum(
-        (emissions[:, :, :, o3_species_emis, :] - baseline_emissions[:, :, :, o3_species_emis, :]) *
-    ozone_radiative_efficiency[:, :, :, o3_species_emis, :], axis=SPECIES_AXIS)
+        (emissions[:, :, :, slcf_indices, :] - baseline_emissions[:, :, :, slcf_indices, :]) *
+    ozone_radiative_efficiency[:, :, :, slcf_indices, :], axis=SPECIES_AXIS)
 
     # Temperature feedback
     _erf[:, :, :, [3], :] = (
         temperature_feedback * temperature * np.sum(_erf[:, :, :, :3, :], axis=SPECIES_AXIS, keepdims=True)
     )
-    #print(_erf[:, 7, :, 3, :].squeeze())
-    #print(temperature.shape) 1 8 66 1
-    #print(temperature[:, 7, :, :].squeeze())
     erf_out = np.sum(_erf, axis=SPECIES_AXIS, keepdims=True)
     return erf_out
