@@ -23,7 +23,9 @@ def calculate_erfaci_forcing(
     scale,
     shape_sulfur,
     shape_bcoc,
-    aerosol_index_mapping,
+    so2_index,
+    bc_index,
+    oc_index,
     aci_method,
 ):
     """Calculate effective radiative forcing from aerosol-cloud interactions.
@@ -48,9 +50,12 @@ def calculate_erfaci_forcing(
         scale factor for BC+OC emissions
     radiative_efficiency : ndarray
         radiative efficiency (W m-2 (emission_unit yr-1)-1) of each species.
-    aerosol_index_mapping : dict
-        provides a mapping of which aerosol species corresponds to which array
-        index along the SPECIES_AXIS.
+    so2_index : int or None
+        array index along SPECIES_AXIS corresponding to SO2 emissions.
+    bc_index : int or None
+        array index along SPECIES_AXIS corresponding to BC emissions.
+    oc_index : int or None
+        array index along SPECIES_AXIS corresponding to OC emissions.
     aci_method : ACIMethod
         Method used to calculate aerosol forcing.
 
@@ -94,18 +99,17 @@ def calculate_erfaci_forcing(
         Research: Atmospheres, 126, e2020JD033622.
     """
 
-    so2 = emissions[:, :, :, [aerosol_index_mapping["Sulfur"]], ...]
-    so2_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["Sulfur"]], ...]
+    so2 = emissions[:, :, :, [so2_index], ...]
+    so2_base = pre_industrial_emissions[:, :, :, [so2_index], ...]
 
     if aci_method==ACIMethod.SMITH2018:
-        bc = emissions[:, :, :, [aerosol_index_mapping["BC"]], ...]
-        bc_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["BC"]], ...]
-        oc = emissions[:, :, :, [aerosol_index_mapping["OC"]], ...]
-        oc_pi = pre_industrial_emissions[:, :, :, [aerosol_index_mapping["OC"]], ...]
-        aci_index = aerosol_index_mapping["Aerosol-Cloud Interactions"]
+        bc = emissions[:, :, :, [bc_index], ...]
+        bc_base = pre_industrial_emissions[:, :, :, [bc_index], ...]
+        oc = emissions[:, :, :, [oc_index], ...]
+        oc_base = pre_industrial_emissions[:, :, :, [oc_index], ...]
 
     else:
-        bc = bc_pi = oc = oc_pi = 0
+        bc = bc_base = oc = oc_base = 0
         shape_bcoc = 100  # anything to avoid divide by zero
 
     # TODO: raise an error if sulfur, BC and OC are not all there
@@ -114,8 +118,8 @@ def calculate_erfaci_forcing(
         (bc + oc)/shape_bcoc
     )
     pre_industrial_radiative_effect = -scale * np.log(
-        1 + so2_pi/shape_sulfur +
-        (bc_pi + oc_pi)/shape_bcoc
+        1 + so2_base/shape_sulfur +
+        (bc_base + oc_base)/shape_bcoc
     )
 
     erf_out = (radiative_effect - pre_industrial_radiative_effect) * forcing_scaling

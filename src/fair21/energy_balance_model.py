@@ -4,6 +4,7 @@ import scipy.stats
 
 from .constants import DOUBLING_TIME_1PCT
 from .exceptions import IncompatibleConfigError
+from .earth_params import earth_radius, seconds_per_year
 
 class EnergyBalanceModel:
     """Energy balance model that converts forcing to temperature.
@@ -242,7 +243,7 @@ class EnergyBalanceModel:
         self.temperature = solution[:, 1:]
         self.stochastic_forcing = solution[:, 0]
         self.toa_imbalance = self.forcing - self.ocean_heat_transfer[0]*self.temperature[:,0] + (1 - self.deep_ocean_efficacy) * self.ocean_heat_transfer[2] * (self.temperature[:,1] - self.temperature[:,2])
-        self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * np.gradient(self.time))
+        self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * np.gradient(self.time) * earth_radius**2 * 4 * np.pi * seconds_per_year)
 
     def step_temperature(self, temperature_boxes_old, forcing):
         """Timestep the temperature forward.

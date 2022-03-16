@@ -311,6 +311,11 @@ class FAIR():
         self.co2_ffi_index = None
         self.co2_afolu_index = None
         self.co2_index = None
+        self.ch4_index = None
+        self.n2o_index = None
+        self.bc_index = None
+        self.so2_index = None
+        self.oc_index = None
         #self.config_indices = []
         for ispec, specie in enumerate(self.species):  # specie is a SpeciesID
             self.species_index_mapping[specie.name] = ispec
@@ -353,6 +358,12 @@ class FAIR():
                 self.ch4_index = ispec
             if specie.category == Category.N2O:
                 self.n2o_index = ispec
+            if specie.category == Category.SULFUR:
+                self.so2_index = ispec
+            if specie.category == Category.BC:
+                self.bc_index = ispec
+            if specie.category == Category.OC:
+                self.oc_index = ispec
             if specie.category == Category.SOLAR:
                 self.solar_index = ispec
             if specie.category == Category.VOLCANIC:
@@ -634,7 +645,9 @@ class FAIR():
                     self.erfaci_scale_array,
                     self.erfaci_shape_sulfur_array,
                     self.erfaci_shape_bcoc_array,
-                    self.species_index_mapping,
+                    self.so2_index,
+                    self.bc_index,
+                    self.oc_index,
                     self.run_config.aci_method
                 )[0:1, :, :, self.aci_index, :]
 
