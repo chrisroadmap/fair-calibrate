@@ -301,7 +301,7 @@ class FAIR():
         self.lapsi_index = None
         self.h2o_stratospheric_index = None
         self.nox_aviation_index = None
-        self.aci_index = None
+        self.aci_index = []
         self.ozone_index = None
         self.contrails_index = None
         self.land_use_index = None
@@ -317,6 +317,7 @@ class FAIR():
                     self.ghg_emissions_indices.append(ispec)
                 elif specie.run_mode == RunMode.CONCENTRATION:
                     self.ghg_concentration_indices.append(ispec)
+            # I THINK THIS NEXT BIT WILL BE DELETED
             if specie.category in AggregatedCategory.AEROSOL:
                 self.ari_indices.append(ispec)
             if specie.category == Category.LAPSI:
@@ -611,17 +612,16 @@ class FAIR():
             )[0:1, :, :, self.ari_indices, :]
 
             # 6. aerosol indirect emissions to forcing
-            if self.aci_index is not None:
-                self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = calculate_erfaci_forcing(
-                    self.emissions_array[[i_timestep], ...],
-                    self.baseline_emissions_array,
-                    self.forcing_scaling_array,
-                    self.erfaci_scale_array,
-                    self.erfaci_shape_sulfur_array,
-                    self.erfaci_shape_bcoc_array,
-                    self.species_index_mapping,
-                    self.run_config.aci_method
-                )[0:1, :, :, self.aci_index, :]
+            self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = calculate_erfaci_forcing(
+                self.emissions_array[[i_timestep], ...],
+                self.baseline_emissions_array,
+                self.forcing_scaling_array,
+                self.erfaci_scale_array,
+                self.erfaci_shape_sulfur_array,
+                self.erfaci_shape_bcoc_array,
+                self.species_index_mapping,
+                self.run_config.aci_method
+            )[0:1, :, :, self.aci_index, :]
 
             # 7. ozone emissions and concentrations to forcing
             if self.ozone_index is not None:
