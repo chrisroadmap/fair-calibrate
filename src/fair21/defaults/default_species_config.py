@@ -359,23 +359,23 @@ default_species_config = {
     ),
     'sulfur': SpeciesConfig(
         species_id = SpeciesID('Sulfur', Category.SULFUR, run_mode=RunMode.EMISSIONS),
-        erfari_emissions_to_forcing = -0.0036167830509091486,
+        erfari_radiative_efficiency = -0.0036167830509091486,
         baseline_emissions = 2.44004843482201
     ),
     'bc': SpeciesConfig(
         species_id = SpeciesID('BC', Category.BC, run_mode=RunMode.EMISSIONS),
-        erfari_emissions_to_forcing = 0.0507748226795483,
+        erfari_radiative_efficiency = 0.0507748226795483,
         baseline_emissions = 2.09777075542297,
         lapsi_emissions_to_forcing = 0.011585926
     ),
     'oc': SpeciesConfig(
         species_id = SpeciesID('OC', Category.OC, run_mode=RunMode.EMISSIONS),
-        erfari_emissions_to_forcing = -0.006214374446217472,
+        erfari_radiative_efficiency = -0.006214374446217472,
         baseline_emissions = 15.4476681469614
     ),
     'nh3': SpeciesConfig(
         species_id = SpeciesID('NH3', Category.OTHER_AEROSOL, run_mode=RunMode.EMISSIONS),
-        erfari_emissions_to_forcing = -0.0020809236231100624,
+        erfari_radiative_efficiency = -0.0020809236231100624,
         baseline_emissions = 6.92769009144426
     ),
     'co': SpeciesConfig(
@@ -396,6 +396,9 @@ default_species_config = {
     'nox_aviation' : SpeciesConfig(
         species_id = SpeciesID('NOx Aviation', Category.NOX_AVIATION, run_mode=RunMode.EMISSIONS),
         contrails_emissions_to_forcing = 0.014664524317963392,   # W/m2/(MtNO2-aviation)
+    ),
+    'ari' : SpeciesConfig(
+        species_id = SpeciesID('Aerosol-Radiation Interactions', Category.AEROSOL_RADIATION_INTERACTIONS, run_mode=RunMode.FROM_OTHER_SPECIES)
     ),
     'aci': SpeciesConfig(
         species_id = SpeciesID('Aerosol-Cloud Interactions', Category.AEROSOL_CLOUD_INTERACTIONS, run_mode=RunMode.FROM_OTHER_SPECIES),

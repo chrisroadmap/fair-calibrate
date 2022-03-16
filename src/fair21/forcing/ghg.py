@@ -7,7 +7,10 @@ def calculate_ghg_forcing(
     pre_industrial_concentration,
     forcing_scaling,
     radiative_efficiency,
-    gas_index_mapping,
+    co2_index,
+    ch4_index,
+    n2o_index,
+    minor_ghg_indices,
     a1 = -2.4785e-07,
     b1 = 0.00075906,
     c1 = -0.0021492,
@@ -38,9 +41,14 @@ def calculate_ghg_forcing(
         effective radiative forcing and forcing uncertainty).
     radiative_efficiency : ndarray
         radiative efficiency to use for linear-forcing gases, in W m-2 ppb-1
-    gas_index_mapping : dict
-        provides a mapping of which gas corresponds to which array index along
-        the SPECIES_AXIS.
+    co2_index : int
+        index along SPECIES_AXIS relating to CO2.
+    ch4_index : int
+        index along SPECIES_AXIS relating to CH4.
+    n2o_index : int
+        index along SPECIES AXIS relating to N2O.
+    minor_ghg_indices : list of int
+        indices of other GHGs that are not CO2, CH4 or N2O.
     a1 : float, default=-2.4785e-07
         fitting parameter (see Meinshausen et al. 2020)
     b1 : float, default=0.00075906
@@ -89,13 +97,12 @@ def calculate_ghg_forcing(
     # extracting indices upfront means we're not always searching through array and makes things more readable.
     # expanding the co2_pi array to the same shape as co2 allows efficient conditional indexing
 
-
-    co2 = concentration[:, :, :, [gas_index_mapping["CO2"]], ...]
-    co2_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["CO2"]], ...] * np.ones_like(co2)
-    ch4 = concentration[:, :, :, [gas_index_mapping["CH4"]], ...]
-    ch4_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["CH4"]], ...]
-    n2o = concentration[:, :, :, [gas_index_mapping["N2O"]], ...]
-    n2o_pi = pre_industrial_concentration[:, :, :, [gas_index_mapping["N2O"]], ...]
+    co2 = concentration[:, :, :, [co2_index], ...]
+    co2_pi = pre_industrial_concentration[:, :, :, [co2_index], ...] * np.ones_like(co2)
+    ch4 = concentration[:, :, :, [ch4_index], ...]
+    ch4_pi = pre_industrial_concentration[:, :, :, [ch4_index], ...]
+    n2o = concentration[:, :, :, [n2o_index], ...]
+    n2o_pi = pre_industrial_concentration[:, :, :, [n2o_index], ...]
 
     # CO2
     ca_max = co2_pi - b1/(2*a1)
@@ -107,28 +114,25 @@ def calculate_ghg_forcing(
     alpha_p[where_low] = d1
     alpha_p[where_high] = d1 - b1**2/(4*a1)
     alpha_n2o = c1*np.sqrt(n2o)
-    erf_out[:, :, :, [gas_index_mapping["CO2"]], :] = (alpha_p + alpha_n2o) * np.log(co2/co2_pi) * (forcing_scaling[:, :, :, [gas_index_mapping["CO2"]], :])
+    erf_out[:, :, :, [co2_index], :] = (alpha_p + alpha_n2o) * np.log(co2/co2_pi) * (forcing_scaling[:, :, :, [co2_index], :])
 
     # CH4
-    erf_out[:, :, :, [gas_index_mapping["CH4"]], :] = (
+    erf_out[:, :, :, [ch4_index], :] = (
         (a3*np.sqrt(ch4) + b3*np.sqrt(n2o) + d3) *
         (np.sqrt(ch4) - np.sqrt(ch4_pi))
-    )  * (forcing_scaling[:, :, :, [gas_index_mapping["CH4"]], :])
+    )  * (forcing_scaling[:, :, :, [ch4_index], :])
 
     # N2O
-    erf_out[:, :, :, [gas_index_mapping["N2O"]], :] = (
+    erf_out[:, :, :, [n2o_index], :] = (
         (a2*np.sqrt(co2) + b2*np.sqrt(n2o) + c2*np.sqrt(ch4) + d2) *
         (np.sqrt(n2o) - np.sqrt(n2o_pi))
-    )  * (forcing_scaling[:, :, :, [gas_index_mapping["N2O"]], :])
+    )  * (forcing_scaling[:, :, :, [n2o_index], :])
 
     # Then, linear forcing for other gases
-    minor_gas_index = list(range(concentration.shape[SPECIES_AXIS]))
-    for major_gas in ['CO2', 'CH4', 'N2O']:
-        minor_gas_index.remove(gas_index_mapping[major_gas])
-    if len(minor_gas_index) > 0:
-        erf_out[:, :, :, minor_gas_index, :] = (
-            (concentration[:, :, :, minor_gas_index, :] - pre_industrial_concentration[:, :, :, minor_gas_index, :])
-            * radiative_efficiency[:, :, :, minor_gas_index, :] * 0.001
-        ) * (forcing_scaling[:, :, :, minor_gas_index, :])
+    if len(minor_ghg_indices) > 0:  # TODO: this if might not be required
+        erf_out[:, :, :, minor_ghg_indices, :] = (
+            (concentration[:, :, :, minor_ghg_indices, :] - pre_industrial_concentration[:, :, :, minor_ghg_indices, :])
+            * radiative_efficiency[:, :, :, minor_ghg_indices, :] * 0.001
+        ) * (forcing_scaling[:, :, :, minor_ghg_indices, :])
 
     return erf_out

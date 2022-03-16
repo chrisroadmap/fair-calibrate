@@ -19,6 +19,7 @@ class Category(Enum):
     SLCF_OZONE_PRECURSOR = auto()
     NOX_AVIATION = auto()
     OZONE = auto()
+    AEROSOL_RADIATION_INTERACTIONS = auto()
     AEROSOL_CLOUD_INTERACTIONS = auto()
     CONTRAILS = auto()
     LAPSI = auto()
@@ -33,9 +34,11 @@ class AggregatedCategory():
     """Groups of Category that share common properties."""
     CO2_SOURCE = [Category.CO2_FFI, Category.CO2_AFOLU]
     GREENHOUSE_GAS = [Category.CO2, Category.CH4, Category.N2O, Category.CFC_11, Category.OTHER_HALOGEN, Category.F_GAS]
+    MINOR_GREENHOUSE_GAS = [Category.CFC_11, Category.OTHER_HALOGEN, Category.F_GAS]
     HALOGEN = [Category.CFC_11, Category.OTHER_HALOGEN]
     AEROSOL = [Category.SULFUR, Category.BC, Category.OC, Category.OTHER_AEROSOL]
     OZONE_PRECURSOR = [Category.CH4, Category.N2O, Category.SLCF_OZONE_PRECURSOR] + HALOGEN
+    SLCF = AEROSOL + [Category.SLCF_OZONE_PRECURSOR]
     NO_DUPLICATES_ALLOWED = [
         Category.CO2_FFI,
         Category.CO2_AFOLU,
@@ -48,6 +51,7 @@ class AggregatedCategory():
         Category.OC,
         Category.NOX_AVIATION,
         Category.OZONE,
+        Category.AEROSOL_RADIATION_INTERACTIONS,
         Category.AEROSOL_CLOUD_INTERACTIONS,
         Category.CONTRAILS,
         Category.LAPSI,
@@ -74,13 +78,14 @@ valid_run_modes = {
     Category.CFC_11: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
     Category.OTHER_HALOGEN: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
     Category.F_GAS: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
-    Category.SULFUR: (RunMode.EMISSIONS, RunMode.FORCING),
-    Category.BC: (RunMode.EMISSIONS, RunMode.FORCING),
-    Category.OC: (RunMode.EMISSIONS, RunMode.FORCING),
-    Category.OTHER_AEROSOL: (RunMode.EMISSIONS, RunMode.FORCING),
-    Category.SLCF_OZONE_PRECURSOR: (RunMode.EMISSIONS, RunMode.FORCING),
+    Category.SULFUR: (RunMode.EMISSIONS,),
+    Category.BC: (RunMode.EMISSIONS,),
+    Category.OC: (RunMode.EMISSIONS,),
+    Category.OTHER_AEROSOL: (RunMode.EMISSIONS,),
+    Category.SLCF_OZONE_PRECURSOR: (RunMode.EMISSIONS,),
     Category.NOX_AVIATION: (RunMode.EMISSIONS,),
     Category.OZONE: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
+    Category.AEROSOL_RADIATION_INTERACTIONS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.AEROSOL_CLOUD_INTERACTIONS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.CONTRAILS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.LAPSI: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
@@ -121,6 +126,7 @@ class SpeciesID():
             elif self.category in [
                 Category.CO2,
                 Category.OZONE,
+                Category.AEROSOL_RADIATION_INTERACTIONS,
                 Category.AEROSOL_CLOUD_INTERACTIONS,
                 Category.CONTRAILS,
                 Category.H2O_STRATOSPHERIC,

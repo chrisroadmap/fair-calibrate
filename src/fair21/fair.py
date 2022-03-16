@@ -293,15 +293,18 @@ class FAIR():
         # a class level attribute "species".
         self.scenarios_index_mapping = {}
         self.species_index_mapping = {}
+        self.category_indices = []
         self.configs_index_mapping = {}
         self.ghg_indices = []
+        self.slcf_indices = []
         self.ghg_emissions_indices = []
         self.ghg_concentration_indices = []
-        self.ari_indices = []
+        self.minor_ghg_indices = []
+        self.ari_index = None
         self.lapsi_index = None
         self.h2o_stratospheric_index = None
         self.nox_aviation_index = None
-        self.aci_index = []
+        self.aci_index = None
         self.ozone_index = None
         self.contrails_index = None
         self.land_use_index = None
@@ -309,17 +312,23 @@ class FAIR():
         self.co2_afolu_index = None
         self.co2_index = None
         #self.config_indices = []
-        for ispec, specie in enumerate(self.species):
+        for ispec, specie in enumerate(self.species):  # specie is a SpeciesID
             self.species_index_mapping[specie.name] = ispec
+            self.category_indices.append(specie.category)
+            # All of this below can now be deleted.
+
             if specie.category in AggregatedCategory.GREENHOUSE_GAS:
                 self.ghg_indices.append(ispec)
                 if specie.run_mode in (RunMode.EMISSIONS, RunMode.FROM_OTHER_SPECIES):
                     self.ghg_emissions_indices.append(ispec)
                 elif specie.run_mode == RunMode.CONCENTRATION:
                     self.ghg_concentration_indices.append(ispec)
-            # I THINK THIS NEXT BIT WILL BE DELETED
-            if specie.category in AggregatedCategory.AEROSOL:
-                self.ari_indices.append(ispec)
+            if specie.category in AggregatedCategory.SLCF:
+                self.slcf_indices.append(ispec)
+            if specie.category in AggregatedCategory.MINOR_GREENHOUSE_GAS:
+                self.minor_ghg_indices.append(ispec)
+            if specie.category == Category.AEROSOL_RADIATION_INTERACTIONS:
+                self.ari_index = ispec
             if specie.category == Category.LAPSI:
                 self.lapsi_index = ispec
             if specie.category == Category.H2O_STRATOSPHERIC:
@@ -353,9 +362,11 @@ class FAIR():
         for iconf, config in enumerate(self.configs):
             self.configs_index_mapping[config.name] = iconf
 
+
+    # TODO: incomplete
     def _fill_concentration(self):
         """After the emissions to concentrations step we want to put the concs into each GreenhouseGas"""
-        for ispec, species_name in enumerate(self.species_index_mapping):
+        for ispec, specie in enumerate(self.species_index_mapping):
             if self.species[ispec].category in AggregatedCategory.GREENHOUSE_GAS: # and self.species[ispec].run_mode == RunMode.EMISSIONS: # don't think necessary as should just be replacing with same thing. We want the alpha for CH4 though.
                 for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
                     scen_spec = self.scenarios[iscen].list_of_species[ispec]
@@ -411,7 +422,7 @@ class FAIR():
         self.fractional_release_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.br_atoms_array = np.ones((1, 1, 1, n_species, 1)) * np.nan
         self.cl_atoms_array = np.ones((1, 1, 1, n_species, 1)) * np.nan
-        self.erfari_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.erfari_radiative_efficiency_array = np.zeros((1, 1, n_configs, n_species, 1)) * np.nan
         self.erfaci_scale_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
         self.erfaci_shape_sulfur_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
         self.erfaci_shape_bcoc_array = np.ones((1, 1, n_configs, 1, 1)) * np.inf
@@ -426,8 +437,8 @@ class FAIR():
         self.temperature = np.ones((n_timesteps, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
         self.toa_imbalance = np.ones((n_timesteps, n_scenarios, n_configs, 1, 1)) * np.nan
 
-        for ispec, species_name in enumerate(self.species_index_mapping):
-            for iconf, config_name in enumerate(self.configs_index_mapping):
+        for ispec, specie in enumerate(self.species_index_mapping):
+            for iconf, config in enumerate(self.configs_index_mapping):
                 conf_spec = self.configs[iconf].species_configs[ispec]
                 self.forcing_scaling_array[:, 0, iconf, ispec, 0] = (1+conf_spec.tropospheric_adjustment) * conf_spec.scale
                 self.efficacy_array[:, 0, iconf, ispec, 0] = conf_spec.efficacy
@@ -457,8 +468,7 @@ class FAIR():
                     self.fractional_release_array[:, :, iconf, ispec, 0] = conf_spec.fractional_release
                     self.br_atoms_array[:, :, :, ispec, 0] = conf_spec.br_atoms
                     self.cl_atoms_array[:, :, :, ispec, 0] = conf_spec.cl_atoms
-                if self.species[ispec].category in AggregatedCategory.AEROSOL:
-                    self.erfari_emissions_to_forcing_array[:, 0, iconf, ispec, :] = conf_spec.erfari_emissions_to_forcing
+                self.erfari_radiative_efficiency_array[:, 0, iconf, ispec, :] = conf_spec.erfari_radiative_efficiency
                 if self.species[ispec].category == Category.AEROSOL_CLOUD_INTERACTIONS:
                     self.erfaci_scale_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['scale']
                     self.erfaci_shape_sulfur_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['Sulfur']
@@ -599,29 +609,34 @@ class FAIR():
                 self.baseline_concentration_array,
                 self.forcing_scaling_array,
                 self.radiative_efficiency_array,
-                self.species_index_mapping
+                self.co2_index, self.ch4_index, self.n2o_index, self.minor_ghg_indices
             )[0:1, :, :, self.ghg_indices, :]
 
             # 5. aerosol direct emissions to forcing
-            self.forcing_array[i_timestep:i_timestep+1, :, :, self.ari_indices, :] = calculate_erfari_forcing(
-                self.emissions_array[[i_timestep], ...],
-                self.baseline_emissions_array,
-                self.forcing_scaling_array,
-                self.erfari_emissions_to_forcing_array,
-                self.species_index_mapping
-            )[0:1, :, :, self.ari_indices, :]
+            if self.ari_index is not None:
+                self.forcing_array[i_timestep:i_timestep+1, :, :, self.ari_index, :] = calculate_erfari_forcing(
+                    self.emissions_array[[i_timestep], ...],
+                    self.concentration_array[[i_timestep], ...],
+                    self.baseline_emissions_array,
+                    self.baseline_concentration_array,
+                    self.forcing_scaling_array,
+                    self.erfari_radiative_efficiency_array,
+                    self.slcf_indices,
+                    self.ghg_indices,
+                )
 
             # 6. aerosol indirect emissions to forcing
-            self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = calculate_erfaci_forcing(
-                self.emissions_array[[i_timestep], ...],
-                self.baseline_emissions_array,
-                self.forcing_scaling_array,
-                self.erfaci_scale_array,
-                self.erfaci_shape_sulfur_array,
-                self.erfaci_shape_bcoc_array,
-                self.species_index_mapping,
-                self.run_config.aci_method
-            )[0:1, :, :, self.aci_index, :]
+            if self.aci_index is not None:
+                self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = calculate_erfaci_forcing(
+                    self.emissions_array[[i_timestep], ...],
+                    self.baseline_emissions_array,
+                    self.forcing_scaling_array,
+                    self.erfaci_scale_array,
+                    self.erfaci_shape_sulfur_array,
+                    self.erfaci_shape_bcoc_array,
+                    self.species_index_mapping,
+                    self.run_config.aci_method
+                )[0:1, :, :, self.aci_index, :]
 
             # 7. ozone emissions and concentrations to forcing
             if self.ozone_index is not None:

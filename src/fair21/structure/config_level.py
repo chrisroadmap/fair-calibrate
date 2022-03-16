@@ -137,7 +137,7 @@ class SpeciesConfig():
         baseline (often but not always pre-industrial) concentration of
         greenhouse gas used for radiative forcing and atmospheric concentration
         baselines
-    erfari_emissions_to_forcing : float, optional
+    erfari_radiative_efficiency : float, optional
         coefficient of direct aerosol forcing with emissions of a species.
     contrails_emissions_to_forcing : float, optional
         coefficient of contrail forcing with emissions of a species.
@@ -188,7 +188,7 @@ class SpeciesConfig():
     iirf_temperature: float=0
     natural_emissions_adjustment: float=0
     baseline_concentration: float=0
-    erfari_emissions_to_forcing: float=0
+    erfari_radiative_efficiency: float=0
     contrails_emissions_to_forcing: float=0
     lapsi_emissions_to_forcing: float=0
     h2o_stratospheric_factor: float=0
