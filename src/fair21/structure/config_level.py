@@ -62,9 +62,10 @@ class ClimateResponse():
         Estimation of Stochastic Energy Balance Model Parameters, Journal of
         Climate, 33(18), 7909-7926.
     """
-    ocean_heat_capacity: typing.Union[Iterable, float]
-    ocean_heat_transfer: typing.Union[Iterable, float]
-    deep_ocean_efficacy: float=1
+    ocean_heat_capacity: Iterable=field(default_factory=lambda: [1.31, 2, 1])
+    ocean_heat_transfer: Iterable=field(default_factory=lambda: [5, 20, 100])
+    deep_ocean_efficacy: float=1.2
+    forcing_4co2: float=7.86
     stochastic_run: bool=False
     sigma_xi: float=0.5
     sigma_eta: float=0.5
@@ -205,6 +206,13 @@ class SpeciesConfig():
     forcing_temperature_feedback: float=0
     run_config: RunConfig=RunConfig()
 
+    def calculate_iirf0(self):
+        self.iirf_0 = (
+            np.sum(np.asarray(self.lifetime) *
+            (1 - np.exp(-self.run_config.iirf_horizon / np.asarray(self.lifetime)))
+            * np.asarray(self.partition_fraction))
+        )
+
     def __post_init__(self):
         # validate input - the whole partition_fraction and lifetime thing
         # would be nice to validate if not CO2, CH4 or N2O that radiative_efficiency must be defined.
@@ -237,11 +245,7 @@ class SpeciesConfig():
             )
             self.burden_per_emission = 1 / (mass_atmosphere / 1e18 * self.molecular_weight / molecular_weight_air)
             if self.iirf_0 is None:
-                self.iirf_0 = (
-                    np.sum(np.asarray(self.lifetime) *
-                    (1 - np.exp(-self.run_config.iirf_horizon / np.asarray(self.lifetime)))
-                    * np.asarray(self.partition_fraction))
-                )
+                self.iirf_0 = self.calculate_iirf0()
 
         if self.species_id.category in AggregatedCategory.HALOGEN:
             if not isinstance(self.ozone_radiative_efficiency, Number):

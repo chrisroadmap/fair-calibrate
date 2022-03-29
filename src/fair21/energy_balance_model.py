@@ -86,9 +86,9 @@ class EnergyBalanceModel:
             Climate, 33(18), 7909-7926.
         """
         self.ocean_heat_capacity = kwargs.get('ocean_heat_capacity', np.array([5, 20, 100]))
-        self.ocean_heat_transfer = kwargs.get('ocean_heat_transfer', np.array([1, 2, 1]))
-        self.deep_ocean_efficacy = kwargs.get('deep_ocean_efficacy', 1)
-        self.forcing_4co2 = kwargs.get('forcing_4co2', 8)
+        self.ocean_heat_transfer = kwargs.get('ocean_heat_transfer', np.array([1.31, 2, 1]))
+        self.deep_ocean_efficacy = kwargs.get('deep_ocean_efficacy', 1.2)
+        self.forcing_4co2 = kwargs.get('forcing_4co2', 7.86)
         self.stochastic_run = kwargs.get('stochastic_run', False)
         self.sigma_eta = kwargs.get('sigma_eta', 0.5)
         self.sigma_xi = kwargs.get('sigma_xi', 0.5)

@@ -9,7 +9,7 @@ here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 # using climate-assessment as a template here
-REQUIREMENTS_INSTALL = ["numpy", "pandas", "scipy"]
+REQUIREMENTS_INSTALL = ["numpy", "pandas", "scipy", "tqdm"]
 REQUIREMENTS_NOTEBOOKS = ["notebook", "ipywidgets", "climateforcing"]
 REQUIREMENTS_TESTS = ["codecov", "pytest-cov", "pytest-console-scripts", "pytest>=4.0", "matplotlib"]
 REQUIREMENTS_DOCS = ["sphinx>=1.4", "sphinx_rtd_theme"]

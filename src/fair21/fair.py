@@ -3,6 +3,7 @@ import typing
 import warnings
 
 import numpy as np
+import tqdm
 
 from .constants import (TIME_AXIS, SPECIES_AXIS, GAS_BOX_AXIS)
 from .energy_balance_model import EnergyBalanceModel
@@ -246,7 +247,7 @@ class FAIR():
         scenarios: typing.List[Scenario]=None,
         configs: typing.List[Config]=None,
         time: np.ndarray=None,
-        run_config: RunConfig=RunConfig()
+        run_config: RunConfig=RunConfig(),
     ):
         if isinstance(scenarios, list):
             self.n_timesteps = _verify_scenario_consistency(scenarios)
@@ -533,7 +534,7 @@ class FAIR():
                 f"{self.n_timesteps}."
             )
 
-    def run(self):
+    def run(self, progress=True):
         self._pre_run_checks()
         self._assign_indices()
         self.time_deltas = _make_time_deltas(self.time)
@@ -556,7 +557,7 @@ class FAIR():
         eb_matrix_d, forcing_vector_d, stochastic_d = _make_ebm(self.configs, n_timesteps)
 
         # Main loop
-        for i_timestep in range(n_timesteps):
+        for i_timestep in tqdm.tqdm(range(n_timesteps), disable=1-progress):
 
             # 1. calculate scaling of atmospheric lifetimes (alpha)
             # concentration-driven GHGs need cumulative emissions updating each timestep
