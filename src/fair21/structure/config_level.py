@@ -141,7 +141,7 @@ class SpeciesConfig():
         coefficient of direct aerosol forcing with emissions of a species.
     contrails_radiative_efficiency : float, optional
         coefficient of contrail forcing with emissions of a species.
-    lapsi_emissions_to_forcing : float, optional
+    lapsi_radiative_efficiency : float, optional
         coefficient of light absorbing particles on snow with emissions of
         a species.
     h2o_stratospheric_factor : float, optional
@@ -190,7 +190,7 @@ class SpeciesConfig():
     baseline_concentration: float=0
     erfari_radiative_efficiency: float=0
     contrails_radiative_efficiency: float=0
-    lapsi_emissions_to_forcing: float=0
+    lapsi_radiative_efficiency: float=0
     h2o_stratospheric_factor: float=0
     land_use_cumulative_emissions_to_forcing: float=0
     baseline_emissions: float=0

@@ -366,7 +366,7 @@ default_species_config = {
         species_id = SpeciesID('BC', Category.BC, run_mode=RunMode.EMISSIONS),
         erfari_radiative_efficiency = 0.0507748226795483,
         baseline_emissions = 2.09777075542297,
-        lapsi_emissions_to_forcing = 0.011585926
+        lapsi_radiative_efficiency = 0.011585926
     ),
     'oc': SpeciesConfig(
         species_id = SpeciesID('OC', Category.OC, run_mode=RunMode.EMISSIONS),

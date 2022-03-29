@@ -443,7 +443,7 @@ class FAIR():
         self.erfaci_shape_bcoc_array = np.ones((1, 1, n_configs, 1, 1)) * np.inf
         self.ozone_radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.contrails_radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
-        self.lapsi_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.lapsi_radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.stratospheric_h2o_factor_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.land_use_cumulative_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: make a more general temperature-forcing feedback for all species
@@ -459,7 +459,7 @@ class FAIR():
                 self.efficacy_array[:, 0, iconf, ispec, 0] = conf_spec.efficacy
                 self.baseline_emissions_array[:, :, iconf, ispec, :] = conf_spec.baseline_emissions
                 self.forcing_temperature_feedback_array[:, :, iconf, ispec, :] = conf_spec.forcing_temperature_feedback
-                self.lapsi_emissions_to_forcing_array[:, :, iconf, ispec, :] = conf_spec.lapsi_emissions_to_forcing
+                self.lapsi_radiative_efficiency_array[:, :, iconf, ispec, :] = conf_spec.lapsi_radiative_efficiency
                 self.stratospheric_h2o_factor_array[0, 0, iconf, ispec, 0] = conf_spec.h2o_stratospheric_factor
                 self.land_use_cumulative_emissions_to_forcing_array[0, 0, iconf, ispec, 0] = conf_spec.land_use_cumulative_emissions_to_forcing
                 if self.species[ispec].category in AggregatedCategory.GREENHOUSE_GAS:
@@ -692,7 +692,8 @@ class FAIR():
                     self.emissions_array[[i_timestep], ...],
                     self.baseline_emissions_array,
                     self.forcing_scaling_array,
-                    self.lapsi_emissions_to_forcing_array,
+                    self.lapsi_radiative_efficiency_array,
+                    self.slcf_indices,
                 )
 
             # 10. CH4 forcing to stratospheric water vapour forcing
@@ -700,8 +701,9 @@ class FAIR():
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.h2o_stratospheric_index], :] = calculate_linear_forcing(
                     self.forcing_array[[i_timestep], ...],
                     self.forcing_array[0:1, ...],
-                    self.forcing_scaling_array[:, :, :, [self.h2o_stratospheric_index], :],
+                    self.forcing_scaling_array,
                     self.stratospheric_h2o_factor_array,
+                    [self.ch4_index],
                 )
 
             # 11. CO2 cumulative emissions to land use change forcing
@@ -710,8 +712,9 @@ class FAIR():
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.land_use_index], :] = calculate_linear_forcing(
                     self.cumulative_emissions_array[[i_timestep], ...],
                     self.cumulative_emissions_array[0:1, ...],
-                    self.forcing_scaling_array[:, :, :, [self.land_use_index], :],
+                    self.forcing_scaling_array,
                     self.land_use_cumulative_emissions_to_forcing_array,
+                    [self.co2_afolu_index]
                 )
 
             # 12. In future we should allow volcanic forcing to have a temperature dependence
