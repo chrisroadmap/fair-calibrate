@@ -139,7 +139,7 @@ class SpeciesConfig():
         baselines
     erfari_radiative_efficiency : float, optional
         coefficient of direct aerosol forcing with emissions of a species.
-    contrails_emissions_to_forcing : float, optional
+    contrails_radiative_efficiency : float, optional
         coefficient of contrail forcing with emissions of a species.
     lapsi_emissions_to_forcing : float, optional
         coefficient of light absorbing particles on snow with emissions of
@@ -189,7 +189,7 @@ class SpeciesConfig():
     natural_emissions_adjustment: float=0
     baseline_concentration: float=0
     erfari_radiative_efficiency: float=0
-    contrails_emissions_to_forcing: float=0
+    contrails_radiative_efficiency: float=0
     lapsi_emissions_to_forcing: float=0
     h2o_stratospheric_factor: float=0
     land_use_cumulative_emissions_to_forcing: float=0
@@ -258,8 +258,8 @@ class SpeciesConfig():
                 raise TypeError("For aerosol-cloud interactions, you must supply a dict of parameters using the aci_params keyword")
 
         if self.species_id.category == Category.NOX_AVIATION:
-            if not isinstance(self.contrails_emissions_to_forcing, Number):
-                raise ValueError("contrails_emissions_to_forcing should be a number")
+            if not isinstance(self.contrails_radiative_efficiency, Number):
+                raise ValueError("contrails_radiative_efficiency should be a number")
 
         if not isinstance(self.forcing_temperature_feedback, Number):
             raise ValueError("forcing_temperature_feedback should be a number")

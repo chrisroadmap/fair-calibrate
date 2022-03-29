@@ -442,7 +442,7 @@ class FAIR():
         self.erfaci_shape_sulfur_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
         self.erfaci_shape_bcoc_array = np.ones((1, 1, n_configs, 1, 1)) * np.inf
         self.ozone_radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
-        self.contrails_emissions_to_forcing_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
+        self.contrails_radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.lapsi_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.stratospheric_h2o_factor_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.land_use_cumulative_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
@@ -490,8 +490,7 @@ class FAIR():
                     if aci_method==ACIMethod.SMITH2018:
                         self.erfaci_shape_bcoc_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['BC+OC']
                 self.ozone_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.ozone_radiative_efficiency
-                if self.species[ispec].category == Category.NOX_AVIATION:
-                    self.contrails_emissions_to_forcing_array[0, 0, iconf, 0, 0] = conf_spec.contrails_emissions_to_forcing
+                self.contrails_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.contrails_radiative_efficiency
             for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
                 scen_spec = self.scenarios[iscen].list_of_species[ispec]
                 if self.species[ispec].run_mode == RunMode.EMISSIONS:
@@ -677,11 +676,12 @@ class FAIR():
 
             # 8. contrail emissions from aviation NOx to forcing
             if self.contrails_index is not None:
-                self.forcing_array[i_timestep, :, :, [self.contrails_index], :] = calculate_linear_forcing(
-                    self.emissions_array[i_timestep, :, :, [self.nox_aviation_index], :],
-                    self.baseline_emissions_array[0, :, :, [self.nox_aviation_index], :],
-                    self.forcing_scaling_array[0, :, :, [self.nox_aviation_index], :],
-                    self.contrails_emissions_to_forcing_array[:, :, :, 0, :],
+                self.forcing_array[i_timestep:i_timestep+1, :, :, [self.contrails_index], :] = calculate_linear_forcing(
+                    self.emissions_array[[i_timestep], ...],
+                    self.baseline_emissions_array,
+                    self.forcing_scaling_array,
+                    self.contrails_radiative_efficiency_array,
+                    [self.nox_aviation_index]
                 )
 
             # 9. BC emissions to LAPSI forcing

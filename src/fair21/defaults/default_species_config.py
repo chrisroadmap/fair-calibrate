@@ -395,7 +395,7 @@ default_species_config = {
     ),
     'nox_aviation' : SpeciesConfig(
         species_id = SpeciesID('NOx Aviation', Category.NOX_AVIATION, run_mode=RunMode.EMISSIONS),
-        contrails_emissions_to_forcing = 0.014664524317963392,   # W/m2/(MtNO2-aviation)
+        contrails_radiative_efficiency = 0.014664524317963392,   # W/m2/(MtNO2-aviation)
     ),
     'ari' : SpeciesConfig(
         species_id = SpeciesID('Aerosol-Radiation Interactions', Category.AEROSOL_RADIATION_INTERACTIONS, run_mode=RunMode.FROM_OTHER_SPECIES)
