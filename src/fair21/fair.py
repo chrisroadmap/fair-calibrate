@@ -288,6 +288,13 @@ class FAIR():
     def remove_scenario(self, scenario: Scenario):
         self.scenarios.remove(scenario)
 
+    def prescribe_temperature(self, temperature: np.ndarray):
+        # TODO: sense checking of arrays
+        n_scenarios = len(self.scenarios)
+        n_configs = len(self.configs)
+        self.temperature = np.ones((1, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes)) * temperature[:, None, None, None, None]
+        self.run_config.temperature_prescribed = True
+
     def _assign_indices(self):
         # Now that we know that scenarios and configs are consistent, we can
         # allocate array indices to them for running the model. We also define
@@ -450,7 +457,8 @@ class FAIR():
         # TODO: make a more general temperature-forcing feedback for all species
         self.forcing_temperature_feedback_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: start from non-zero temperature
-        self.temperature = np.ones((n_timesteps, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
+        if not self.run_config.temperature_prescribed:
+            self.temperature = np.ones((n_timesteps, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
         self.toa_imbalance = np.ones((n_timesteps, n_scenarios, n_configs, 1, 1)) * np.nan
 
         for ispec, specie in enumerate(self.species_index_mapping):
@@ -534,7 +542,7 @@ class FAIR():
                 f"{self.n_timesteps}."
             )
 
-    def run(self, progress=True):
+    def run(self, progress=False):
         self._pre_run_checks()
         self._assign_indices()
         self.time_deltas = _make_time_deltas(self.time)
@@ -550,6 +558,8 @@ class FAIR():
         # move to initialise_arrays?
         gas_boxes = np.zeros((1, n_scenarios, n_configs, n_species, self.run_config.n_gas_boxes))
         temperature_boxes = np.zeros((1, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes+1))
+        if self.run_config.temperature_prescribed:
+            temperature_boxes = self.temperature[0:1, :, :, 0:1, 0:1] * np.ones_like(temperature_boxes)
         alpha_lifetime_array = np.ones((1, n_scenarios, n_configs, n_species, 1))
 
         # initialise the energy balance model and get critical vectors
@@ -579,6 +589,7 @@ class FAIR():
                 self.run_config.iirf_max
             )[0:1, :, :, self.ghg_indices, :]
             self.alpha_lifetime_array[[i_timestep], ...] = alpha_lifetime_array
+            print(temperature_boxes)
 
             # 2. GHG emissions to concentrations
             ae_timestep = i_timestep-1 if i_timestep>0 else 0
@@ -731,24 +742,28 @@ class FAIR():
             # 14. run the energy balance model
             # TODO: skip if temperature prescribed
             # TODO: remove loop
-            for iscen, scenario in enumerate(self.scenarios):
-                for iconf, config in enumerate(self.configs):
-                    temperature_boxes[0, iscen, iconf, 0, :] = (
-                        eb_matrix_d[iconf] @ temperature_boxes[0, iscen, iconf, 0, :] +
-                        forcing_vector_d[iconf] * efficacy_adjusted_forcing[0, iscen, iconf, 0, 0] +
-                        stochastic_d[iconf][i_timestep, :]
-                    )
-                    self.temperature[i_timestep, iscen, iconf, :, :] = temperature_boxes[0, iscen, iconf, 0, 1:]
-                    self.stochastic_forcing[i_timestep, iscen, iconf] = temperature_boxes[0, iscen, iconf, 0, 0]
-                    self.toa_imbalance[i_timestep, iscen, iconf, :, :] = (
-                        self.forcing_sum_array[i_timestep, iscen, iconf, :, :] -
-                        config.climate_response.ocean_heat_transfer[0]*
-                        self.temperature[i_timestep, iscen, iconf, :, 0] +
-                        (1 - config.climate_response.deep_ocean_efficacy) * config.climate_response.ocean_heat_transfer[2]
-                        * (self.temperature[i_timestep, iscen, iconf, :, 1] -
-                         self.temperature[i_timestep, iscen, iconf, :, 2])
-                    )
+            if not self.run_config.temperature_prescribed:
+                for iscen, scenario in enumerate(self.scenarios):
+                    for iconf, config in enumerate(self.configs):
+                        temperature_boxes[0, iscen, iconf, 0, :] = (
+                            eb_matrix_d[iconf] @ temperature_boxes[0, iscen, iconf, 0, :] +
+                            forcing_vector_d[iconf] * efficacy_adjusted_forcing[0, iscen, iconf, 0, 0] +
+                            stochastic_d[iconf][i_timestep, :]
+                        )
+                        self.temperature[i_timestep, iscen, iconf, :, :] = temperature_boxes[0, iscen, iconf, 0, 1:]
+                        self.stochastic_forcing[i_timestep, iscen, iconf] = temperature_boxes[0, iscen, iconf, 0, 0]
+                        self.toa_imbalance[i_timestep, iscen, iconf, :, :] = (
+                            self.forcing_sum_array[i_timestep, iscen, iconf, :, :] -
+                            config.climate_response.ocean_heat_transfer[0]*
+                            self.temperature[i_timestep, iscen, iconf, :, 0] +
+                            (1 - config.climate_response.deep_ocean_efficacy) * config.climate_response.ocean_heat_transfer[2]
+                            * (self.temperature[i_timestep, iscen, iconf, :, 1] -
+                             self.temperature[i_timestep, iscen, iconf, :, 2])
+                        )
             # TODO: fill in OHC
+            else:
+                temperature_boxes[0, :, :, 0, :] = self.temperature[i_timestep:i_timestep+1, :, :, 0:1, 0:1] * np.ones_like(temperature_boxes)
+
         self._fill_concentration()
         self._fill_forcing()
         self._fill_temperature()
