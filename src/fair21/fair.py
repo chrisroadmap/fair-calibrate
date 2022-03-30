@@ -575,6 +575,8 @@ class FAIR():
                 self.cumulative_emissions_array[i_timestep-1, :, :, self.ghg_concentration_indices, :] +
                 self.emissions_array[i_timestep-1, :, :, self.ghg_concentration_indices, :]
             )
+            # TODO: a separate routine that can be accessed through RunMode
+            # to get methane lifetime alpha as a function of multiple species.
             # A quirk of numpy requires dropping the last dimension here.
             alpha_lifetime_array[0:1, :, :, self.ghg_indices] = calculate_alpha(
                 self.cumulative_emissions_array[[i_timestep], ...],
@@ -589,7 +591,6 @@ class FAIR():
                 self.run_config.iirf_max
             )[0:1, :, :, self.ghg_indices, :]
             self.alpha_lifetime_array[[i_timestep], ...] = alpha_lifetime_array
-            print(temperature_boxes)
 
             # 2. GHG emissions to concentrations
             ae_timestep = i_timestep-1 if i_timestep>0 else 0
@@ -762,7 +763,7 @@ class FAIR():
                         )
             # TODO: fill in OHC
             else:
-                temperature_boxes[0, :, :, 0, :] = self.temperature[i_timestep:i_timestep+1, :, :, 0:1, 0:1] * np.ones_like(temperature_boxes)
+                temperature_boxes[0:1, :, :, 0:1, :] = self.temperature[i_timestep:i_timestep+1, :, :, 0:1, 0:1]
 
         self._fill_concentration()
         self._fill_forcing()
