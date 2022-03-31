@@ -1,0 +1,2 @@
+include versioneer.py
+include src/fair21/_version.py
