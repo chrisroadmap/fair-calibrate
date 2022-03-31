@@ -128,18 +128,11 @@ def _map_species_scenario_config(scenarios, configs, run_config):
             co2_afolu_supplied = True
         if scenarios[0].list_of_species[ispec].species_id.category == Category.CO2_FFI and scenarios[0].list_of_species[ispec].species_id.run_mode == RunMode.EMISSIONS:
             co2_ffi_supplied = True
+
     # check config/scenario species consistency
-    # TODO: this error message is quite helpful, but could be further improved by
-    # pointing out exactly where they differ.
     if species_included_first_config != species_included_first_scenario:
-        # TODO: make better formatted error message
         raise SpeciesMismatchError(species_included_first_scenario, species_included_first_config)
-#            f"The list of Species provided to Scenario.list_of_species is: (name, category, run_mode)\n"
-#            f"{[(species_id.name, species_id.category.name, species_id.run_mode.name) for species_id in species_included_first_scenario]}. "
-#            f"\n\n"
-#            f"This differs from that provided to Config.species_configs: (name, category, run_mode)\n"
-#            f"{[(species_id.name, species_id.category.name, species_id.run_mode.name) for species_id in species_included_first_config]}."
-#        )
+
     # check aerosol species provided are consistent with desired indirect forcing mode
     if aerosol_species_included != required_aerosol_species[run_config.aci_method] and aci_desired:
         raise IncompatibleConfigError(
@@ -147,37 +140,43 @@ def _map_species_scenario_config(scenarios, configs, run_config):
             f"all of {[species_id.name for species_id in required_aerosol_species[run_config.aci_method]]} "
             f"must be provided in the scenario."
         )
+
     # by the time we get here, we should have checked that scearios and configs species line up
     # and configs where ACI is defined
     # so we just need to check that each config has the correct aci_params
     if aci_desired:
         for config in configs:
             _check_aci_params(config.species_configs[aci_index].aci_params, run_config.aci_method)
+
     # if contrail forcing from emissions is desired, we need aviation NOx emissions
     if contrails_from_emissions_desired and not nox_aviation_emissions_supplied:
         raise IncompatibleConfigError(
             f"For contrails forcing from emissions, aviation NOx emissions "
             f"must be supplied."
         )
+
     # if stratospheric water vapour desired, we need methane to exist in the scenario
     if h2o_stratospheric_desired and not ch4_supplied:
         raise IncompatibleConfigError(
             f"For stratospheric water vapour forcing, CH4 emissions, "
             f"concentrations, or forcing must be supplied."
         )
+
     # CO2 emissions from AFOLU and FFI need to be provided
     if co2_desired and not co2_ffi_supplied and not co2_afolu_supplied:
         raise IncompatibleConfigError(
             f"For CO2 emissions-driven, CO2 emissions from FFI and AFOLU must "
             f"both be supplied."
         )
+
     return species_included_first_config
 
 
 def _verify_config_consistency(configs):
-# TODO: check EBM configs are the same length as each other and agree with RunConfig()
+    # TODO: check EBM configs are the same length as each other and agree with RunConfig()
     _check_type_of_elements(configs, Config, name="configs")
     _check_duplicate_names(configs, 'Config')
+
     # we shouldn't need to do any further checking on the climate_response
     # as this is handled in the @dataclass constructor.
     n_species_first_config = len(configs[0].species_configs)
@@ -746,7 +745,8 @@ class FAIR():
                     [self.co2_afolu_index]
                 )
 
-            # 12. In future we should allow volcanic forcing to have a temperature dependence
+            # 12. In future we should allow volcanic forcing to have a temperature dependence.
+            #     Insert NERC funding here.
 
             # 13. sum up all of the forcing calculated previously
             self.forcing_sum_array[[i_timestep], ...] = np.nansum(

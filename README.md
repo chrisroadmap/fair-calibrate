@@ -1,11 +1,15 @@
 # fair2.1-calibrate
 FaIR version 2.1
 
-What has been done?
+What's new compared to v2.0 and v1.6:
 
-- Re-calibration of FaIR v2.0 to updated Cummins calibration and inclusion of ocean heat content
-- Adding back some of the emissions-driven relationships from FaIR v1.6
+- Re-calibration of FaIR v2.0 three-layer model to updated Cummins 4xCO2 relationships, including many more CMIP6 models as provided by Hege-Beate Fredriksen
+- inclusion of top of atmosphere energy imbalance and ocean heat content change as diagnostic outputs
+- following from above, an energy balance representation of the three-layer model, that can also be run in standalone mode
+- inclusion of stochastic temperatures and forcing, introduced from Cummins et al. (2020)
+- Adding back some of the emissions-driven relationships from FaIR v1.6 (land use change, ozone)
 - changing the interface to a object oriented design
+- an AR6-consistent constrained calibration (work in progress)
 
 ## installation
 
@@ -32,11 +36,28 @@ git pull
 # update environment
 conda activate fair2.1-calibrate
 conda env update -f environment.yml --prune
+
+# the last step is to install fair itself
+pip install -e .
 ```
 
 TODO: put all of this into a config/make file.
 
-### R scripts
+## examples
+
+Once `fair` is installed, the notebooks in the `examples` directory give some very incomplete tutorials on how to run the model.
+
+## CMIP6 and AR6 calibrations
+
+The other notebooks directory is `cmip6-ar6-calibrations` which first calibrates the model to CMIP6 and then provides a constrained probablistic distribution that is in line with the IPCC's Sixth Assessment Report, Working Group 1. There are also some model testing notebooks here (mostly related to efficiency and parallelisation).
+
+To reproduce:
+
+1. The `010_concatenate-hege-data-4xCO2.ipynb` notebook is run first.
+2. Then, `r_scripts/calibrate_cummins_3layer.r` is run.
+3. Finally, the remaining notebooks are run in numerical order.
+
+### the R scripts
 
 Open the R console and set the working directory to the `r_scripts` directory of your local repository.
 
@@ -45,12 +66,8 @@ source("setup.r")
 source("calibrate_cummins_3layer.r")
 ```
 
-## reproduction
+## acknowledgements and contributions
 
-1. The `010_concatenate-hege-data-4xCO2.ipynb` notebook is run first.
-2. Then, `r_scripts/calibrate_cummins_3layer.r` is run.
-3. Finally, the remaining notebooks are run in numerical order.
-
-## acknowledgements
-
-1. Hege-Beate Fredriksen for crunching the CMIP6 data from all of the models
+1. Nick Leach and Stuart Jenkins for the original FaIR v2.0, which hopefully isn't too mangled or complicated by this attempt.
+2. Hege-Beate Fredriksen for crunching the CMIP6 4xCO2 data from many more models
+3. Donald Cummins for the three-layer model tuning algorithm.
