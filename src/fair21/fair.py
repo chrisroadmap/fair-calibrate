@@ -468,7 +468,15 @@ class FAIR():
         if not self.run_config.temperature_prescribed:
             self.temperature = np.ones((n_timesteps, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
         self.toa_imbalance = np.ones((n_timesteps, n_scenarios, n_configs, 1, 1)) * np.nan
+        self.ocean_heat_transfer_array = np.ones((1, 1, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
+        self.deep_ocean_efficacy_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
 
+        for iconf, config in enumerate(self.configs_index_mapping):
+            self.ocean_heat_transfer_array[0, 0, iconf, 0, :] = self.configs[iconf].climate_response.ocean_heat_transfer
+            self.deep_ocean_efficacy_array[0, 0, iconf, 0, 0] = self.configs[iconf].climate_response.deep_ocean_efficacy
+
+        # TODO: sort out this mess and don't do unnecessary looping for variables
+        # that do not exist across scenario, config or species dimensions.
         for ispec, specie in enumerate(self.species_index_mapping):
             for iconf, config in enumerate(self.configs_index_mapping):
                 conf_spec = self.configs[iconf].species_configs[ispec]
@@ -749,9 +757,15 @@ class FAIR():
             )
 
             # 14. run the energy balance model if we're not prescribing temperature
-            # TODO: remove loop
             if not self.run_config.temperature_prescribed:
-                temperature_boxes = self.maketemp(i_timestep, temperature_boxes, eb_matrix_d, forcing_vector_d, stochastic_d, efficacy_adjusted_forcing)
+                temperature_boxes = self._step_temperature(
+                    i_timestep,
+                    temperature_boxes,
+                    eb_matrix_d,
+                    forcing_vector_d,
+                    stochastic_d,
+                    efficacy_adjusted_forcing
+                )
             else:
                 temperature_boxes[0:1, :, :, 0:1, :] = self.temperature[i_timestep:i_timestep+1, :, :, 0:1, 0:1]
 
@@ -759,28 +773,33 @@ class FAIR():
         self._fill_forcing()
         self._fill_temperature()
 
-    # dummy function created for profiling
-    def maketemp(self, i_timestep, temperature_boxes, eb_matrix_d, forcing_vector_d, stochastic_d, efficacy_adjusted_forcing):
-        for iconf, config in enumerate(self.configs):
-            temperature_boxes[0, :, iconf, 0, :] = (
-                (eb_matrix_d[0, :, iconf, ...] @ temperature_boxes[0, :, iconf, 0, :, None])[..., 0] +
-                forcing_vector_d[0, :, iconf, 0, :] * efficacy_adjusted_forcing[0, :, iconf, 0, 0, None] +
-                stochastic_d[i_timestep, :, iconf, 0, :]
-            )
-            self.temperature[i_timestep, :, iconf, :, :] = temperature_boxes[0, :, iconf, :, 1:]
-            self.stochastic_forcing[i_timestep, :, iconf] = temperature_boxes[0, :, iconf, 0, 0]
 
-            # TODO: generalise to k-box model where k!=3
-            self.toa_imbalance[i_timestep, :, iconf, :, :] = (
-                self.forcing_sum_array[i_timestep, :, iconf, :, :] -
-                config.climate_response.ocean_heat_transfer[0]*
-                self.temperature[i_timestep, :, iconf, :, None, 0] +
-                (1 - config.climate_response.deep_ocean_efficacy) * config.climate_response.ocean_heat_transfer[2]
-                * (self.temperature[i_timestep, :, iconf, :, None, 1] -
-                 self.temperature[i_timestep, :, iconf, :, None, 2])
-            )
-
+    def _step_temperature(
+        self,
+        i_timestep,
+        temperature_boxes,
+        eb_matrix_d,
+        forcing_vector_d,
+        stochastic_d,
+        efficacy_adjusted_forcing
+    ):
+        temperature_boxes[0, :, :, 0, :] = (
+            (eb_matrix_d[0, :, :, ...] @ temperature_boxes[0, :, :, 0, :, None])[..., 0] +
+            forcing_vector_d[0, :, :, 0, :] * efficacy_adjusted_forcing[0, :, :, 0, 0, None] +
+            stochastic_d[i_timestep, :, :, 0, :]
+        )
+        self.temperature[i_timestep, :, :, :, :] = temperature_boxes[0, :, :, :, 1:]
+        self.stochastic_forcing[i_timestep, :, :] = temperature_boxes[0, :, :, 0, 0]
+        self.toa_imbalance[i_timestep, :, :, :, 0] = (
+            self.forcing_sum_array[i_timestep, :, :, :, 0] -
+            self.ocean_heat_transfer_array[0, ..., 0]*
+            self.temperature[i_timestep, :, :, :, 0] +
+            (1 - self.deep_ocean_efficacy_array[0, ..., 0]) * self.ocean_heat_transfer_array[0, ..., -1]
+            * (self.temperature[i_timestep, :, :, :, -2] -
+             self.temperature[i_timestep, :, :, :, -1])
+        )
         return temperature_boxes
+
 
     # for some reason cumsum is really slow, so we'll make OHC calculations post-processing
     def calculate_ocean_heat_content_change(self):
