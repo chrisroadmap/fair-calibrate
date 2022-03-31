@@ -6,6 +6,7 @@ import numpy as np
 import tqdm
 
 from .constants import (TIME_AXIS, SPECIES_AXIS, GAS_BOX_AXIS)
+from .earth_params import earth_radius, seconds_per_year
 from .energy_balance_model import EnergyBalanceModel
 from .exceptions import (
     DuplicationError,
@@ -48,9 +49,12 @@ def _check_type_of_elements(things_to_check, desired_type, name='the list you su
             )
 
 def _make_ebm(configs, n_timesteps):
-    eb_matrix_d = []
-    forcing_vector_d = []
-    stochastic_d = []
+    # time, scenario, config, matrix_dim_1, matrix_dim_2
+    n_matrix = len(configs[0].climate_response.ocean_heat_capacity) + 1
+    n_configs = len(configs)
+    eb_matrix_d = np.ones((1, 1, n_configs, n_matrix, n_matrix)) * np.nan
+    forcing_vector_d = np.ones((1, 1, n_configs, 1, n_matrix)) * np.nan
+    stochastic_d = np.ones((n_timesteps, 1, n_configs, 1, n_matrix)) * np.nan
     for iconf, config in enumerate(configs):
         conf_clim = config.climate_response
         ebm = EnergyBalanceModel(
@@ -64,9 +68,9 @@ def _make_ebm(configs, n_timesteps):
             seed=conf_clim.seed,
             n_timesteps=n_timesteps,
         )
-        eb_matrix_d.append(ebm.eb_matrix_d)
-        forcing_vector_d.append(ebm.forcing_vector_d)
-        stochastic_d.append(ebm.stochastic_d)
+        eb_matrix_d[0, 0, iconf, ...] = ebm.eb_matrix_d
+        forcing_vector_d[0, 0, iconf, 0, :] = ebm.forcing_vector_d
+        stochastic_d[:, 0, iconf, 0, :] = ebm.stochastic_d
     return eb_matrix_d, forcing_vector_d, stochastic_d
 
 def _make_time_deltas(time):
@@ -419,6 +423,10 @@ class FAIR():
             self.scenarios[iscen].temperature_layers = self.temperature[:, iscen, :, 0, :]
             self.scenarios[iscen].temperature = self.temperature[:, iscen, :, 0, 0]
 
+    def _fill_ocean_heat_content(self):
+        "Fill in ocean heat content"
+        self
+
     def _initialise_arrays(self, n_timesteps, n_scenarios, n_configs, n_species, aci_method):
         self.emissions_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1)) * np.nan
         self.concentration_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1)) * np.nan
@@ -740,31 +748,40 @@ class FAIR():
                 self.forcing_array[[i_timestep], ...]*self.efficacy_array, axis=SPECIES_AXIS, keepdims=True
             )
 
-            # 14. run the energy balance model
-            # TODO: skip if temperature prescribed
+            # 14. run the energy balance model if we're not prescribing temperature
             # TODO: remove loop
             if not self.run_config.temperature_prescribed:
-                for iscen, scenario in enumerate(self.scenarios):
-                    for iconf, config in enumerate(self.configs):
-                        temperature_boxes[0, iscen, iconf, 0, :] = (
-                            eb_matrix_d[iconf] @ temperature_boxes[0, iscen, iconf, 0, :] +
-                            forcing_vector_d[iconf] * efficacy_adjusted_forcing[0, iscen, iconf, 0, 0] +
-                            stochastic_d[iconf][i_timestep, :]
-                        )
-                        self.temperature[i_timestep, iscen, iconf, :, :] = temperature_boxes[0, iscen, iconf, 0, 1:]
-                        self.stochastic_forcing[i_timestep, iscen, iconf] = temperature_boxes[0, iscen, iconf, 0, 0]
-                        self.toa_imbalance[i_timestep, iscen, iconf, :, :] = (
-                            self.forcing_sum_array[i_timestep, iscen, iconf, :, :] -
-                            config.climate_response.ocean_heat_transfer[0]*
-                            self.temperature[i_timestep, iscen, iconf, :, 0] +
-                            (1 - config.climate_response.deep_ocean_efficacy) * config.climate_response.ocean_heat_transfer[2]
-                            * (self.temperature[i_timestep, iscen, iconf, :, 1] -
-                             self.temperature[i_timestep, iscen, iconf, :, 2])
-                        )
-            # TODO: fill in OHC
+                temperature_boxes = self.maketemp(i_timestep, temperature_boxes, eb_matrix_d, forcing_vector_d, stochastic_d, efficacy_adjusted_forcing)
             else:
                 temperature_boxes[0:1, :, :, 0:1, :] = self.temperature[i_timestep:i_timestep+1, :, :, 0:1, 0:1]
 
         self._fill_concentration()
         self._fill_forcing()
         self._fill_temperature()
+
+    # dummy function created for profiling
+    def maketemp(self, i_timestep, temperature_boxes, eb_matrix_d, forcing_vector_d, stochastic_d, efficacy_adjusted_forcing):
+        for iconf, config in enumerate(self.configs):
+            temperature_boxes[0, :, iconf, 0, :] = (
+                (eb_matrix_d[0, :, iconf, ...] @ temperature_boxes[0, :, iconf, 0, :, None])[..., 0] +
+                forcing_vector_d[0, :, iconf, 0, :] * efficacy_adjusted_forcing[0, :, iconf, 0, 0, None] +
+                stochastic_d[i_timestep, :, iconf, 0, :]
+            )
+            self.temperature[i_timestep, :, iconf, :, :] = temperature_boxes[0, :, iconf, :, 1:]
+            self.stochastic_forcing[i_timestep, :, iconf] = temperature_boxes[0, :, iconf, 0, 0]
+
+            # TODO: generalise to k-box model where k!=3
+            self.toa_imbalance[i_timestep, :, iconf, :, :] = (
+                self.forcing_sum_array[i_timestep, :, iconf, :, :] -
+                config.climate_response.ocean_heat_transfer[0]*
+                self.temperature[i_timestep, :, iconf, :, None, 0] +
+                (1 - config.climate_response.deep_ocean_efficacy) * config.climate_response.ocean_heat_transfer[2]
+                * (self.temperature[i_timestep, :, iconf, :, None, 1] -
+                 self.temperature[i_timestep, :, iconf, :, None, 2])
+            )
+
+        return temperature_boxes
+
+    # for some reason cumsum is really slow, so we'll make OHC calculations post-processing
+    def calculate_ocean_heat_content_change(self):
+        self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * np.gradient(self.time), axis=0) * earth_radius**2 * 4 * np.pi * seconds_per_year
