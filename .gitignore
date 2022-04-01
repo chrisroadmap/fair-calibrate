@@ -3,7 +3,7 @@ data/netcdf-scm/cmip_data/
 data/netcdf-scm/*.zip
 data/rcmip/
 data/parameter_sets/
-data/forcing/HolVol_SAOD_-9500_1900_v1.0.nc
+data/forcing/*.nc
 
 # Apple files
 .DS_Store

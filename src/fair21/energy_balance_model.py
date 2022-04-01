@@ -72,6 +72,8 @@ class EnergyBalanceModel:
             See [2]_.
         seed : int or None
             Random seed to use for stochastic variability.
+        timestep : float
+            Time interval of the model (yr)
 
         References
         ----------
@@ -85,7 +87,7 @@ class EnergyBalanceModel:
             Estimation of Stochastic Energy Balance Model Parameters, Journal of
             Climate, 33(18), 7909-7926.
         """
-        self.ocean_heat_capacity = kwargs.get('ocean_heat_capacity', np.array([5, 20, 100]))
+        ocean_heat_capacity = kwargs.get('ocean_heat_capacity', np.array([5, 20, 100]))
         self.ocean_heat_transfer = kwargs.get('ocean_heat_transfer', np.array([1.31, 2, 1]))
         self.deep_ocean_efficacy = kwargs.get('deep_ocean_efficacy', 1.2)
         self.forcing_4co2 = kwargs.get('forcing_4co2', 7.86)
@@ -94,13 +96,16 @@ class EnergyBalanceModel:
         self.sigma_xi = kwargs.get('sigma_xi', 0.5)
         self.gamma_autocorrelation = kwargs.get('gamma_autocorrelation', 2)
         self.seed = kwargs.get('seed', None)
-        self.n_temperature_boxes = len(self.ocean_heat_capacity)
+        self.n_temperature_boxes = len(ocean_heat_capacity)
         if len(self.ocean_heat_transfer) != self.n_temperature_boxes:
             raise IncompatibleConfigError("ocean_heat_capacity and ocean_heat_transfer must be arrays of the same shape.")
         self.temperature = kwargs.get('temperature', np.zeros((1, self.n_temperature_boxes + 1)))
         self.n_timesteps = kwargs.get('n_timesteps', 1)
         self.nmatrix = self.n_temperature_boxes + 1
+        self.timestep = kwargs.get('timestep', 1)
 
+        # adjust ocean heat capacity to be a rate: units W m-2 K-1
+        self.ocean_heat_capacity = ocean_heat_capacity / self.timestep
 
     def _eb_matrix(self):
         """Define the matrix of differential equations.
@@ -217,10 +222,10 @@ class EnergyBalanceModel:
         )
 
 
-    def add_forcing(self, forcing, time):
+    def add_forcing(self, forcing, timestep):
         self.forcing = forcing
-        self.time = time
-        self.n_timesteps = len(time)
+        self.timestep = timestep
+        self.n_timesteps = len(forcing)
 
 
     def run(self):
@@ -243,7 +248,7 @@ class EnergyBalanceModel:
         self.temperature = solution[:, 1:]
         self.stochastic_forcing = solution[:, 0]
         self.toa_imbalance = self.forcing - self.ocean_heat_transfer[0]*self.temperature[:,0] + (1 - self.deep_ocean_efficacy) * self.ocean_heat_transfer[2] * (self.temperature[:,1] - self.temperature[:,2])
-        self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * np.gradient(self.time) * earth_radius**2 * 4 * np.pi * seconds_per_year)
+        self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * self.timestep * earth_radius**2 * 4 * np.pi * seconds_per_year)
 
     def step_temperature(self, temperature_boxes_old, forcing):
         """Timestep the temperature forward.
