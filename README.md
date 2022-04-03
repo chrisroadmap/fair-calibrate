@@ -71,3 +71,4 @@ source("calibrate_cummins_3layer.r")
 1. Nick Leach and Stuart Jenkins for the original FaIR v2.0, which hopefully isn't too mangled or complicated by this attempt.
 2. Hege-Beate Fredriksen for crunching the CMIP6 4xCO2 data from many more models
 3. Donald Cummins for the three-layer model tuning algorithm.
+4. Bill Collins for assistance with chemistry emulations and correspondence to AerChemMIP results.
