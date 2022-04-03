@@ -30,7 +30,7 @@ default_species_config = {
     'ch4' : SpeciesConfig(
         species_id = SpeciesID('CH4', Category.CH4, run_mode=RunMode.EMISSIONS),
         molecular_weight = 16.043,
-        lifetime = 8.25,
+        lifetime = 8.25,  # Thornhill lifetime best fit: 10.8537568
         radiative_efficiency = 0.00038864402860869495,
         iirf_airborne = 0.00032,
         iirf_temperature = -0.3,
@@ -38,6 +38,9 @@ default_species_config = {
         tropospheric_adjustment = -0.14,
         ozone_radiative_efficiency = 1.75e-4,
         h2o_stratospheric_factor = 0.091914639065882,
+        soil_lifetime = 185,
+        ch4_lifetime_chemical_sensitivity = 0.18,
+        ch4_lifetime_temperature_sensitivity = -0.00167
     ),
     'n2o': SpeciesConfig(
         species_id = SpeciesID('N2O', Category.N2O, run_mode=RunMode.EMISSIONS),
@@ -47,6 +50,7 @@ default_species_config = {
         baseline_concentration = 270.1,
         tropospheric_adjustment = 0.07,
         ozone_radiative_efficiency = 7.1e-4,
+        ch4_lifetime_chemical_sensitivity = -0.039,
     ),
     'cfc-11': SpeciesConfig(
         species_id = SpeciesID('CFC-11', Category.CFC_11, run_mode=RunMode.EMISSIONS),
@@ -278,66 +282,77 @@ default_species_config = {
         molecular_weight = 120.02,
         lifetime = 30,
         radiative_efficiency = 0.23378,
+        ch4_lifetime_chemical_sensitivity = -0.0009642894772697214,
     ),
     'hfc-134a': SpeciesConfig(
         species_id = SpeciesID('HFC-134a', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 102.03,
         lifetime = 14,
         radiative_efficiency = 0.16714,
+        ch4_lifetime_chemical_sensitivity = -0.003615023786272495,
     ),
     'hfc-143a': SpeciesConfig(
         species_id = SpeciesID('HFC-143a', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 84.04,
         lifetime = 51,
         radiative_efficiency = 0.168,
+        ch4_lifetime_chemical_sensitivity = -0.0006883484644028191,
     ),
     'hfc-152a': SpeciesConfig(
         species_id = SpeciesID('HFC-152a', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 66.05,
         lifetime = 1.6,
         radiative_efficiency = 0.10174,
+        ch4_lifetime_chemical_sensitivity = -0.00021133459396516935,
     ),
     'hfc-227ea': SpeciesConfig(
         species_id = SpeciesID('HFC-227ea', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 170.03,
         lifetime = 36,
         radiative_efficiency = 0.27325,
+        ch4_lifetime_chemical_sensitivity = -7.381860158059581e-05,
     ),
     'hfc-23': SpeciesConfig(
         species_id = SpeciesID('HFC-23', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 70.014,
         lifetime = 228,
         radiative_efficiency = 0.19111,
+        ch4_lifetime_chemical_sensitivity = -0.001380483674751533,
     ),
     'hfc-236fa': SpeciesConfig(
         species_id = SpeciesID('HFC-236fa', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 152.04,
         lifetime = 213,
         radiative_efficiency = 0.25069,
+        ch4_lifetime_chemical_sensitivity = -8.79292645911157e-06,
     ),
     'hfc-245fa': SpeciesConfig(
         species_id = SpeciesID('HFC-245fa', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 134.05,
         lifetime = 7.9,
         radiative_efficiency = 0.24498,
+        ch4_lifetime_chemical_sensitivity = -0.00013473391955397875,
     ),
     'hfc-32': SpeciesConfig(
         species_id = SpeciesID('HFC-32', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 52.023,
         lifetime = 5.4,
         radiative_efficiency = 0.11144,
+        ch4_lifetime_chemical_sensitivity = -0.00024957399034576547,
     ),
     'hfc-365mfc': SpeciesConfig(
         species_id = SpeciesID('HFC-365mfc', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 148.07,
         lifetime = 8.9,
         radiative_efficiency = 0.22813,
+        ch4_lifetime_chemical_sensitivity = -4.688253387776103e-05,
     ),
     'hfc-4310mee': SpeciesConfig(
         species_id = SpeciesID('HFC-4310mee', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 252.05,
         lifetime = 17,
         radiative_efficiency = 0.35731,
+        ch4_lifetime_chemical_sensitivity = -2.3733082702031964e-05,
     ),
     'nf3': SpeciesConfig(
         species_id = SpeciesID('NF3', Category.F_GAS, run_mode=RunMode.EMISSIONS),
@@ -386,12 +401,14 @@ default_species_config = {
     'nox' : SpeciesConfig(
         species_id = SpeciesID('NOx', Category.SLCF_OZONE_PRECURSOR, run_mode=RunMode.EMISSIONS),
         ozone_radiative_efficiency = 1.797e-3,
-        baseline_emissions = 12.7352119423177
+        baseline_emissions = 12.7352119423177,
+        ch4_lifetime_chemical_sensitivity = -0.291428531,
     ),
     'voc' : SpeciesConfig(
         species_id = SpeciesID('VOC', Category.SLCF_OZONE_PRECURSOR, run_mode=RunMode.EMISSIONS),
         ozone_radiative_efficiency = 3.29e-4,
-        baseline_emissions = 60.0218262241548
+        baseline_emissions = 60.0218262241548,
+        ch4_lifetime_chemical_sensitivity = 0.241599754,
     ),
     'nox_aviation' : SpeciesConfig(
         species_id = SpeciesID('NOx Aviation', Category.NOX_AVIATION, run_mode=RunMode.EMISSIONS),

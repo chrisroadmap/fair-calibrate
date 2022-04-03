@@ -199,6 +199,7 @@ class SpeciesConfig():
     cl_atoms: int=0
     br_atoms: int=0
     fractional_release: float=None
+    ch4_lifetime_chemical_sensitivity: float=0
     tropospheric_adjustment: float=0
     scale: float=1
     efficacy: float=1

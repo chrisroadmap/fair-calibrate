@@ -25,6 +25,7 @@ from .forcing.ozone import calculate_ozone_forcing
 from .gas_cycle import calculate_alpha
 from .gas_cycle.forward import step_concentration
 from .gas_cycle.inverse import unstep_concentration
+from .gas_cycle.ch4_lifetime import calculate_alpha_ch4
 from .structure.top_level import RunConfig, ACIMethod, Category, RunMode, AggregatedCategory
 from .structure.scenario_level import Scenario
 from .structure.config_level import Config
@@ -417,10 +418,6 @@ class FAIR():
             self.scenarios[iscen].temperature_layers = self.temperature[:, iscen, :, 0, :]
             self.scenarios[iscen].temperature = self.temperature[:, iscen, :, 0, 0]
 
-    def _fill_ocean_heat_content(self):
-        "Fill in ocean heat content"
-        self
-
     def _initialise_arrays(self, n_timesteps, n_scenarios, n_configs, n_species, aci_method):
         self.emissions_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1)) * np.nan
         self.concentration_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1)) * np.nan
@@ -591,9 +588,27 @@ class FAIR():
                 self.iirf_airborne_array,
                 self.g0_array,
                 self.g1_array,
-                self.run_config.iirf_max
+                self.run_config.iirf_max,
             )[0:1, :, :, self.ghg_indices, :]
             self.alpha_lifetime_array[[i_timestep], ...] = alpha_lifetime_array
+
+            # 1a. Override for methane lifetime. It's probably more efficient
+            # in general to calculate the simple lifetimes in step 1, then
+            # overwrite the methane lifetime if this option is needed.
+            if self.run_config.ch4_lifetime_method == MethaneLifetimeMethod.THORHNILL2021:
+                conc_in = self.concentration_array[[i_timestep], ...] if i_timestep > 0 else self.baseline_concentration_array
+                alpha_lifetime_array[0:1, :, :, self.ch4_index] = calculate_alpha_ch4(
+                    self.emissions_array[[i_timestep], ...],
+                    conc_in,
+                    temperature_boxes[:, :, :, :, 1:2],
+                    self.baseline_emissions_array,
+                    self.baseline_concentration_array,
+                    self.normalisation,
+                    self.ch4_lifetime_chemical_sensitivity,
+                    self.ch4_lifetime_temperature_sensitivity,
+                    self.slcf_indices,
+                    self.ghg_indices,
+                )
 
             # 2. GHG emissions to concentrations
             ae_timestep = i_timestep-1 if i_timestep>0 else 0
