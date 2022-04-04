@@ -26,7 +26,7 @@ from .gas_cycle import calculate_alpha
 from .gas_cycle.forward import step_concentration
 from .gas_cycle.inverse import unstep_concentration
 from .gas_cycle.ch4_lifetime import calculate_alpha_ch4
-from .structure.top_level import RunConfig, ACIMethod, Category, RunMode, AggregatedCategory
+from .structure.top_level import RunConfig, ACIMethod, CH4LifetimeMethod, Category, RunMode, AggregatedCategory
 from .structure.scenario_level import Scenario
 from .structure.config_level import Config
 
@@ -141,6 +141,13 @@ def _map_species_scenario_config(scenarios, configs, run_config):
             f"For aerosol-cloud interactions using the {run_config.aci_method}, "
             f"all of {[species_id.name for species_id in required_aerosol_species[run_config.aci_method]]} "
             f"must be provided in the scenario."
+        )
+
+    # if requesting AerChemMIP methane lifetime, we actually have to have methane in the scenario
+    if run_config.ch4_lifetime_method==CH4LifetimeMethod.AERCHEMMIP and not ch4_supplied:
+        raise IncompatibleConfigError(
+            f"For CH4LifetimeMethod.AERCHEMMIP, CH4 needs to be present in "
+            f"the scenario."
         )
 
     # by the time we get here, we should have checked that scearios and configs species line up
@@ -418,7 +425,7 @@ class FAIR():
             self.scenarios[iscen].temperature_layers = self.temperature[:, iscen, :, 0, :]
             self.scenarios[iscen].temperature = self.temperature[:, iscen, :, 0, 0]
 
-    def _initialise_arrays(self, n_timesteps, n_scenarios, n_configs, n_species, aci_method):
+    def _initialise_arrays(self, n_timesteps, n_scenarios, n_configs, n_species, aci_method, ch4_lifetime_method):
         self.emissions_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1)) * np.nan
         self.concentration_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1)) * np.nan
         self.forcing_sum_array = np.ones((n_timesteps, n_scenarios, n_configs, 1, 1)) * np.nan
@@ -455,6 +462,10 @@ class FAIR():
         self.land_use_cumulative_emissions_to_forcing_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: make a more general temperature-forcing feedback for all species
         self.forcing_temperature_feedback_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.normalisation = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.ch4_lifetime_chemical_sensitivity = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.ch4_lifetime_temperature_sensitivity = np.ones((1, 1, n_configs, 1, 1)) * np.nan
+        self.soil_lifetime = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         # TODO: start from non-zero temperature
         if not self.run_config.temperature_prescribed:
             self.temperature = np.ones((n_timesteps, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
@@ -478,6 +489,7 @@ class FAIR():
                 self.lapsi_radiative_efficiency_array[:, :, iconf, ispec, :] = conf_spec.lapsi_radiative_efficiency
                 self.stratospheric_h2o_factor_array[0, 0, iconf, ispec, 0] = conf_spec.h2o_stratospheric_factor
                 self.land_use_cumulative_emissions_to_forcing_array[0, 0, iconf, ispec, 0] = conf_spec.land_use_cumulative_emissions_to_forcing
+                self.soil_lifetime[0, 0, iconf, ispec, 0] = conf_spec.soil_lifetime
                 if self.species[ispec].category in AggregatedCategory.GREENHOUSE_GAS:
                     partition_fraction = np.asarray(conf_spec.partition_fraction)
                     if np.ndim(partition_fraction) == 1:
@@ -505,8 +517,14 @@ class FAIR():
                     self.erfaci_shape_sulfur_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['Sulfur']
                     if aci_method==ACIMethod.SMITH2018:
                         self.erfaci_shape_bcoc_array[0, 0, iconf, 0, 0] = conf_spec.aci_params['BC+OC']
+                if self.species[ispec].category == Category.CH4:
+                    if ch4_lifetime_method==CH4LifetimeMethod.AERCHEMMIP:
+                        self.ch4_lifetime_temperature_sensitivity[0, 0, iconf, 0, 0] = conf_spec.ch4_lifetime_temperature_sensitivity
                 self.ozone_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.ozone_radiative_efficiency
                 self.contrails_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.contrails_radiative_efficiency
+                self.normalisation[0, 0, iconf, ispec, 0] = conf_spec.normalisation
+                self.ch4_lifetime_chemical_sensitivity[0, 0, iconf, ispec, 0] = conf_spec.ch4_lifetime_chemical_sensitivity
+                #    self.ch4_lifetime_temperature_sensitivity = np.ones((1, 1, n_configs, 1, 1)) * np.nan
             for iscen, scenario_name in enumerate(self.scenarios_index_mapping):
                 scen_spec = self.scenarios[iscen].list_of_species[ispec]
                 if self.species[ispec].run_mode == RunMode.EMISSIONS:
@@ -554,7 +572,7 @@ class FAIR():
 
         # from this point onwards, we lose a bit of the clean OO-style and go
         # back to prodecural programming, which is a ton quicker.
-        self._initialise_arrays(n_timesteps, n_scenarios, n_configs, n_species, self.run_config.aci_method)
+        self._initialise_arrays(n_timesteps, n_scenarios, n_configs, n_species, self.run_config.aci_method, self.run_config.ch4_lifetime_method)
         # move to initialise_arrays?
         gas_boxes = np.zeros((1, n_scenarios, n_configs, n_species, self.run_config.n_gas_boxes))
         temperature_boxes = np.zeros((1, n_scenarios, n_configs, 1, self.run_config.n_temperature_boxes+1))
@@ -595,7 +613,9 @@ class FAIR():
             # 1a. Override for methane lifetime. It's probably more efficient
             # in general to calculate the simple lifetimes in step 1, then
             # overwrite the methane lifetime if this option is needed.
-            if self.run_config.ch4_lifetime_method == MethaneLifetimeMethod.THORHNILL2021:
+
+            # THE SOIL LIFETIME ISN'T SCALED...
+            if self.run_config.ch4_lifetime_method == CH4LifetimeMethod.AERCHEMMIP:
                 conc_in = self.concentration_array[[i_timestep], ...] if i_timestep > 0 else self.baseline_concentration_array
                 alpha_lifetime_array[0:1, :, :, self.ch4_index] = calculate_alpha_ch4(
                     self.emissions_array[[i_timestep], ...],
@@ -623,6 +643,7 @@ class FAIR():
                 self.burden_per_emission_array[0:1, :, :, self.ghg_emissions_indices, :],
                 self.lifetime_array[0:1, :, :, self.ghg_emissions_indices, :],
                 alpha_lifetime=alpha_lifetime_array[0:1, :, :, self.ghg_emissions_indices, :],
+                soil_lifetime=self.soil_lifetime[0:1, :, :, self.ghg_emissions_indices, :],
                 pre_industrial_concentration=self.baseline_concentration_array[0:1, :, :, self.ghg_emissions_indices, :],
                 timestep=self.timestep,
                 partition_fraction=self.partition_fraction_array[0:1, :, :, self.ghg_emissions_indices, :],

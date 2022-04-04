@@ -172,16 +172,16 @@ class CH4LifetimeMethod(Enum):
 
     Attributes
     ----------
-    LEACH2021 : enum
+    IIRF : enum
         Use Leach et al. (2021) FaIR v2.0 treatment which is the same as for
         other GHGs (methane lifetime depends only on methane and climate)
-    THORNHILL2021 : enum
+    AERCHEMMIP : enum
         Use Thornhill et al. (2021a, 2021b) treatment of various precursor gases
         and SLCFs and climate affecting methane lifetime, based on calibrations
         to AerChemMIP CMIP6 models.
     """
-    LEACH2021 = auto()
-    THORNHILL2021 = auto()
+    IIRF = auto()
+    AERCHEMMIP = auto()
 
 
 @dataclass
@@ -190,7 +190,7 @@ class RunConfig():
     n_temperature_boxes: int=3
     temperature_prescribed: bool=False
     aci_method: ACIMethod=ACIMethod.SMITH2018
-    ch4_lifetime_method=CH4LifetimeMethod.LEACH2021
+    ch4_lifetime_method=CH4LifetimeMethod.IIRF
     br_cl_ratio: float=45
     iirf_horizon: float=100
     iirf_max: float=99.5

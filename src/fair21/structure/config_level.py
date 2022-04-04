@@ -200,6 +200,9 @@ class SpeciesConfig():
     br_atoms: int=0
     fractional_release: float=None
     ch4_lifetime_chemical_sensitivity: float=0
+    soil_lifetime: float=np.inf  # only finite for CH4 in AerChemMIP mode
+    ch4_lifetime_temperature_sensitivity: float=None  # only relevant for CH4 in AerChemMIP mode
+    normalisation: float=None
     tropospheric_adjustment: float=0
     scale: float=1
     efficacy: float=1

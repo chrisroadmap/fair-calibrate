@@ -15,6 +15,7 @@ def step_concentration(
     burden_per_emission,
     lifetime,
     alpha_lifetime,
+    soil_lifetime,
     partition_fraction,
     pre_industrial_concentration,
     timestep=1,
@@ -43,6 +44,10 @@ def step_concentration(
     alpha_lifetime : ndarray
         scaling factor for `lifetime`. Necessary where there is a state-
         dependent feedback.
+    soil_lifetime : ndarray
+        an additional loss pathway that does not scale with climate state;
+        should only be finite for methane lifetime scalings under the AerChemMIP
+        treatment, otherwise set to np.inf.
     partition_fraction : ndarray
         the partition fraction of emissions into each gas box. If array, the
         entries should be individually non-negative and sum to one.
@@ -81,7 +86,7 @@ def step_concentration(
     # cause a warning.
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
-        decay_rate = timestep/(alpha_lifetime * lifetime)
+        decay_rate = timestep/(1/(1/(alpha_lifetime * lifetime) + 1/soil_lifetime))
     decay_factor = np.exp(-decay_rate)
     gas_boxes_new = (
         partition_fraction *
