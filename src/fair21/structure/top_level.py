@@ -190,7 +190,7 @@ class RunConfig():
     n_temperature_boxes: int=3
     temperature_prescribed: bool=False
     aci_method: ACIMethod=ACIMethod.SMITH2018
-    ch4_lifetime_method=CH4LifetimeMethod.IIRF
+    ch4_lifetime_method: CH4LifetimeMethod=CH4LifetimeMethod.IIRF
     br_cl_ratio: float=45
     iirf_horizon: float=100
     iirf_max: float=99.5
