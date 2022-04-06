@@ -230,7 +230,6 @@ class EnergyBalanceModel:
 
     def run(self):
         # internal variables
-        n_timesteps = len(self.time)
         forcing_vector = self._forcing_vector()
 
         # Calculate the matrix exponential
