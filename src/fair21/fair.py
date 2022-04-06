@@ -48,7 +48,7 @@ def _check_type_of_elements(things_to_check, desired_type, name='the list you su
                 f"where it should be a list of {desired_type} objects"
             )
 
-def _make_ebm(configs, n_timesteps):
+def _make_ebm(configs, n_timesteps, timestep):
     # time, scenario, config, matrix_dim_1, matrix_dim_2
     n_matrix = len(configs[0].climate_response.ocean_heat_capacity) + 1
     n_configs = len(configs)
@@ -67,6 +67,7 @@ def _make_ebm(configs, n_timesteps):
             gamma_autocorrelation=conf_clim.gamma_autocorrelation,
             seed=conf_clim.seed,
             n_timesteps=n_timesteps,
+            timestep=timestep,
         )
         eb_matrix_d[0, 0, iconf, ...] = ebm.eb_matrix_d
         forcing_vector_d[0, 0, iconf, 0, :] = ebm.forcing_vector_d
@@ -249,7 +250,7 @@ class FAIR():
         self,
         scenarios: typing.List[Scenario]=None,
         configs: typing.List[Config]=None,
-        time: np.ndarray=None,
+        timestep: float=1,
         run_config: RunConfig=RunConfig(),
     ):
         if isinstance(scenarios, list):
@@ -268,8 +269,7 @@ class FAIR():
         else:
             raise TypeError("configs should be a list of Configs or None")
 
-        if time is not None:
-            self.define_time(time)
+        self.timestep = timestep
         self.run_config = run_config
 
     def add_config(self, config: Config):
@@ -279,11 +279,6 @@ class FAIR():
     def add_scenario(self, scenario: Scenario):
         self.scenarios.append(scenario)
         _verify_scenario_consistency(self.scenarios)
-
-    def define_time(self, time: np.ndarray):
-        if not hasattr(time, '__iter__'):
-            raise TimeNotIterableError("Time must be an iterable data type")
-        self.time = np.asarray(time)
 
     def remove_config(self, config: Config):
         self.configs.remove(config)
@@ -531,7 +526,7 @@ class FAIR():
                 self.emissions_array[:, :, :, self.co2_afolu_index, :]
             )
 
-        self.cumulative_emissions_array = np.cumsum(self.emissions_array * self.time_deltas[:, None, None, None, None], axis=TIME_AXIS)
+        self.cumulative_emissions_array = np.cumsum(self.emissions_array * self.timestep, axis=TIME_AXIS)
         self.alpha_lifetime_array = np.ones((n_timesteps, n_scenarios, n_configs, n_species, 1))
         self.airborne_emissions_array = np.zeros((n_timesteps, n_scenarios, n_configs, n_species, 1))
         self.stochastic_forcing = np.ones((n_timesteps, n_scenarios, n_configs)) * np.nan
@@ -542,7 +537,7 @@ class FAIR():
 
     def _pre_run_checks(self):
         # Check if necessary inputs are defined
-        for attr in ('scenarios', 'configs', 'time'):
+        for attr in ('scenarios', 'configs'):
             if not hasattr(self, attr):
                 raise MissingInputError(
                     f"{attr} was not provided when trying to run"
@@ -550,17 +545,10 @@ class FAIR():
         _check_type_of_elements(self.scenarios, Scenario, 'scenarios')
         _check_type_of_elements(self.configs, Config, 'configs')
         self.species = _map_species_scenario_config(self.scenarios, self.configs, self.run_config)
-        if self.n_timesteps != len(self.time):
-            raise TimeMismatchError(
-                f"time vector provided is of length {len(self.time)} whereas "
-                f"the supplied Scenario inputs are of length "
-                f"{self.n_timesteps}."
-            )
 
     def run(self, progress=False):
         self._pre_run_checks()
         self._assign_indices()
-        self.time_deltas = _make_time_deltas(self.time)
 
         n_species = len(self.species_index_mapping)
         n_configs = len(self.configs_index_mapping)
@@ -579,7 +567,7 @@ class FAIR():
 
         # initialise the energy balance model and get critical vectors
         # which itself needs to be run once per "config" and dimensioned correctly
-        eb_matrix_d, forcing_vector_d, stochastic_d = _make_ebm(self.configs, n_timesteps)
+        eb_matrix_d, forcing_vector_d, stochastic_d = _make_ebm(self.configs, n_timesteps, self.timestep)
 
         # Main loop
         for i_timestep in tqdm.tqdm(range(n_timesteps), disable=1-progress):
@@ -621,7 +609,7 @@ class FAIR():
                 self.lifetime_array[0:1, :, :, self.ghg_emissions_indices, :],
                 alpha_lifetime=alpha_lifetime_array[0:1, :, :, self.ghg_emissions_indices, :],
                 pre_industrial_concentration=self.baseline_concentration_array[0:1, :, :, self.ghg_emissions_indices, :],
-                timestep=self.time_deltas[i_timestep],
+                timestep=self.timestep,
                 partition_fraction=self.partition_fraction_array[0:1, :, :, self.ghg_emissions_indices, :],
                 natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_emissions_indices, :],
             )
@@ -639,7 +627,7 @@ class FAIR():
                 self.lifetime_array[0:1, :, :, self.ghg_concentration_indices, :],
                 alpha_lifetime=alpha_lifetime_array[0:1, :, :, self.ghg_concentration_indices, :],
                 pre_industrial_concentration=self.baseline_concentration_array[0:1, :, :, self.ghg_concentration_indices, :],
-                timestep=self.time_deltas[i_timestep],
+                timestep=self.timestep,
                 partition_fraction=self.partition_fraction_array[0:1, :, :, self.ghg_concentration_indices, :],
                 natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_concentration_indices, :],
             )
@@ -803,4 +791,4 @@ class FAIR():
 
     # for some reason cumsum is really slow, so we'll make OHC calculations post-processing
     def calculate_ocean_heat_content_change(self):
-        self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * np.gradient(self.time), axis=0) * earth_radius**2 * 4 * np.pi * seconds_per_year
+        self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * self.timestep, axis=0) * earth_radius**2 * 4 * np.pi * seconds_per_year

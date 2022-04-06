@@ -1,8 +1,9 @@
-# large data output files
+# large data input and output files
 data/netcdf-scm/cmip_data/
 data/netcdf-scm/*.zip
 data/rcmip/
 data/parameter_sets/
+data/forcing/*.nc
 
 # Apple files
 .DS_Store
