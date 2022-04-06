@@ -18,24 +18,23 @@ def calculate_alpha_ch4(
     ghg_indices,
 ):
 
-    #for species in ['CH4', 'N2O', 'VOC', 'HFC', 'NOx', 'temp']:
-    print(normalisation[0,0,0,:,0])
-    print(ch4_lifetime_chemical_sensitivity[0,0,0,:,0])
-    print(ch4_lifetime_temperature_sensitivity[0,0,0,:,0])
     log_lifetime_scaling = (
-        np.log(
-            1 +
-            np.sum(
+        np.sum(
+            np.log(
+                1 +
                 (emissions[:,:,:,slcf_indices,:]-baseline_emissions[:,:,:,slcf_indices,:])/normalisation[:,:,:,slcf_indices,:]
-                * ch4_lifetime_chemical_sensitivity[:,:,:,slcf_indices,:], axis=SPECIES_AXIS, keepdims=True
-            ) +
-            np.sum(
+                * ch4_lifetime_chemical_sensitivity[:,:,:,slcf_indices,:]
+            ),
+        axis=SPECIES_AXIS, keepdims=True) +
+        np.sum(
+            np.log(
+                1 +
                 (concentration[:,:,:,ghg_indices,:]-baseline_concentration[:,:,:,ghg_indices,:])/
                 normalisation[:,:,:,ghg_indices,:]
-                * ch4_lifetime_chemical_sensitivity[:,:,:,ghg_indices,:], axis=SPECIES_AXIS, keepdims=True
-            ) +
-            temperature * ch4_lifetime_temperature_sensitivity
-        )
+                * ch4_lifetime_chemical_sensitivity[:,:,:,ghg_indices,:],
+            ),
+        axis=SPECIES_AXIS, keepdims=True) +
+        np.log(1 + temperature * ch4_lifetime_temperature_sensitivity)
     )
 
     return np.exp(log_lifetime_scaling)

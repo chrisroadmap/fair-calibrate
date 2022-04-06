@@ -608,14 +608,13 @@ class FAIR():
                 self.g1_array,
                 self.run_config.iirf_max,
             )[0:1, :, :, self.ghg_indices, :]
-            self.alpha_lifetime_array[[i_timestep], ...] = alpha_lifetime_array
 
             # 1a. Override for methane lifetime. It's probably more efficient
             # in general to calculate the simple lifetimes in step 1, then
             # overwrite the methane lifetime if this option is needed.
             #print(alpha_lifetime_array.shape)
             if self.run_config.ch4_lifetime_method == CH4LifetimeMethod.AERCHEMMIP:
-                conc_in = self.concentration_array[[i_timestep], ...] if i_timestep > 0 else self.baseline_concentration_array
+                conc_in = self.concentration_array[[i_timestep-1], ...] if i_timestep > 0 else self.baseline_concentration_array
                 alpha_lifetime_array[0:1, :, :, [self.ch4_index], :] = calculate_alpha_ch4(
                     self.emissions_array[[i_timestep], ...],
                     conc_in,
@@ -628,7 +627,7 @@ class FAIR():
                     self.slcf_indices,
                     self.ghg_indices,
                 )
-                print(alpha_lifetime_array[0:1, 0, 0, self.ch4_index, 0])
+            self.alpha_lifetime_array[[i_timestep], ...] = alpha_lifetime_array
 
             # 2. GHG emissions to concentrations
             ae_timestep = i_timestep-1 if i_timestep>0 else 0

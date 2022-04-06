@@ -25,7 +25,8 @@ default_species_config = {
         iirf_cumulative=0.00846,
         iirf_temperature=4.0,
         baseline_concentration = 278.3,
-        tropospheric_adjustment = 0.05
+        tropospheric_adjustment = 0.05,
+        normalisation = 113.22998046875,
     ),
     'ch4' : SpeciesConfig(
         species_id = SpeciesID('CH4', Category.CH4, run_mode=RunMode.EMISSIONS),
@@ -63,6 +64,7 @@ default_species_config = {
         cl_atoms = 3,
         fractional_release = 0.47,
         tropospheric_adjustment = 0.13,
+        normalisation = 233.07986958821616,
     ),
     'cfc-12': SpeciesConfig(
         species_id = SpeciesID('CFC-12', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -73,6 +75,7 @@ default_species_config = {
         cl_atoms = 2,
         fractional_release = 0.23,
         tropospheric_adjustment = 0.12,
+        normalisation = 520.5809682210287,
     ),
     'cfc-113': SpeciesConfig(
         species_id = SpeciesID('CFC-113', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -82,6 +85,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 3,
         fractional_release = 0.29,
+        normalisation = 72.71072514851888,
     ),
     'cfc-114': SpeciesConfig(
         species_id = SpeciesID('CFC-114', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -91,6 +95,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 2,
         fractional_release = 0.12,
+        normalisation = 16.306567827860516,
     ),
     'cfc-115': SpeciesConfig(
         species_id = SpeciesID('CFC-115', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -100,6 +105,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 1,
         fractional_release = 0.04,
+        normalisation = 8.429009358088175,
     ),
     'hcfc-22': SpeciesConfig(
         species_id = SpeciesID('HCFC-22', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -109,6 +115,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 1,
         fractional_release = 0.13,
+        normalisation = 229.5420659383138,
     ),
     'hcfc-141b': SpeciesConfig(
         species_id = SpeciesID('HCFC-141b', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -118,6 +125,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 2,
         fractional_release = 0.34,
+        normalisation = 23.809098561604817,
     ),
     'hcfc-142b': SpeciesConfig(
         species_id = SpeciesID('HCFC-142b', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -127,6 +135,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 1,
         fractional_release = 0.17,
+        normalisation = 22.07569440205892,
     ),
     'ccl4': SpeciesConfig(
         species_id = SpeciesID('CCl4', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -138,6 +147,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 4,
         fractional_release = 0.56,
+        normalisation = 83.04493123712018,
     ),
     'chcl3': SpeciesConfig(
         species_id = SpeciesID('CHCl3', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -149,6 +159,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 3,
         fractional_release = 0,  # no literature value available
+        normalisation = 3.9018423954645796,
     ),
     'ch2cl2': SpeciesConfig(
         species_id = SpeciesID('CH2Cl2', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -160,6 +171,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 2,
         fractional_release = 0,  # no literature value available
+        normalisation = 29.434795737266533,
     ),
     'ch3cl': SpeciesConfig(
         species_id = SpeciesID('CH3Cl', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -171,6 +183,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 1,
         fractional_release = 0.44,
+        normalisation = 82.5420201619466,
     ),
     'ch3ccl3': SpeciesConfig(
         species_id = SpeciesID('CH3CCl3', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -180,6 +193,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         cl_atoms = 3,
         fractional_release = 0.67,
+        normalisation = 3.680271248022715,
     ),
     'ch3br': SpeciesConfig(
         species_id = SpeciesID('CH3Br', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -191,6 +205,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         br_atoms = 1,
         fractional_release = 0.6,
+        normalisation = 1.3860924243927002,
     ),
     'halon-1211': SpeciesConfig(
         species_id = SpeciesID('Halon-1211', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -203,6 +218,7 @@ default_species_config = {
         cl_atoms = 1,
         br_atoms = 1,
         fractional_release = 0.62,
+        normalisation = 3.74921120555761,
     ),
     'halon-1301': SpeciesConfig(
         species_id = SpeciesID('Halon-1301', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -213,6 +229,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         br_atoms = 1,
         fractional_release = 0.28,
+        normalisation = 3.2976099848747253,
     ),
     'halon-2402': SpeciesConfig(
         species_id = SpeciesID('Halon-2402', Category.OTHER_HALOGEN, run_mode=RunMode.EMISSIONS),
@@ -222,6 +239,7 @@ default_species_config = {
         ozone_radiative_efficiency = -1.25e-4,
         br_atoms = 2,
         fractional_release = 0.65,
+        normalisation = 0.431062030295531,
     ),
     'cf4': SpeciesConfig(
         species_id = SpeciesID('CF4', Category.F_GAS, run_mode=RunMode.EMISSIONS),
@@ -230,54 +248,63 @@ default_species_config = {
         radiative_efficiency = 0.09859,
         baseline_concentration = 34.05,
         natural_emissions_adjustment = 0.010071225,
+        normalisation = 47.042491277058915,
     ),
     'c2f6': SpeciesConfig(
         species_id = SpeciesID('C2F6', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 138.01,
         lifetime = 10000,
         radiative_efficiency = 0.26105,
+        normalisation = 4.3987283931865475,
     ),
     'c3f8': SpeciesConfig(
         species_id = SpeciesID('C3F8', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 188.02,
         lifetime = 2600,
         radiative_efficiency = 0.26999,
+        normalisation = 0.6006629715363184,
     ),
     'c-c4f8': SpeciesConfig(
         species_id = SpeciesID('C-C4F8', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 200.03,
         lifetime = 3200,
         radiative_efficiency = 0.31392,
+        normalisation = 1.3385799725850422,
     ),
     'c4f10': SpeciesConfig(
         species_id = SpeciesID('C4F10', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 238.03,
         lifetime = 2600,
         radiative_efficiency = 0.36874,
+        normalisation = 0.1795000011722246,
     ),
     'c5f12': SpeciesConfig(
         species_id = SpeciesID('C5F12', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 288.03,
         lifetime = 4100,
         radiative_efficiency = 0.4076,
+        normalisation = 0.1260000020265579,
     ),
     'c6f14': SpeciesConfig(
         species_id = SpeciesID('C6F14', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 338.04,
         lifetime = 3100,
         radiative_efficiency = 0.44888,
+        normalisation = 0.2790000016490618,
     ),
     'c7f16': SpeciesConfig(
         species_id = SpeciesID('C7F16', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 388.05,
         lifetime = 3000,
         radiative_efficiency = 0.50312,
+        normalisation = 0.1260000001639127,
     ),
     'c8f18': SpeciesConfig(
         species_id = SpeciesID('C8F18', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 438.06,
         lifetime = 3000,
         radiative_efficiency = 0.55787,
+        normalisation = 0.0909999993940194,
     ),
     'hfc-125': SpeciesConfig(
         species_id = SpeciesID('HFC-125', Category.F_GAS, run_mode=RunMode.EMISSIONS),
@@ -372,44 +399,52 @@ default_species_config = {
         molecular_weight = 71.002,
         lifetime = 569,
         radiative_efficiency = 0.20448,
+        normalisation = 1.2399999896685283,
     ),
     'sf6': SpeciesConfig(
         species_id = SpeciesID('SF6', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 146.06,
         lifetime = 3200,
         radiative_efficiency = 0.56657,
+        normalisation = 8.221433083216349,
     ),
     'so2f2': SpeciesConfig(
         species_id = SpeciesID('SO2F2', Category.F_GAS, run_mode=RunMode.EMISSIONS),
         molecular_weight = 102.06,
         lifetime = 36,
         radiative_efficiency = 0.21074,
+        normalisation = 2.0393082883466978,
     ),
     'sulfur': SpeciesConfig(
         species_id = SpeciesID('Sulfur', Category.SULFUR, run_mode=RunMode.EMISSIONS),
         erfari_radiative_efficiency = -0.0036167830509091486,
-        baseline_emissions = 2.44004843482201
+        baseline_emissions = 2.44004843482201,
+        normalisation = 109.4641984292916,
     ),
     'bc': SpeciesConfig(
         species_id = SpeciesID('BC', Category.BC, run_mode=RunMode.EMISSIONS),
         erfari_radiative_efficiency = 0.0507748226795483,
         baseline_emissions = 2.09777075542297,
-        lapsi_radiative_efficiency = 0.011585926
+        lapsi_radiative_efficiency = 0.011585926,
+        normalisation = 7.173255179344797,
     ),
     'oc': SpeciesConfig(
         species_id = SpeciesID('OC', Category.OC, run_mode=RunMode.EMISSIONS),
         erfari_radiative_efficiency = -0.006214374446217472,
-        baseline_emissions = 15.4476681469614
+        baseline_emissions = 15.4476681469614,
+        normalisation = 17.918996598395935,
     ),
     'nh3': SpeciesConfig(
         species_id = SpeciesID('NH3', Category.OTHER_AEROSOL, run_mode=RunMode.EMISSIONS),
         erfari_radiative_efficiency = -0.0020809236231100624,
-        baseline_emissions = 6.92769009144426
+        baseline_emissions = 6.92769009144426,
+        normalisation = 55.432691101301614,
     ),
     'co': SpeciesConfig(
         species_id = SpeciesID('CO', Category.SLCF_OZONE_PRECURSOR, run_mode=RunMode.EMISSIONS),
         ozone_radiative_efficiency = 1.55e-4,
         baseline_emissions = 348.52735877736,
+        normalisation = 552.5847438307005,
     ),
     'nox' : SpeciesConfig(
         species_id = SpeciesID('NOx', Category.SLCF_OZONE_PRECURSOR, run_mode=RunMode.EMISSIONS),
