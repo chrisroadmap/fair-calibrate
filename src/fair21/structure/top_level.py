@@ -16,7 +16,7 @@ class Category(Enum):
     BC = auto()
     OC = auto()
     OTHER_AEROSOL = auto()
-    SLCF_OZONE_PRECURSOR = auto()
+    REACTIVE_GAS = auto()
     NOX_AVIATION = auto()
     OZONE = auto()
     AEROSOL_RADIATION_INTERACTIONS = auto()
@@ -37,8 +37,8 @@ class AggregatedCategory():
     MINOR_GREENHOUSE_GAS = [Category.CFC_11, Category.OTHER_HALOGEN, Category.F_GAS]
     HALOGEN = [Category.CFC_11, Category.OTHER_HALOGEN]
     AEROSOL = [Category.SULFUR, Category.BC, Category.OC, Category.OTHER_AEROSOL]
-    OZONE_PRECURSOR = [Category.CH4, Category.N2O, Category.SLCF_OZONE_PRECURSOR] + HALOGEN
-    SLCF = AEROSOL + [Category.SLCF_OZONE_PRECURSOR]
+    OZONE_PRECURSOR = [Category.CH4, Category.N2O, Category.REACTIVE_GAS] + HALOGEN
+    SLCF = AEROSOL + [Category.REACTIVE_GAS]
     NO_DUPLICATES_ALLOWED = [
         Category.CO2_FFI,
         Category.CO2_AFOLU,
@@ -82,7 +82,7 @@ valid_run_modes = {
     Category.BC: (RunMode.EMISSIONS,),
     Category.OC: (RunMode.EMISSIONS,),
     Category.OTHER_AEROSOL: (RunMode.EMISSIONS,),
-    Category.SLCF_OZONE_PRECURSOR: (RunMode.EMISSIONS,),
+    Category.REACTIVE_GAS: (RunMode.EMISSIONS,),
     Category.NOX_AVIATION: (RunMode.EMISSIONS,),
     Category.OZONE: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),
     Category.AEROSOL_RADIATION_INTERACTIONS: (RunMode.FROM_OTHER_SPECIES, RunMode.FORCING),

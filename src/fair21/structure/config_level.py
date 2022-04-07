@@ -208,6 +208,8 @@ class SpeciesConfig():
     efficacy: float=1
     aci_params: dict=None
     forcing_temperature_feedback: float=0
+    ch4_lifetime_eesc_normalisation: float=None
+    ch4_lifetime_eesc_sensitivity: float=None
     run_config: RunConfig=RunConfig()
 
     def calculate_iirf0(self):

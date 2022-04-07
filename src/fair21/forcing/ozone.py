@@ -66,16 +66,11 @@ def calculate_ozone_forcing(
     concentration,
     baseline_emissions,
     baseline_concentration,
-    fractional_release,
-    cl_atoms,
-    br_atoms,
+    eesc,
     forcing_scaling,
     ozone_radiative_efficiency,
     temperature,
     temperature_feedback,
-    br_cl_ratio,
-    cfc_11_index,
-    halogen_indices,
     slcf_indices,
     ghg_indices
 ):
@@ -159,17 +154,7 @@ def calculate_ozone_forcing(
     # revisit this if we ever want to dump out intermediate calculations like the feedback strength.
     _erf = np.ones((n_timesteps, n_scenarios, n_configs, 4, 1)) * np.nan
 
-    # Halogen GHGs expressed as EESC
-    eesc = calculate_eesc(
-        concentration,
-        baseline_concentration,
-        fractional_release,
-        cl_atoms,
-        br_atoms,
-        cfc_11_index,
-        halogen_indices,
-        br_cl_ratio,
-    )
+    # Halogen GHGs expressed as EESC precalculated
     _erf[:, :, :, 0, :] = np.nansum(eesc * ozone_radiative_efficiency * forcing_scaling, axis=SPECIES_AXIS)
 
     # Non-Halogen GHGs, with a concentration-given ozone radiative_efficiency
