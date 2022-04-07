@@ -1,0 +1,6 @@
+﻿Species,run_mode,normalisation,baseline_emissions,baseline_concentration,iirf_0,iirf_temperature,iirf_cumulative,iirf_airborne,molecular_weight,lifetime0,partition_fraction0,lifetime1,partition_fraction1,lifetime2,partition_fraction2,lifetime3,partition_fraction3,radiative_efficiency,natural_emissions_adjustment,erfari_radiative_efficiency,contrails_radiative_efficiency,lapsi_radiative_efficiency,h2o_stratospheric_factor,land_use_cumulative_emissions_to_forcing,ozone_radiative_efficiency,cl_atoms,br_atoms,fractional_release,ch4_lifetime_chemical_sensitivity,soil_lifetime,ch4_lifetime_temperature_sensitivity,tropospheric_adjustment,scale,efficacy,aci_params,forcing_temperature_feedback,run_config
+CO2,FROM_OTHER_SPECIES,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+CO2_FFI,EMISSIONS,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+CO2_AFOLU,EMISSIONS,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+CH4,EMISSIONS,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+N2O,EMISSIONS,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
