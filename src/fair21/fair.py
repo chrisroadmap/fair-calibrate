@@ -21,7 +21,7 @@ from .forcing.aerosol.erfari import calculate_erfari_forcing
 from .forcing.aerosol.erfaci import calculate_erfaci_forcing, _check_aci_params
 from .forcing.ghg import calculate_ghg_forcing
 from .forcing.linear import calculate_linear_forcing
-from .forcing.ozone import calculate_ozone_forcing
+from .forcing.ozone import calculate_eesc, calculate_ozone_forcing
 from .gas_cycle import calculate_alpha
 from .gas_cycle.forward import step_concentration
 from .gas_cycle.inverse import unstep_concentration
@@ -315,6 +315,7 @@ class FAIR():
         self.ghg_concentration_indices = []
         self.minor_ghg_indices = []
         self.halogen_indices = []
+        self.non_halogen_ghg_indices = []
         self.ari_index = None
         self.lapsi_index = None
         self.h2o_stratospheric_index = None
@@ -342,6 +343,8 @@ class FAIR():
                     self.ghg_emissions_indices.append(ispec)
                 elif specie.run_mode == RunMode.CONCENTRATION:
                     self.ghg_concentration_indices.append(ispec)
+                if specie.category!=AggregatedCategory.HALOGEN:
+                    self.non_halogen_ghg_indices.append(ispec)
             if specie.category in AggregatedCategory.SLCF:
                 self.slcf_indices.append(ispec)
             if specie.category in AggregatedCategory.MINOR_GREENHOUSE_GAS:
@@ -472,6 +475,8 @@ class FAIR():
         self.toa_imbalance = np.ones((n_timesteps, n_scenarios, n_configs, 1, 1)) * np.nan
         self.ocean_heat_transfer_array = np.ones((1, 1, n_configs, 1, self.run_config.n_temperature_boxes)) * np.nan
         self.deep_ocean_efficacy_array = np.ones((1, 1, n_configs, 1, 1)) * np.nan
+        self.ch4_lifetime_eesc_normalisation = np.ones((1, 1, n_configs, 1, 1)) * np.nan
+        self.ch4_lifetime_eesc_sensitivity = np.ones((1, 1, n_configs, 1, 1)) * np.nan
 
         for iconf, config in enumerate(self.configs_index_mapping):
             self.ocean_heat_transfer_array[0, 0, iconf, 0, :] = self.configs[iconf].climate_response.ocean_heat_transfer
@@ -520,6 +525,8 @@ class FAIR():
                 if self.species[ispec].category == Category.CH4:
                     if ch4_lifetime_method==CH4LifetimeMethod.AERCHEMMIP:
                         self.ch4_lifetime_temperature_sensitivity[0, 0, iconf, 0, 0] = conf_spec.ch4_lifetime_temperature_sensitivity
+                        self.ch4_lifetime_eesc_normalisation[0, 0, iconf, 0, 0] = conf_spec.ch4_lifetime_eesc_normalisation
+                        self.ch4_lifetime_eesc_sensitivity[0, 0, iconf, 0, 0] = conf_spec.ch4_lifetime_eesc_sensitivity
                 self.ozone_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.ozone_radiative_efficiency
                 self.contrails_radiative_efficiency_array[0, 0, iconf, ispec, 0] = conf_spec.contrails_radiative_efficiency
                 self.normalisation[0, 0, iconf, ispec, 0] = conf_spec.normalisation
@@ -609,27 +616,42 @@ class FAIR():
                 self.run_config.iirf_max,
             )[0:1, :, :, self.ghg_indices, :]
 
-            # 1a. Override for methane lifetime. It's probably more efficient
+            # 2. Override for methane lifetime. It's probably more efficient
             # in general to calculate the simple lifetimes in step 1, then
             # overwrite the methane lifetime if this option is needed.
             #print(alpha_lifetime_array.shape)
             if self.run_config.ch4_lifetime_method == CH4LifetimeMethod.AERCHEMMIP:
                 conc_in = self.concentration_array[[i_timestep-1], ...] if i_timestep > 0 else self.baseline_concentration_array
+
+                eesc = calculate_eesc(
+                    conc_in,
+                    self.baseline_concentration_array,
+                    self.fractional_release_array,
+                    self.cl_atoms_array,
+                    self.br_atoms_array,
+                    self.cfc_11_index,
+                    self.halogen_indices,
+                    self.run_config.br_cl_ratio,
+                )
+
                 alpha_lifetime_array[0:1, :, :, [self.ch4_index], :] = calculate_alpha_ch4(
                     self.emissions_array[[i_timestep], ...],
                     conc_in,
+                    np.nansum(eesc, axis=SPECIES_AXIS, keepdims=True),
                     temperature_boxes[:, :, :, :, 1:2],
                     self.baseline_emissions_array,
                     self.baseline_concentration_array,
                     self.normalisation,
+                    self.ch4_lifetime_eesc_normalisation,
                     self.ch4_lifetime_chemical_sensitivity,
+                    self.ch4_lifetime_eesc_sensitivity,
                     self.ch4_lifetime_temperature_sensitivity,
                     self.slcf_indices,
-                    self.ghg_indices,
+                    self.non_halogen_ghg_indices,
                 )
             self.alpha_lifetime_array[[i_timestep], ...] = alpha_lifetime_array
 
-            # 2. GHG emissions to concentrations
+            # 3. GHG emissions to concentrations
             ae_timestep = i_timestep-1 if i_timestep>0 else 0
             (
                 self.concentration_array[i_timestep:i_timestep+1, :, :, self.ghg_emissions_indices, :],
@@ -649,7 +671,7 @@ class FAIR():
                 natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_emissions_indices, :],
             )
 
-            # 3. GHG concentrations to emissions:
+            # 4. GHG concentrations to emissions:
             (
                 self.emissions_array[i_timestep:i_timestep+1, :, :, self.ghg_concentration_indices, :],
                 gas_boxes[0:1, :, :, self.ghg_concentration_indices, :],
@@ -667,7 +689,7 @@ class FAIR():
                 natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_concentration_indices, :],
             )
 
-            # 4. greenhouse gas concentrations to forcing
+            # 5. greenhouse gas concentrations to forcing
             self.forcing_array[i_timestep:i_timestep+1, :, :, self.ghg_indices, :] = calculate_ghg_forcing(
                 self.concentration_array[i_timestep:i_timestep+1, ...],
                 self.baseline_concentration_array,
@@ -676,7 +698,7 @@ class FAIR():
                 self.co2_index, self.ch4_index, self.n2o_index, self.minor_ghg_indices
             )[0:1, :, :, self.ghg_indices, :]
 
-            # 5. aerosol direct emissions to forcing
+            # 6. aerosol direct emissions to forcing
             if self.ari_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, self.ari_index, :] = calculate_erfari_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -689,7 +711,7 @@ class FAIR():
                     self.ghg_indices,
                 )
 
-            # 6. aerosol indirect emissions to forcing
+            # 7. aerosol indirect emissions to forcing
             if self.aci_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = calculate_erfaci_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -704,28 +726,36 @@ class FAIR():
                     self.run_config.aci_method
                 )[0:1, :, :, self.aci_index, :]
 
-            # 7. ozone emissions and concentrations to forcing
+            # 8. ozone precursor emissions and concentrations to forcing
             if self.ozone_index is not None:
+                # it's necessary to calcalate this again if we used it for the
+                # methane lifetime as we're a timestep further on
+                eesc = calculate_eesc(
+                    self.concentration_array[[i_timestep], ...],
+                    self.baseline_concentration_array,
+                    self.fractional_release_array,
+                    self.cl_atoms_array,
+                    self.br_atoms_array,
+                    self.cfc_11_index,
+                    self.halogen_indices,
+                    self.run_config.br_cl_ratio,
+                )
+
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.ozone_index], :] = calculate_ozone_forcing(
                     self.emissions_array[[i_timestep], ...],
                     self.concentration_array[[i_timestep], ...],
                     self.baseline_emissions_array,
                     self.baseline_concentration_array,
-                    self.fractional_release_array,
-                    self.cl_atoms_array,
-                    self.br_atoms_array,
+                    eesc,
                     self.forcing_scaling_array,
                     self.ozone_radiative_efficiency_array,
                     temperature_boxes[:, :, :, :, 1:2],
                     self.forcing_temperature_feedback_array[:, :, :, [self.ozone_index], :],
-                    self.run_config.br_cl_ratio,
-                    self.cfc_11_index,
-                    self.halogen_indices,
                     self.slcf_indices,
-                    self.ghg_indices,
+                    self.non_halogen_ghg_indices,
                 )
 
-            # 8. contrail emissions from aviation NOx to forcing
+            # 9. contrail emissions from aviation NOx to forcing
             if self.contrails_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.contrails_index], :] = calculate_linear_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -735,9 +765,7 @@ class FAIR():
                     [self.nox_aviation_index]
                 )
 
-            # 9. BC emissions to LAPSI forcing
-            # TODO: can be refactored with aerosol direct I think
-            # TODO: include OC
+            # 10. BC and OC emissions to LAPSI forcing
             if self.lapsi_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.lapsi_index], :] = calculate_linear_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -747,7 +775,7 @@ class FAIR():
                     self.slcf_indices,
                 )
 
-            # 10. CH4 forcing to stratospheric water vapour forcing
+            # 11. CH4 forcing to stratospheric water vapour forcing
             if self.h2o_stratospheric_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.h2o_stratospheric_index], :] = calculate_linear_forcing(
                     self.forcing_array[[i_timestep], ...],
@@ -757,8 +785,7 @@ class FAIR():
                     [self.ch4_index],
                 )
 
-            # 11. CO2 cumulative emissions to land use change forcing
-            # TODO: separate treatment depending on how land use is formulated
+            # 12. CO2 cumulative emissions to land use change forcing
             if self.land_use_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.land_use_index], :] = calculate_linear_forcing(
                     self.cumulative_emissions_array[[i_timestep], ...],
@@ -768,10 +795,10 @@ class FAIR():
                     [self.co2_afolu_index]
                 )
 
-            # 12. In future we should allow volcanic forcing to have a temperature dependence.
+            # 13. In future we should allow volcanic forcing to have a temperature dependence.
             #     Insert NERC funding here.
 
-            # 13. sum up all of the forcing calculated previously
+            # 14. sum up all of the forcing calculated previously
             self.forcing_sum_array[[i_timestep], ...] = np.nansum(
                 self.forcing_array[[i_timestep], ...], axis=SPECIES_AXIS, keepdims=True
             )
@@ -779,7 +806,7 @@ class FAIR():
                 self.forcing_array[[i_timestep], ...]*self.efficacy_array, axis=SPECIES_AXIS, keepdims=True
             )
 
-            # 14. run the energy balance model if we're not prescribing temperature
+            # 15. run the energy balance model if we're not prescribing temperature
             if not self.run_config.temperature_prescribed:
                 temperature_boxes = self._step_temperature(
                     i_timestep,

@@ -8,11 +8,14 @@ from ..constants import SPECIES_AXIS
 def calculate_alpha_ch4(
     emissions,
     concentration,
+    eesc,
     temperature,
     baseline_emissions,
     baseline_concentration,
     normalisation,
+    eesc_normalisation,
     ch4_lifetime_chemical_sensitivity,
+    ch4_lifetime_eesc_sensitivity,
     ch4_lifetime_temperature_sensitivity,
     slcf_indices,
     ghg_indices,
@@ -34,6 +37,7 @@ def calculate_alpha_ch4(
                 * ch4_lifetime_chemical_sensitivity[:,:,:,ghg_indices,:],
             ),
         axis=SPECIES_AXIS, keepdims=True) +
+        np.log(1 + (eesc/eesc_normalisation * ch4_lifetime_eesc_sensitivity)) +
         np.log(1 + temperature * ch4_lifetime_temperature_sensitivity)
     )
 
