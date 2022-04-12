@@ -225,7 +225,12 @@ def _verify_scenario_consistency(scenarios):
                             raise TimeMismatchError(
                                 f"Each Species in each Scenario must have the same "
                                 f"number of timesteps for their emissions, concentration "
-                                f"or forcing"
+                                f"or forcing. The Species at position 0 in the list, "
+                                f"{scenarios[iscen].list_of_species[0].species_id.name}, "
+                                f"has length {n_timesteps_first_scenario_species}. "
+                                f"The Species at position {iscen} which is "
+                                f"{scenarios[iscen].list_of_species[ispec].species_id.name}, "
+                                f"has length {n_timesteps_this_scenario_species}."
                             )
         species_included = []
         n_species = len(scenarios[iscen].list_of_species)
@@ -820,7 +825,7 @@ class FAIR():
                 temperature_boxes[0:1, :, :, 0:1, :] = self.temperature[i_timestep:i_timestep+1, :, :, 0:1, 0:1]
 
         self._fill_concentration()
-        self._fill_forcing()
+#        self._fill_forcing()
         self._fill_temperature()
 
 
