@@ -222,10 +222,19 @@ def _verify_scenario_consistency(scenarios):
                     if getattr(scenarios[iscen].list_of_species[ispec], attr) is not None:
                         n_timesteps_this_scenario_species = len(getattr(scenarios[iscen].list_of_species[ispec], attr))
                         if n_timesteps_this_scenario_species != n_timesteps_first_scenario_species:
+                            print(n_timesteps_this_scenario_species)
+                            print(n_timesteps_first_scenario_species)
+                            print(scenarios[iscen].list_of_species[0].species_id.name)
+                            print(scenarios[iscen].list_of_species[ispec].species_id.name)
                             raise TimeMismatchError(
                                 f"Each Species in each Scenario must have the same "
                                 f"number of timesteps for their emissions, concentration "
-                                f"or forcing"
+                                f"or forcing. The Species at position 0 in the list, "
+                                f"{scenarios[iscen].list_of_species[0].species_id.name}, "
+                                f"has length {n_timesteps_first_scenario_species}. "
+                                f"The Species at position {iscen} which is "
+                                f"{scenarios[iscen].list_of_species[ispec].species_id.name}, "
+                                f"has length {n_timesteps_this_scenario_species}."
                             )
         species_included = []
         n_species = len(scenarios[iscen].list_of_species)
