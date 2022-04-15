@@ -7,6 +7,8 @@ class Category(Enum):
     CO2_FFI = auto()
     CO2_AFOLU = auto()
     CO2 = auto()
+    CH4_FFI = auto()
+    CH4_AFOLU = auto()
     CH4 = auto()
     N2O = auto()
     CFC_11 = auto()
@@ -33,6 +35,7 @@ class Category(Enum):
 class AggregatedCategory():
     """Groups of Category that share common properties."""
     CO2_SOURCE = [Category.CO2_FFI, Category.CO2_AFOLU]
+    CH4_SOURCE = [Category.CH4_FFI, Category.CH4_AFOLU]
     GREENHOUSE_GAS = [Category.CO2, Category.CH4, Category.N2O, Category.CFC_11, Category.OTHER_HALOGEN, Category.F_GAS]
     MINOR_GREENHOUSE_GAS = [Category.CFC_11, Category.OTHER_HALOGEN, Category.F_GAS]
     HALOGEN = [Category.CFC_11, Category.OTHER_HALOGEN]
@@ -43,6 +46,8 @@ class AggregatedCategory():
         Category.CO2_FFI,
         Category.CO2_AFOLU,
         Category.CO2,
+        Category.CH4_FFI,
+        Category.CH4_AFOLU,
         Category.CH4,
         Category.N2O,
         Category.CFC_11,
@@ -73,7 +78,9 @@ valid_run_modes = {
     Category.CO2_FFI: (RunMode.EMISSIONS,),
     Category.CO2_AFOLU: (RunMode.EMISSIONS,),
     Category.CO2: (RunMode.CONCENTRATION, RunMode.FORCING, RunMode.FROM_OTHER_SPECIES),  # we will only allow CO2 emissions to be given for FFI and AFOLU separately.
-    Category.CH4: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
+    Category.CH4_FFI: (RunMode.CONCENTRATION,),
+    Category.CH4_AFOLU: (RunMode.CONCENTRATION,),
+    Category.CH4: (RunMode.CONCENTRATION, RunMode.FORCING, RunMode.FROM_OTHER_SPECIES),  # as above
     Category.N2O: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
     Category.CFC_11: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
     Category.OTHER_HALOGEN: (RunMode.EMISSIONS, RunMode.CONCENTRATION, RunMode.FORCING),
@@ -125,6 +132,7 @@ class SpeciesID():
                 self.run_mode = RunMode.FORCING
             elif self.category in [
                 Category.CO2,
+                Category.CH4,
                 Category.OZONE,
                 Category.AEROSOL_RADIATION_INTERACTIONS,
                 Category.AEROSOL_CLOUD_INTERACTIONS,

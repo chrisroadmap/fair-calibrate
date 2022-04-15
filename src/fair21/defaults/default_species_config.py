@@ -28,8 +28,15 @@ default_species_config = {
         tropospheric_adjustment = 0.05,
         normalisation = 113.22998046875,
     ),
+    'ch4_afolu' : SpeciesConfig(
+        species_id = SpeciesID(name='CH4 AFOLU', category=Category.CH4_AFOLU, run_mode=RunMode.EMISSIONS),
+        oxidation_to_co2 = 0.75,
+    ),
+    'ch4_ffi': SpeciesConfig(
+        species_id = SpeciesID(name='CH4 fossil fuel and industrial', category=Category.CH4_FFI, run_mode=RunMode.EMISSIONS),
+    ),
     'ch4' : SpeciesConfig(
-        species_id = SpeciesID('CH4', Category.CH4, run_mode=RunMode.EMISSIONS),
+        species_id = SpeciesID('CH4', Category.CH4, run_mode=RunMode.FROM_OTHER_SPECIES),
         molecular_weight = 16.043,
         lifetime = 8.25,  # Thornhill lifetime best fit: 10.8537568
         radiative_efficiency = 0.00038864402860869495,

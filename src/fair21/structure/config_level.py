@@ -210,6 +210,7 @@ class SpeciesConfig():
     forcing_temperature_feedback: float=0
     ch4_lifetime_eesc_normalisation: float=None
     ch4_lifetime_eesc_sensitivity: float=None
+    oxidation_to_co2: float=0
     run_config: RunConfig=RunConfig()
 
     def calculate_iirf0(self):

@@ -671,7 +671,14 @@ class FAIR():
                 natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_emissions_indices, :],
             )
 
-            # 4. GHG concentrations to emissions:
+            # 4. oxidation of carbon-containing species to CO2.
+            # we only do this for CH4 by default. We assume that CO is included
+            # in emissions inventories already, and VOC... well, we don't know,
+            # but the effect of omission is likely to be tiny, and anyway you
+            # can supply a non-zero value if you want.
+
+
+            # 5. GHG concentrations to emissions:
             (
                 self.emissions_array[i_timestep:i_timestep+1, :, :, self.ghg_concentration_indices, :],
                 gas_boxes[0:1, :, :, self.ghg_concentration_indices, :],
@@ -689,7 +696,7 @@ class FAIR():
                 natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_concentration_indices, :],
             )
 
-            # 5. greenhouse gas concentrations to forcing
+            # 6. greenhouse gas concentrations to forcing
             self.forcing_array[i_timestep:i_timestep+1, :, :, self.ghg_indices, :] = calculate_ghg_forcing(
                 self.concentration_array[i_timestep:i_timestep+1, ...],
                 self.baseline_concentration_array,
@@ -698,7 +705,7 @@ class FAIR():
                 self.co2_index, self.ch4_index, self.n2o_index, self.minor_ghg_indices
             )[0:1, :, :, self.ghg_indices, :]
 
-            # 6. aerosol direct emissions to forcing
+            # 7. aerosol direct emissions to forcing
             if self.ari_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, self.ari_index, :] = calculate_erfari_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -711,7 +718,7 @@ class FAIR():
                     self.ghg_indices,
                 )
 
-            # 7. aerosol indirect emissions to forcing
+            # 8. aerosol indirect emissions to forcing
             if self.aci_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, self.aci_index, :] = calculate_erfaci_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -726,7 +733,7 @@ class FAIR():
                     self.run_config.aci_method
                 )[0:1, :, :, self.aci_index, :]
 
-            # 8. ozone precursor emissions and concentrations to forcing
+            # 9. ozone precursor emissions and concentrations to forcing
             if self.ozone_index is not None:
                 # it's necessary to calcalate this again if we used it for the
                 # methane lifetime as we're a timestep further on
@@ -755,7 +762,7 @@ class FAIR():
                     self.non_halogen_ghg_indices,
                 )
 
-            # 9. contrail emissions from aviation NOx to forcing
+            # 10. contrail emissions from aviation NOx to forcing
             if self.contrails_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.contrails_index], :] = calculate_linear_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -765,7 +772,7 @@ class FAIR():
                     [self.nox_aviation_index]
                 )
 
-            # 10. BC and OC emissions to LAPSI forcing
+            # 11. BC and OC emissions to LAPSI forcing
             if self.lapsi_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.lapsi_index], :] = calculate_linear_forcing(
                     self.emissions_array[[i_timestep], ...],
@@ -775,7 +782,7 @@ class FAIR():
                     self.slcf_indices,
                 )
 
-            # 11. CH4 forcing to stratospheric water vapour forcing
+            # 12. CH4 forcing to stratospheric water vapour forcing
             if self.h2o_stratospheric_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.h2o_stratospheric_index], :] = calculate_linear_forcing(
                     self.forcing_array[[i_timestep], ...],
@@ -785,7 +792,7 @@ class FAIR():
                     [self.ch4_index],
                 )
 
-            # 12. CO2 cumulative emissions to land use change forcing
+            # 13. CO2 cumulative emissions to land use change forcing
             if self.land_use_index is not None:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.land_use_index], :] = calculate_linear_forcing(
                     self.cumulative_emissions_array[[i_timestep], ...],
@@ -795,10 +802,10 @@ class FAIR():
                     [self.co2_afolu_index]
                 )
 
-            # 13. In future we should allow volcanic forcing to have a temperature dependence.
+            # 14. In future we should allow volcanic forcing to have a temperature dependence.
             #     Insert NERC funding here.
 
-            # 14. sum up all of the forcing calculated previously
+            # 15. sum up all of the forcing calculated previously
             self.forcing_sum_array[[i_timestep], ...] = np.nansum(
                 self.forcing_array[[i_timestep], ...], axis=SPECIES_AXIS, keepdims=True
             )
@@ -806,7 +813,7 @@ class FAIR():
                 self.forcing_array[[i_timestep], ...]*self.efficacy_array, axis=SPECIES_AXIS, keepdims=True
             )
 
-            # 15. run the energy balance model if we're not prescribing temperature
+            # 16. run the energy balance model if we're not prescribing temperature
             if not self.run_config.temperature_prescribed:
                 temperature_boxes = self._step_temperature(
                     i_timestep,
