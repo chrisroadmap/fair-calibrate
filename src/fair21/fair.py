@@ -638,7 +638,6 @@ class FAIR():
                     self.halogen_indices,
                     self.run_config.br_cl_ratio,
                 )
-
                 alpha_lifetime_array[0:1, :, :, [self.ch4_index], :] = calculate_alpha_ch4(
                     self.emissions_array[[i_timestep], ...],
                     conc_in,
