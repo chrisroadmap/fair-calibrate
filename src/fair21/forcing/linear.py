@@ -49,8 +49,8 @@ def calculate_linear_forcing(
 
     erf_out = np.sum(
         (
-            (emissions[:, :, :, indices, :] - baseline_emissions[:, :, :, indices, :])
-            * radiative_efficiency[:, :, :, indices, :]
+            (emissions[:, :, :, indices_in, :] - baseline_emissions[:, :, :, indices_in, :])
+            * radiative_efficiency[:, :, :, indices_in, :]
         ) * forcing_scaling[:, :, :, index_out, :],
     axis=SPECIES_AXIS, keepdims=True)
     return erf_out

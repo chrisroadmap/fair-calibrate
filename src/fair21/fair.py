@@ -348,7 +348,7 @@ class FAIR():
                     self.ghg_emissions_indices.append(ispec)
                 elif specie.run_mode == RunMode.CONCENTRATION:
                     self.ghg_concentration_indices.append(ispec)
-                if specie.category!=AggregatedCategory.HALOGEN:
+                if specie.category not in AggregatedCategory.HALOGEN:
                     self.non_halogen_ghg_indices.append(ispec)
             if specie.category in AggregatedCategory.SLCF:
                 self.slcf_indices.append(ispec)
