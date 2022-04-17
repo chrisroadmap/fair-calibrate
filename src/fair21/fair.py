@@ -766,7 +766,8 @@ class FAIR():
                     self.baseline_emissions_array,
                     self.forcing_scaling_array,
                     self.contrails_radiative_efficiency_array,
-                    [self.nox_aviation_index]
+                    [self.nox_aviation_index],
+                    [self.contrails_index],
                 )
 
             # 10. BC and OC emissions to LAPSI forcing
@@ -777,6 +778,7 @@ class FAIR():
                     self.forcing_scaling_array,
                     self.lapsi_radiative_efficiency_array,
                     self.slcf_indices,
+                    [self.lapsi_index],
                 )
 
             # 11. CH4 forcing to stratospheric water vapour forcing
@@ -787,6 +789,7 @@ class FAIR():
                     self.forcing_scaling_array,
                     self.stratospheric_h2o_factor_array,
                     [self.ch4_index],
+                    [self.h2o_stratospheric_index],
                 )
 
             # 12. CO2 cumulative emissions to land use change forcing
@@ -796,7 +799,8 @@ class FAIR():
                     self.cumulative_emissions_array[0:1, ...],
                     self.forcing_scaling_array,
                     self.land_use_cumulative_emissions_to_forcing_array,
-                    [self.co2_afolu_index]
+                    [self.co2_afolu_index],
+                    [self.land_use_index],
                 )
 
             # 13. In future we should allow volcanic forcing to have a temperature dependence.

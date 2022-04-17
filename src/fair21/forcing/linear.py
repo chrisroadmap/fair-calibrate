@@ -10,7 +10,8 @@ def calculate_linear_forcing(
     baseline_emissions,
     forcing_scaling,
     radiative_efficiency,
-    indices,
+    indices_in,
+    index_out,
 ):
     """
     Calculate effective radiative forcing from a linear relationship of
@@ -27,9 +28,11 @@ def calculate_linear_forcing(
         effective radiative forcing and forcing uncertainty).
     radiative_efficiency : ndarray
         radiative efficiency (W m-2 (driver_unit yr-1)-1) of each species.
-    indices : list of int
+    indices_in : list of int
         provides a mapping of which species along the SPECIES_AXIS to include
         in the forcing calculation.
+    index_out : int
+        provides the index that will contain the forcing output.
 
     Returns
     -------
@@ -48,6 +51,6 @@ def calculate_linear_forcing(
         (
             (emissions[:, :, :, indices, :] - baseline_emissions[:, :, :, indices, :])
             * radiative_efficiency[:, :, :, indices, :]
-        ) * forcing_scaling[:, :, :, indices, :],
+        ) * forcing_scaling[:, :, :, index_out, :],
     axis=SPECIES_AXIS, keepdims=True)
     return erf_out
