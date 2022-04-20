@@ -225,7 +225,12 @@ def _verify_scenario_consistency(scenarios):
                             raise TimeMismatchError(
                                 f"Each Species in each Scenario must have the same "
                                 f"number of timesteps for their emissions, concentration "
-                                f"or forcing"
+                                f"or forcing. The Species at position 0 in the list, "
+                                f"{scenarios[iscen].list_of_species[0].species_id.name}, "
+                                f"has length {n_timesteps_first_scenario_species}. "
+                                f"The Species at position {iscen} which is "
+                                f"{scenarios[iscen].list_of_species[ispec].species_id.name}, "
+                                f"has length {n_timesteps_this_scenario_species}."
                             )
         species_included = []
         n_species = len(scenarios[iscen].list_of_species)
@@ -343,7 +348,7 @@ class FAIR():
                     self.ghg_emissions_indices.append(ispec)
                 elif specie.run_mode == RunMode.CONCENTRATION:
                     self.ghg_concentration_indices.append(ispec)
-                if specie.category!=AggregatedCategory.HALOGEN:
+                if specie.category not in AggregatedCategory.HALOGEN:
                     self.non_halogen_ghg_indices.append(ispec)
             if specie.category in AggregatedCategory.SLCF:
                 self.slcf_indices.append(ispec)
@@ -633,7 +638,6 @@ class FAIR():
                     self.halogen_indices,
                     self.run_config.br_cl_ratio,
                 )
-
                 alpha_lifetime_array[0:1, :, :, [self.ch4_index], :] = calculate_alpha_ch4(
                     self.emissions_array[[i_timestep], ...],
                     conc_in,
@@ -762,7 +766,8 @@ class FAIR():
                     self.baseline_emissions_array,
                     self.forcing_scaling_array,
                     self.contrails_radiative_efficiency_array,
-                    [self.nox_aviation_index]
+                    [self.nox_aviation_index],
+                    [self.contrails_index],
                 )
 
             # 10. BC and OC emissions to LAPSI forcing
@@ -773,6 +778,7 @@ class FAIR():
                     self.forcing_scaling_array,
                     self.lapsi_radiative_efficiency_array,
                     self.slcf_indices,
+                    [self.lapsi_index],
                 )
 
             # 11. CH4 forcing to stratospheric water vapour forcing
@@ -783,6 +789,7 @@ class FAIR():
                     self.forcing_scaling_array,
                     self.stratospheric_h2o_factor_array,
                     [self.ch4_index],
+                    [self.h2o_stratospheric_index],
                 )
 
             # 12. CO2 cumulative emissions to land use change forcing
@@ -792,7 +799,8 @@ class FAIR():
                     self.cumulative_emissions_array[0:1, ...],
                     self.forcing_scaling_array,
                     self.land_use_cumulative_emissions_to_forcing_array,
-                    [self.co2_afolu_index]
+                    [self.co2_afolu_index],
+                    [self.land_use_index],
                 )
 
             # 13. In future we should allow volcanic forcing to have a temperature dependence.
@@ -820,7 +828,7 @@ class FAIR():
                 temperature_boxes[0:1, :, :, 0:1, :] = self.temperature[i_timestep:i_timestep+1, :, :, 0:1, 0:1]
 
         self._fill_concentration()
-        self._fill_forcing()
+#        self._fill_forcing()
         self._fill_temperature()
 
 

@@ -4,6 +4,7 @@ Alternative methane lifetime definition that is based on multiple species.
 
 import numpy as np
 from ..constants import SPECIES_AXIS
+#import warnings
 
 def calculate_alpha_ch4(
     emissions,
@@ -21,6 +22,12 @@ def calculate_alpha_ch4(
     ghg_indices,
 ):
 
+    #print(np.min(1 + temperature * ch4_lifetime_temperature_sensitivity))
+    #print(np.argmin(np.squeeze(1 + temperature * ch4_lifetime_temperature_sensitivity)))
+
+    #with warnings.catch_warnings():
+    #    warnings.filterwarnings("error")
+    #    try:
     log_lifetime_scaling = (
         np.sum(
             np.log(
@@ -40,5 +47,7 @@ def calculate_alpha_ch4(
         np.log(1 + (eesc/eesc_normalisation * ch4_lifetime_eesc_sensitivity)) +
         np.log(1 + temperature * ch4_lifetime_temperature_sensitivity)
     )
+    #    except Warning:
+    #        print('stopped')
 
     return np.exp(log_lifetime_scaling)

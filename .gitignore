@@ -4,6 +4,7 @@ data/netcdf-scm/*.zip
 data/rcmip/
 data/parameter_sets/
 data/forcing/*.nc
+data/ar6_ensemble_batches/
 
 # Apple files
 .DS_Store
