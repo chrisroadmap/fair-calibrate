@@ -72,3 +72,4 @@ source("calibrate_cummins_3layer.r")
 2. Hege-Beate Fredriksen for crunching the CMIP6 4xCO2 data from many more models
 3. Donald Cummins for the three-layer model tuning algorithm.
 4. Bill Collins for assistance with chemistry emulations and correspondence to AerChemMIP results.
+5. Zeb Nicholls for advice on constraining to assessed ranges (e.g. AR6)
