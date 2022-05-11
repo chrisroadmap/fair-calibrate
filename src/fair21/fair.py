@@ -793,7 +793,7 @@ class FAIR():
                 )
 
             # 12. CO2 cumulative emissions to land use change forcing
-            if self.land_use_index is not None:
+            if self.land_use_index is not None and self.species[self.land_use_index].run_mode == RunMode.FROM_OTHER_SPECIES:
                 self.forcing_array[i_timestep:i_timestep+1, :, :, [self.land_use_index], :] = calculate_linear_forcing(
                     self.cumulative_emissions_array[[i_timestep], ...],
                     self.cumulative_emissions_array[0:1, ...],
