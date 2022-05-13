@@ -39,14 +39,24 @@ class EnergyBalanceModel:
         of Climate, 26(6), 1859-1876
     """
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        ocean_heat_capacity,
+        ocean_heat_transfer,
+        deep_ocean_efficacy=1,
+        forcing_4co2=8,
+        stochastic_run=False,
+        sigma_eta=0.5,
+        sigma_xi=0.5,
+        gamma_autocorrelation=2,
+        seed=None,
+        timestep=1,
+        n_timesteps=1
+    ):
         """Initialise the EnergyBalanceModel.
 
         Parameters
         ----------
-        **kwargs : dict, optional
-            Parameters to run the energy balance model with.
-
         ocean_heat_capacity : `np.ndarray`
             Ocean heat capacity of each layer (top first), W m-2 yr K-1
         ocean_heat_transfer : `np.ndarray`
@@ -87,25 +97,24 @@ class EnergyBalanceModel:
             Estimation of Stochastic Energy Balance Model Parameters, Journal of
             Climate, 33(18), 7909-7926.
         """
-        ocean_heat_capacity = kwargs.get('ocean_heat_capacity', np.array([5, 20, 100]))
-        self.ocean_heat_transfer = kwargs.get('ocean_heat_transfer', np.array([1.31, 2, 1]))
-        self.deep_ocean_efficacy = kwargs.get('deep_ocean_efficacy', 1.2)
-        self.forcing_4co2 = kwargs.get('forcing_4co2', 7.86)
-        self.stochastic_run = kwargs.get('stochastic_run', False)
-        self.sigma_eta = kwargs.get('sigma_eta', 0.5)
-        self.sigma_xi = kwargs.get('sigma_xi', 0.5)
-        self.gamma_autocorrelation = kwargs.get('gamma_autocorrelation', 2)
-        self.seed = kwargs.get('seed', None)
-        self.n_temperature_boxes = len(ocean_heat_capacity)
-        if len(self.ocean_heat_transfer) != self.n_temperature_boxes:
-            raise IncompatibleConfigError("ocean_heat_capacity and ocean_heat_transfer must be arrays of the same shape.")
-        self.temperature = kwargs.get('temperature', np.zeros((1, self.n_temperature_boxes + 1)))
-        self.n_timesteps = kwargs.get('n_timesteps', 1)
-        self.nmatrix = self.n_temperature_boxes + 1
-        self.timestep = kwargs.get('timestep', 1)
 
         # adjust ocean heat capacity to be a rate: units W m-2 K-1
-        self.ocean_heat_capacity = ocean_heat_capacity / self.timestep
+        self.ocean_heat_transfer = ocean_heat_transfer
+        self.deep_ocean_efficacy = deep_ocean_efficacy
+        self.forcing_4co2 = forcing_4co2
+        self.stochastic_run = stochastic_run
+        self.sigma_eta = sigma_eta
+        self.sigma_xi = sigma_xi
+        self.gamma_autocorrelation = gamma_autocorrelation
+        self.ocean_heat_capacity = ocean_heat_capacity / timestep
+        self.n_temperature_boxes = len(self.ocean_heat_capacity)
+        if len(self.ocean_heat_transfer) != self.n_temperature_boxes:
+            raise IncompatibleConfigError("ocean_heat_capacity and ocean_heat_transfer must be arrays of the same shape.")
+        self.temperature = np.zeros((1, self.n_temperature_boxes + 1))
+        self.n_timesteps = n_timesteps
+        self.n_matrix = self.n_temperature_boxes + 1
+        self.timestep = timestep
+
 
     def _eb_matrix(self):
         """Define the matrix of differential equations.
