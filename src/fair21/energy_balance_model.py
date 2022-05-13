@@ -39,14 +39,24 @@ class EnergyBalanceModel:
         of Climate, 26(6), 1859-1876
     """
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        ocean_heat_capacity,
+        ocean_heat_transfer,
+        deep_ocean_efficacy=1,
+        forcing_4co2=8,
+        stochastic_run=False,
+        sigma_eta=0.5,
+        sigma_xi=0.5,
+        gamma_autocorrelation=2,
+        seed=None,
+        timestep=1,
+        n_timesteps=1
+    ):
         """Initialise the EnergyBalanceModel.
 
         Parameters
         ----------
-        **kwargs : dict, optional
-            Parameters to run the energy balance model with.
-
         ocean_heat_capacity : `np.ndarray`
             Ocean heat capacity of each layer (top first), W m-2 yr K-1
         ocean_heat_transfer : `np.ndarray`
@@ -87,25 +97,27 @@ class EnergyBalanceModel:
             Estimation of Stochastic Energy Balance Model Parameters, Journal of
             Climate, 33(18), 7909-7926.
         """
-        ocean_heat_capacity = kwargs.get('ocean_heat_capacity', np.array([5, 20, 100]))
-        self.ocean_heat_transfer = kwargs.get('ocean_heat_transfer', np.array([1.31, 2, 1]))
-        self.deep_ocean_efficacy = kwargs.get('deep_ocean_efficacy', 1.2)
-        self.forcing_4co2 = kwargs.get('forcing_4co2', 7.86)
-        self.stochastic_run = kwargs.get('stochastic_run', False)
-        self.sigma_eta = kwargs.get('sigma_eta', 0.5)
-        self.sigma_xi = kwargs.get('sigma_xi', 0.5)
-        self.gamma_autocorrelation = kwargs.get('gamma_autocorrelation', 2)
-        self.seed = kwargs.get('seed', None)
-        self.n_temperature_boxes = len(ocean_heat_capacity)
-        if len(self.ocean_heat_transfer) != self.n_temperature_boxes:
-            raise IncompatibleConfigError("ocean_heat_capacity and ocean_heat_transfer must be arrays of the same shape.")
-        self.temperature = kwargs.get('temperature', np.zeros((1, self.n_temperature_boxes + 1)))
-        self.n_timesteps = kwargs.get('n_timesteps', 1)
-        self.nmatrix = self.n_temperature_boxes + 1
-        self.timestep = kwargs.get('timestep', 1)
 
         # adjust ocean heat capacity to be a rate: units W m-2 K-1
-        self.ocean_heat_capacity = ocean_heat_capacity / self.timestep
+        self.ocean_heat_transfer = np.asarray(ocean_heat_transfer)
+        self.deep_ocean_efficacy = deep_ocean_efficacy
+        self.forcing_4co2 = forcing_4co2
+        self.stochastic_run = stochastic_run
+        self.sigma_eta = sigma_eta
+        self.sigma_xi = sigma_xi
+        self.gamma_autocorrelation = gamma_autocorrelation
+        self.ocean_heat_capacity = np.asarray(ocean_heat_capacity) / timestep
+        self.n_temperature_boxes = len(self.ocean_heat_capacity)
+        if len(self.ocean_heat_transfer) != self.n_temperature_boxes:
+            raise IncompatibleConfigError("ocean_heat_capacity and ocean_heat_transfer must be arrays of the same shape.")
+        if self.n_temperature_boxes < 2:
+            raise IncompatibleConfigError("At least two ocean layers must be specified in the energy balance model.")
+        self.temperature = np.zeros((1, self.n_temperature_boxes + 1))
+        self.n_timesteps = n_timesteps
+        self.n_matrix = self.n_temperature_boxes + 1
+        self.seed = seed
+        self.timestep = timestep
+
 
     def _eb_matrix(self):
         """Define the matrix of differential equations.
@@ -118,29 +130,51 @@ class EnergyBalanceModel:
             2D array of eigenvectors (an array of 1D eigenvectors) of the
             energy balance matrix.
         """
-        eb_matrix = np.array(
-            [
-                [
-                    -(self.ocean_heat_transfer[0]+self.ocean_heat_transfer[1])/self.ocean_heat_capacity[0],
-                    self.ocean_heat_transfer[1]/self.ocean_heat_capacity[0],
-                    0
-                ],
-                [
-                    self.ocean_heat_transfer[1]/self.ocean_heat_capacity[1],
-                    -(self.ocean_heat_transfer[1]+self.deep_ocean_efficacy*self.ocean_heat_transfer[2])/self.ocean_heat_capacity[1],
-                    self.deep_ocean_efficacy*self.ocean_heat_transfer[2]/self.ocean_heat_capacity[1]
-                ],
-                [
-                    0,
-                    self.ocean_heat_transfer[2]/self.ocean_heat_capacity[2],
-                    -self.ocean_heat_transfer[2]/self.ocean_heat_capacity[2]
-                ]
+        # two box model
+        # [x  x]
+        # [x  x]
+
+        # three box model
+        # [x  x  0]
+        # [x  x ex]
+        # [0  x  x]
+
+        # four box model
+        # [x  x  0  0]
+        # [x  x  x  0]
+        # [0  x  x ex]
+        # [0  0  x  x]
+
+        # put the efficacy of deep ocean in the right place
+        # making a vector avoids if statements
+        n_box = self.n_temperature_boxes
+        eb_matrix = np.zeros((n_box, n_box))
+        epsilon_array = np.ones(n_box)
+        epsilon_array[n_box-2] = self.deep_ocean_efficacy
+
+        # First row
+        eb_matrix[0, :2] = [
+            -(self.ocean_heat_transfer[0]+epsilon_array[0]*self.ocean_heat_transfer[1])/self.ocean_heat_capacity[0],
+            epsilon_array[0]*self.ocean_heat_transfer[1]/self.ocean_heat_capacity[0],
+        ]
+
+        # Last row
+        eb_matrix[-1, -2:] = [
+            self.ocean_heat_transfer[-1]/self.ocean_heat_capacity[-1],
+            -self.ocean_heat_transfer[-1]/self.ocean_heat_capacity[-1]
+        ]
+
+        # Intermediate rows where n>2
+        for row in range(1, n_box-1):
+            eb_matrix[row, row-1:row+2] = [
+                self.ocean_heat_transfer[row]/self.ocean_heat_capacity[row],
+                -(self.ocean_heat_transfer[row]+epsilon_array[row]*self.ocean_heat_transfer[row+1])/self.ocean_heat_capacity[row],
+                epsilon_array[row]*self.ocean_heat_transfer[row+1]/self.ocean_heat_capacity[row]
             ]
-        )
 
         # Prepend eb_matrix with stochastic terms if this is a stochastic run: Cummins et al. (2020) eqs. 13 and 14
-        eb_matrix = np.insert(eb_matrix, 0, np.zeros(self.n_temperature_boxes), axis=0)
-        prepend_col = np.zeros(self.n_temperature_boxes+1)
+        eb_matrix = np.insert(eb_matrix, 0, np.zeros(n_box), axis=0)
+        prepend_col = np.zeros(n_box+1)
         prepend_col[0] = -self.gamma_autocorrelation
         prepend_col[1] = 1/self.ocean_heat_capacity[0]
         eb_matrix = np.insert(eb_matrix, 0, prepend_col, axis=1)
@@ -172,19 +206,19 @@ class EnergyBalanceModel:
         # stochastic stuff
         if self.stochastic_run:
             eb_matrix = self._eb_matrix()
-            q_mat = np.zeros((self.nmatrix, self.nmatrix))
+            q_mat = np.zeros((self.n_matrix, self.n_matrix))
             q_mat[0,0] = self.sigma_eta**2
             q_mat[1,1] = (self.sigma_xi/self.ocean_heat_capacity[0])**2
             ## use Van Loan (1978) to compute the matrix exponential
-            h_mat = np.zeros((self.nmatrix*2, self.nmatrix*2))
-            h_mat[:self.nmatrix,:self.nmatrix] = -eb_matrix
-            h_mat[:self.nmatrix,self.nmatrix:] = q_mat
-            h_mat[self.nmatrix:,self.nmatrix:] = eb_matrix.T
+            h_mat = np.zeros((self.n_matrix*2, self.n_matrix*2))
+            h_mat[:self.n_matrix,:self.n_matrix] = -eb_matrix
+            h_mat[:self.n_matrix,self.n_matrix:] = q_mat
+            h_mat[self.n_matrix:,self.n_matrix:] = eb_matrix.T
             g_mat = scipy.linalg.expm(h_mat)
-            q_mat_d = g_mat[self.nmatrix:,self.nmatrix:].T @ g_mat[:self.nmatrix,self.nmatrix:]
+            q_mat_d = g_mat[self.n_matrix:,self.n_matrix:].T @ g_mat[:self.n_matrix,self.n_matrix:]
             q_mat_d = q_mat_d.astype(np.float64)
             _stochastic_d = scipy.stats.multivariate_normal.rvs(
-                size=self.n_timesteps, mean=np.zeros(self.nmatrix), cov=q_mat_d, random_state=self.seed
+                size=self.n_timesteps, mean=np.zeros(self.n_matrix), cov=q_mat_d, random_state=self.seed
             )
 
         return _stochastic_d
@@ -230,6 +264,7 @@ class EnergyBalanceModel:
 
     def run(self):
         # internal variables
+        n_box = self.n_matrix-1
         forcing_vector = self._forcing_vector()
 
         # Calculate the matrix exponential
@@ -237,16 +272,16 @@ class EnergyBalanceModel:
         eb_matrix_d = scipy.linalg.expm(eb_matrix)
 
         # Solve for temperature
-        forcing_vector_d = scipy.linalg.solve(eb_matrix, (eb_matrix_d - np.identity(self.nmatrix)) @ forcing_vector)
+        forcing_vector_d = scipy.linalg.solve(eb_matrix, (eb_matrix_d - np.identity(self.n_matrix)) @ forcing_vector)
 
-        solution = np.zeros((self.n_timesteps, self.nmatrix))
+        solution = np.zeros((self.n_timesteps, self.n_matrix))
         solution[0, :] = self.temperature[0, :]
         for i in range(1, self.n_timesteps):
             solution[i, :] = eb_matrix_d @ solution[i-1, :] + forcing_vector_d * self.forcing[i-1] + self.stochastic_d[i-1, :]
 
         self.temperature = solution[:, 1:]
         self.stochastic_forcing = solution[:, 0]
-        self.toa_imbalance = self.forcing - self.ocean_heat_transfer[0]*self.temperature[:,0] + (1 - self.deep_ocean_efficacy) * self.ocean_heat_transfer[2] * (self.temperature[:,1] - self.temperature[:,2])
+        self.toa_imbalance = self.forcing - self.ocean_heat_transfer[0]*self.temperature[:,0] + (1 - self.deep_ocean_efficacy) * self.ocean_heat_transfer[n_box-1] * (self.temperature[:,n_box-2] - self.temperature[:,n_box-1])
         self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * self.timestep * earth_radius**2 * 4 * np.pi * seconds_per_year)
 
     def step_temperature(self, temperature_boxes_old, forcing):
