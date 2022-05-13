@@ -135,22 +135,25 @@ class EnergyBalanceModel:
 
         # put the efficacy of deep ocean in the right place
         # making a vector avoids if statements
-        eb_matrix = np.zeros((n_temperature_boxes, n_temperature_boxes))
-        epsilon_array = np.ones(n_temperature_boxes)
-        epsilon_array[n_temperature_boxes-2] = deep_ocean_efficacy
+        n_box = self.n_temperature_boxes
+        eb_matrix = np.zeros((n_box, n_box))
+        epsilon_array = np.ones(n_box)
+        epsilon_array[n_box-2] = self.deep_ocean_efficacy
 
         # First row
         eb_matrix[0, :2] = [
             -(self.ocean_heat_transfer[0]+epsilon_array[0]*self.ocean_heat_transfer[1])/self.ocean_heat_capacity[0],
             epsilon_array[0]*self.ocean_heat_transfer[1]/self.ocean_heat_capacity[0],
         ]
+
         # Last row
         eb_matrix[-1, -2:] = [
             self.ocean_heat_transfer[-1]/self.ocean_heat_capacity[-1],
             -self.ocean_heat_transfer[-1]/self.ocean_heat_capacity[-1]
         ]
+
         # Intermediate rows where n>2
-        for row in range(1, n_temperature_boxes-2):
+        for row in range(1, n_box-1):
             eb_matrix[row, row-1:row+2] = [
                 self.ocean_heat_transfer[row]/self.ocean_heat_capacity[row],
                 -(self.ocean_heat_transfer[row]+epsilon_array[row]*self.ocean_heat_transfer[row+1])/self.ocean_heat_capacity[row],
@@ -158,8 +161,8 @@ class EnergyBalanceModel:
             ]
 
         # Prepend eb_matrix with stochastic terms if this is a stochastic run: Cummins et al. (2020) eqs. 13 and 14
-        eb_matrix = np.insert(eb_matrix, 0, np.zeros(self.n_temperature_boxes), axis=0)
-        prepend_col = np.zeros(self.n_temperature_boxes+1)
+        eb_matrix = np.insert(eb_matrix, 0, np.zeros(n_box), axis=0)
+        prepend_col = np.zeros(n_box+1)
         prepend_col[0] = -self.gamma_autocorrelation
         prepend_col[1] = 1/self.ocean_heat_capacity[0]
         eb_matrix = np.insert(eb_matrix, 0, prepend_col, axis=1)
