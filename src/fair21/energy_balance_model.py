@@ -99,17 +99,19 @@ class EnergyBalanceModel:
         """
 
         # adjust ocean heat capacity to be a rate: units W m-2 K-1
-        self.ocean_heat_transfer = ocean_heat_transfer
+        self.ocean_heat_transfer = np.asarray(ocean_heat_transfer)
         self.deep_ocean_efficacy = deep_ocean_efficacy
         self.forcing_4co2 = forcing_4co2
         self.stochastic_run = stochastic_run
         self.sigma_eta = sigma_eta
         self.sigma_xi = sigma_xi
         self.gamma_autocorrelation = gamma_autocorrelation
-        self.ocean_heat_capacity = ocean_heat_capacity / timestep
+        self.ocean_heat_capacity = np.asarray(ocean_heat_capacity) / timestep
         self.n_temperature_boxes = len(self.ocean_heat_capacity)
         if len(self.ocean_heat_transfer) != self.n_temperature_boxes:
             raise IncompatibleConfigError("ocean_heat_capacity and ocean_heat_transfer must be arrays of the same shape.")
+        if self.n_temperature_boxes < 2:
+            raise IncompatibleConfigError("At least two ocean layers must be specified in the energy balance model.")
         self.temperature = np.zeros((1, self.n_temperature_boxes + 1))
         self.n_timesteps = n_timesteps
         self.n_matrix = self.n_temperature_boxes + 1
@@ -262,6 +264,7 @@ class EnergyBalanceModel:
 
     def run(self):
         # internal variables
+        n_box = self.n_matrix-1
         forcing_vector = self._forcing_vector()
 
         # Calculate the matrix exponential
@@ -278,7 +281,7 @@ class EnergyBalanceModel:
 
         self.temperature = solution[:, 1:]
         self.stochastic_forcing = solution[:, 0]
-        self.toa_imbalance = self.forcing - self.ocean_heat_transfer[0]*self.temperature[:,0] + (1 - self.deep_ocean_efficacy) * self.ocean_heat_transfer[2] * (self.temperature[:,1] - self.temperature[:,2])
+        self.toa_imbalance = self.forcing - self.ocean_heat_transfer[0]*self.temperature[:,0] + (1 - self.deep_ocean_efficacy) * self.ocean_heat_transfer[n_box-1] * (self.temperature[:,n_box-2] - self.temperature[:,n_box-1])
         self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * self.timestep * earth_radius**2 * 4 * np.pi * seconds_per_year)
 
     def step_temperature(self, temperature_boxes_old, forcing):
