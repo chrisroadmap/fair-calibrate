@@ -203,19 +203,19 @@ class EnergyBalanceModel:
         # stochastic stuff
         if self.stochastic_run:
             eb_matrix = self._eb_matrix()
-            q_mat = np.zeros((self.nmatrix, self.nmatrix))
+            q_mat = np.zeros((self.n_matrix, self.n_matrix))
             q_mat[0,0] = self.sigma_eta**2
             q_mat[1,1] = (self.sigma_xi/self.ocean_heat_capacity[0])**2
             ## use Van Loan (1978) to compute the matrix exponential
-            h_mat = np.zeros((self.nmatrix*2, self.nmatrix*2))
-            h_mat[:self.nmatrix,:self.nmatrix] = -eb_matrix
-            h_mat[:self.nmatrix,self.nmatrix:] = q_mat
-            h_mat[self.nmatrix:,self.nmatrix:] = eb_matrix.T
+            h_mat = np.zeros((self.n_matrix*2, self.n_matrix*2))
+            h_mat[:self.n_matrix,:self.n_matrix] = -eb_matrix
+            h_mat[:self.n_matrix,self.n_matrix:] = q_mat
+            h_mat[self.n_matrix:,self.n_matrix:] = eb_matrix.T
             g_mat = scipy.linalg.expm(h_mat)
-            q_mat_d = g_mat[self.nmatrix:,self.nmatrix:].T @ g_mat[:self.nmatrix,self.nmatrix:]
+            q_mat_d = g_mat[self.n_matrix:,self.n_matrix:].T @ g_mat[:self.n_matrix,self.n_matrix:]
             q_mat_d = q_mat_d.astype(np.float64)
             _stochastic_d = scipy.stats.multivariate_normal.rvs(
-                size=self.n_timesteps, mean=np.zeros(self.nmatrix), cov=q_mat_d, random_state=self.seed
+                size=self.n_timesteps, mean=np.zeros(self.n_matrix), cov=q_mat_d, random_state=self.seed
             )
 
         return _stochastic_d
@@ -268,9 +268,9 @@ class EnergyBalanceModel:
         eb_matrix_d = scipy.linalg.expm(eb_matrix)
 
         # Solve for temperature
-        forcing_vector_d = scipy.linalg.solve(eb_matrix, (eb_matrix_d - np.identity(self.nmatrix)) @ forcing_vector)
+        forcing_vector_d = scipy.linalg.solve(eb_matrix, (eb_matrix_d - np.identity(self.n_matrix)) @ forcing_vector)
 
-        solution = np.zeros((self.n_timesteps, self.nmatrix))
+        solution = np.zeros((self.n_timesteps, self.n_matrix))
         solution[0, :] = self.temperature[0, :]
         for i in range(1, self.n_timesteps):
             solution[i, :] = eb_matrix_d @ solution[i-1, :] + forcing_vector_d * self.forcing[i-1] + self.stochastic_d[i-1, :]
