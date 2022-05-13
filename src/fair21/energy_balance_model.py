@@ -113,6 +113,7 @@ class EnergyBalanceModel:
         self.temperature = np.zeros((1, self.n_temperature_boxes + 1))
         self.n_timesteps = n_timesteps
         self.n_matrix = self.n_temperature_boxes + 1
+        self.seed = seed
         self.timestep = timestep
 
 
