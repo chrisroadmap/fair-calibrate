@@ -6,8 +6,9 @@ data/parameter_sets/
 data/forcing/*.nc
 data/ar6_ensemble_batches/
 
-# Apple files
+# OS files
 .DS_Store
+Thumbs.db
 
 # R history files
 .rapp.history
