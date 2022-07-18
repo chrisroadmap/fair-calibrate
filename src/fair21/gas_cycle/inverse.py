@@ -10,13 +10,13 @@ def unstep_concentration(
     concentration,
     gas_boxes_old,
     airborne_emissions_old,
-    burden_per_emission,
-    lifetime,
     alpha_lifetime,
+    baseline_concentration,
+    baseline_emissions,
+    concentration_per_emission,
+    lifetime,
     partition_fraction,
-    pre_industrial_concentration,
-    timestep=1,
-    natural_emissions_adjustment=0,
+    timestep,
 ):
     """
     Calculates emissions from concentrations of any greenhouse gas.
@@ -32,25 +32,24 @@ def unstep_concentration(
         The total airborne emissions at the beginning of the timestep. This is
         the concentrations above the pre-industrial control. It is also the sum
         of gas_boxes_old if this is an array.
-    burden_per_emission : ndarray
+    alpha_lifetime : ndarray
+        scaling factor for `lifetime`. Necessary where there is a state-
+        dependent feedback.
+    baseline_concentration : ndarray
+        baseline (possibly pre-industrial) concentration of gas in question.
+    baseline_emissions : ndarray
+        baseline (possibly pre-industrial) emissions of gas in question.
+    concentration_per_emission : ndarray
         how much atmospheric concentrations grow (e.g. in ppm) per unit (e.g.
         GtCO2) emission.
     lifetime : ndarray
         atmospheric burden lifetime of greenhouse gas (yr). For multiple
         lifetimes gases, it is the lifetime of each box.
-    alpha_lifetime : ndarray
-        scaling factor for `lifetime`. Necessary where there is a state-
-        dependent feedback.
     partition_fraction : ndarray
         the partition fraction of emissions into each gas box. If array, the
         entries should be individually non-negative and sum to one.
-    pre_industrial_concentration : ndarray
-        pre-industrial concentration gas in question.
     timestep : float, default=1
         emissions timestep in years.
-    natural_emissions_adjustment : ndarray or float, default=0
-        Amount to adjust emissions by for natural emissions given in the total
-        in emissions files.
 
     Notes
     -----
@@ -82,10 +81,10 @@ def unstep_concentration(
     decay_rate = timestep/(alpha_lifetime * lifetime)   # [1]
     decay_factor = np.exp(-decay_rate)  # [1]
 
-    # [GtCO2] = [ppm] - [ppm] / [ppm/GtCO2]
-    airborne_emissions_new = (concentration-pre_industrial_concentration)/burden_per_emission
+    # [kg] = [ppm] - [ppm] / [ppm/kg]
+    airborne_emissions_new = (concentration-baseline_concentration)/concentration_per_emission
 
-    # [GtCO2/yr] = [GtCO2] - [GtCO2]*[1] / ([1] * [1] * [1] * [yr])
+    # [kg/yr] = [kg] - [kg]*[1] / ([1] * [1] * [1] * [yr])
     emissions = (
         (airborne_emissions_new - np.sum(gas_boxes_old*decay_factor, axis=GAS_BOX_AXIS, keepdims=True)) /
         (np.sum(
@@ -94,9 +93,8 @@ def unstep_concentration(
         )
     )
 
-    # [GtCO2] = [yr] * [GtCO2/yr] * [1] / [1] * [1] + [GtCO2] * [1]
+    # [kg] = ([yr] * [kg/yr] * [1] / [1] * [1]) + [kg] * [1]
     gas_boxes_new = timestep * emissions * partition_fraction * 1/decay_rate * ( 1. - decay_factor ) + gas_boxes_old * decay_factor
-
-    emissions_out = emissions + natural_emissions_adjustment
+    emissions_out = emissions + baseline_emissions
 
     return emissions_out, gas_boxes_new, airborne_emissions_new

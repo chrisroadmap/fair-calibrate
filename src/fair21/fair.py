@@ -684,13 +684,13 @@ class FAIR():
                 self.concentration_array[i_timestep:i_timestep+1, :, :, self.ghg_concentration_indices, :],
                 gas_boxes[0:1, :, :, self.ghg_concentration_indices, :],
                 self.airborne_emissions_array[ae_timestep:ae_timestep+1, :, :, self.ghg_concentration_indices, :],
+                alpha_lifetime_array[0:1, :, :, self.ghg_concentration_indices, :],
+                self.baseline_concentration_array[0:1, :, :, self.ghg_concentration_indices, :],
+                self.baseline_emissions_array[0:1, :, :, self.ghg_concentration_indices, :],
                 self.concentration_per_emission_array[0:1, :, :, self.ghg_concentration_indices, :],
                 self.lifetime_array[0:1, :, :, self.ghg_concentration_indices, :],
-                alpha_lifetime=alpha_lifetime_array[0:1, :, :, self.ghg_concentration_indices, :],
-                pre_industrial_concentration=self.baseline_concentration_array[0:1, :, :, self.ghg_concentration_indices, :],
-                timestep=self.timestep,
-                partition_fraction=self.partition_fraction_array[0:1, :, :, self.ghg_concentration_indices, :],
-                natural_emissions_adjustment=self.baseline_emissions_array[0:1, :, :, self.ghg_concentration_indices, :],
+                self.partition_fraction_array[0:1, :, :, self.ghg_concentration_indices, :],
+                self.timestep,
             )
 
             # 5. greenhouse gas concentrations to forcing
