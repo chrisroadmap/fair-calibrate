@@ -447,12 +447,12 @@ class FAIR():
         self.iirf_cumulative_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.iirf_temperature_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.iirf_airborne_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
-        self.burden_per_emission_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
+        self.concentration_per_emission_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.lifetime_array = np.zeros((1, 1, n_configs, n_species, self.run_config.n_gas_boxes))
         self.baseline_emissions_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.baseline_concentration_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.partition_fraction_array = np.zeros((1, 1, n_configs, n_species, self.run_config.n_gas_boxes))
-        self.natural_emissions_adjustment_array = np.zeros((1, 1, n_configs, n_species, 1))
+        self.baseline_emissions_array = np.zeros((1, 1, n_configs, n_species, 1))
         self.radiative_efficiency_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.forcing_scaling_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
         self.efficacy_array = np.ones((1, 1, n_configs, n_species, 1)) * np.nan
@@ -511,12 +511,12 @@ class FAIR():
                     self.iirf_cumulative_array[:, :, iconf, ispec, :] = conf_spec.iirf_cumulative
                     self.iirf_temperature_array[:, :, iconf, ispec, :] = conf_spec.iirf_temperature
                     self.iirf_airborne_array[:, :, iconf, ispec, :] = conf_spec.iirf_airborne
-                    self.burden_per_emission_array[:, :, iconf, ispec, :] = conf_spec.burden_per_emission
+                    self.concentration_per_emission_array[:, :, iconf, ispec, :] = conf_spec.burden_per_emission
                     self.radiative_efficiency_array[:, :, iconf, ispec, :] = conf_spec.radiative_efficiency
                     self.g0_array[:, :, iconf, ispec, :] = conf_spec.g0
                     self.g1_array[:, :, iconf, ispec, :] = conf_spec.g1
                     self.baseline_concentration_array[:, :, iconf, ispec, :] = conf_spec.baseline_concentration
-                    self.natural_emissions_adjustment_array[:, :, iconf, ispec, 0] = conf_spec.natural_emissions_adjustment
+                    self.baseline_emissions_array[:, :, iconf, ispec, 0] = conf_spec.natural_emissions_adjustment
                 if self.species[ispec].category in AggregatedCategory.HALOGEN:  # TODO: probably needs similar to above here.
                     self.fractional_release_array[:, :, iconf, ispec, 0] = conf_spec.fractional_release
                     self.br_atoms_array[:, :, :, ispec, 0] = conf_spec.br_atoms
@@ -665,14 +665,14 @@ class FAIR():
                 self.emissions_array[i_timestep:i_timestep+1, :, :, self.ghg_emissions_indices, :],
                 gas_boxes[0:1, :, :, self.ghg_emissions_indices, :],
                 self.airborne_emissions_array[ae_timestep:ae_timestep+1, :, :, self.ghg_emissions_indices, :],
-                self.burden_per_emission_array[0:1, :, :, self.ghg_emissions_indices, :],
+                alpha_lifetime_array[0:1, :, :, self.ghg_emissions_indices, :],
+                self.baseline_concentration_array[0:1, :, :, self.ghg_emissions_indices, :],
+                self.baseline_emissions_array[0:1, :, :, self.ghg_emissions_indices, :],
+                self.concentration_per_emission_array[0:1, :, :, self.ghg_emissions_indices, :],
                 self.lifetime_array[0:1, :, :, self.ghg_emissions_indices, :],
-                alpha_lifetime=alpha_lifetime_array[0:1, :, :, self.ghg_emissions_indices, :],
-                soil_lifetime=self.soil_lifetime[0:1, :, :, self.ghg_emissions_indices, :],
-                pre_industrial_concentration=self.baseline_concentration_array[0:1, :, :, self.ghg_emissions_indices, :],
-                timestep=self.timestep,
-                partition_fraction=self.partition_fraction_array[0:1, :, :, self.ghg_emissions_indices, :],
-                natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_emissions_indices, :],
+                self.partition_fraction_array[0:1, :, :, self.ghg_emissions_indices, :],
+                #soil_lifetime=self.soil_lifetime[0:1, :, :, self.ghg_emissions_indices, :],
+                self.timestep,
             )
 
             # 4. GHG concentrations to emissions:
@@ -684,13 +684,13 @@ class FAIR():
                 self.concentration_array[i_timestep:i_timestep+1, :, :, self.ghg_concentration_indices, :],
                 gas_boxes[0:1, :, :, self.ghg_concentration_indices, :],
                 self.airborne_emissions_array[ae_timestep:ae_timestep+1, :, :, self.ghg_concentration_indices, :],
-                self.burden_per_emission_array[0:1, :, :, self.ghg_concentration_indices, :],
+                self.concentration_per_emission_array[0:1, :, :, self.ghg_concentration_indices, :],
                 self.lifetime_array[0:1, :, :, self.ghg_concentration_indices, :],
                 alpha_lifetime=alpha_lifetime_array[0:1, :, :, self.ghg_concentration_indices, :],
                 pre_industrial_concentration=self.baseline_concentration_array[0:1, :, :, self.ghg_concentration_indices, :],
                 timestep=self.timestep,
                 partition_fraction=self.partition_fraction_array[0:1, :, :, self.ghg_concentration_indices, :],
-                natural_emissions_adjustment=self.natural_emissions_adjustment_array[0:1, :, :, self.ghg_concentration_indices, :],
+                natural_emissions_adjustment=self.baseline_emissions_array[0:1, :, :, self.ghg_concentration_indices, :],
             )
 
             # 5. greenhouse gas concentrations to forcing
