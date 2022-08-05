@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.linalg
 import scipy.stats
+import xarray as xr
 
 from .constants import DOUBLING_TIME_1PCT
 from .exceptions import IncompatibleConfigError
@@ -311,3 +312,67 @@ class EnergyBalanceModel:
         # think we'd be better with step_temperature here
         # OHC now needs to be after the fact
         #self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * np.concatenate(([0], np.diff(self.time)))) * EARTH_RADIUS**2 * 4 * np.pi * SECONDS_PER_YEAR
+
+
+def multi_ebm(
+    configs,
+    ocean_heat_capacity,
+    ocean_heat_transfer,
+    deep_ocean_efficacy,
+    stochastic_run,
+    sigma_eta,
+    sigma_xi,
+    gamma_autocorrelation,
+    seed,
+    use_seed,
+    forcing_4co2,
+    timestep,
+    timebounds,
+):
+    """Create several instances of the EnergyBalanceModel for efficient implementation in FaIR.
+
+    We have to use a for loop at is does not look like the linear algebra functions in scipy are naturally
+    parallel.
+    """
+
+    n_configs = ocean_heat_capacity.shape[0]
+    n_layers = ocean_heat_capacity.shape[1]
+    n_timebounds = len(timebounds)
+    ebms = xr.Dataset(
+        {
+            "eb_matrix_d": (["config", "eb_dim0", "eb_dim1"], np.ones((n_configs, n_layers+1, n_layers+1))*np.nan),
+            "forcing_vector_d": (["config", "eb_dim0"], np.ones((n_configs, n_layers+1))*np.nan),
+            "stochastic_d": (["timebounds", "config", "eb_dim0"], np.ones((n_timebounds, n_configs, n_layers+1))*np.nan),
+            "ecs": (["config"], np.ones(n_configs) * np.nan),
+            "tcr": (["config"], np.ones(n_configs) * np.nan),
+        },
+        coords = {
+            "timebounds": timebounds,
+            "config": configs,
+            "eb_dim0": np.arange(-1, n_layers),
+            "eb_dim1": np.arange(-1, n_layers),
+        }
+    )
+
+    for i_conf, config in enumerate(configs):
+        ebm = EnergyBalanceModel(
+            ocean_heat_capacity=ocean_heat_capacity[i_conf, :],
+            ocean_heat_transfer=ocean_heat_transfer[i_conf, :],
+            deep_ocean_efficacy=deep_ocean_efficacy[i_conf],
+            stochastic_run=stochastic_run[i_conf],
+            sigma_eta=sigma_eta[i_conf],
+            sigma_xi=sigma_xi[i_conf],
+            gamma_autocorrelation=gamma_autocorrelation[i_conf],
+            seed=seed[i_run] if use_seed[i_conf] else None,
+            forcing_4co2=forcing_4co2[i_conf],
+            timestep=timestep,
+            n_timesteps=n_timebounds,
+        )
+        ebms["eb_matrix_d"].loc[dict(config=config)]=ebm.eb_matrix_d
+        ebms["forcing_vector_d"].loc[dict(config=config)]=ebm.forcing_vector_d
+        ebms["stochastic_d"].loc[dict(config=config)]=ebm.stochastic_d
+        ebm.emergent_parameters()
+        ebms["ecs"].loc[dict(config=config)]=ebm.ecs
+        ebms["tcr"].loc[dict(config=config)]=ebm.tcr
+
+    return ebms
