@@ -5,6 +5,7 @@ data/rcmip/
 data/parameter_sets/
 data/forcing/*.nc
 data/ar6_ensemble_batches/
+data/ar6_ensemble_batches_rcp/
 data/rff/
 
 # projects built from this repo before it goes public
