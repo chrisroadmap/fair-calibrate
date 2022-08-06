@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import xarray as xr
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 
 from .constants import TIME_AXIS, SPECIES_AXIS, GASBOX_AXIS
 from .earth_params import earth_radius, mass_atmosphere, seconds_per_year
@@ -52,7 +52,7 @@ class FAIR:
         # 1. everything we want to run with defined?
         for specie in species:
             if specie not in properties:
-                raise ValueError(f"{specie.name} does not have a corresponding key in `properties`.")
+                raise ValueError(f"{specie} does not have a corresponding key in `properties`.")
 
             # 2. everything a valid species type?
             if properties[specie]['type'] not in species_types:
@@ -265,13 +265,8 @@ class FAIR:
         )
 
 
-    def _fill_co2_total_emissions(self):
-        # co2 = co2 ffi + co2 afolu
-        pass
-
-
     # climate response
-    def make_ebms(self):
+    def _make_ebms(self):
         self.ebms = multi_ebm(
             self.configs,
             ocean_heat_capacity=self.climate_configs['ocean_heat_capacity'],
@@ -306,7 +301,7 @@ class FAIR:
                 n_nan = np.isnan(self.forcing.loc[dict(specie=specie)]).sum()
                 if n_nan > 0: _raise_if_nan(specie, 'forcing')
 
-        properties_df = pd.DataFrame(self.properties).T
+        properties_df = pd.DataFrame(self.properties).T.reindex(self.species)
 
         # 5. special dependency cases
         if 'co2' in list(properties_df.loc[properties_df['input_mode']=='calculated']['type']):
@@ -413,6 +408,7 @@ class FAIR:
     def run(self, progress=True):
         self._check_properties()
         self._make_indices()
+        self._make_ebms()
 
         # part of pre-run: TODO move to a new method
         if self._co2_indices.sum() + self._co2_ffi_indices.sum() + self._co2_afolu_indices.sum()==3:
