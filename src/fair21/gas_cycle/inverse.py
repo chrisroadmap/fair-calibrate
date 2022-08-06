@@ -4,11 +4,11 @@ Module for inverting concentrations.
 
 import numpy as np
 
-from ..constants import GAS_BOX_AXIS
+from ..constants import GASBOX_AXIS
 
 def unstep_concentration(
     concentration,
-    gas_boxes_old,
+    gasboxes_old,
     airborne_emissions_old,
     alpha_lifetime,
     baseline_concentration,
@@ -77,24 +77,19 @@ def unstep_concentration(
         at the end of the timestep.
     """
 
-    # comments are keeping track of units
     decay_rate = timestep/(alpha_lifetime * lifetime)   # [1]
     decay_factor = np.exp(-decay_rate)  # [1]
 
-    # [kg] = [ppm] - [ppm] / [ppm/kg]
     airborne_emissions_new = (concentration-baseline_concentration)/concentration_per_emission
-
-    # [kg/yr] = [kg] - [kg]*[1] / ([1] * [1] * [1] * [yr])
     emissions = (
-        (airborne_emissions_new - np.sum(gas_boxes_old*decay_factor, axis=GAS_BOX_AXIS, keepdims=True)) /
+        (airborne_emissions_new - np.sum(gasboxes_old*decay_factor, axis=GASBOX_AXIS)) /
         (np.sum(
             partition_fraction / decay_rate * ( 1. - decay_factor ) * timestep,
-            axis=GAS_BOX_AXIS, keepdims=True)
+            axis=GASBOX_AXIS)
         )
     )
 
-    # [kg] = ([yr] * [kg/yr] * [1] / [1] * [1]) + [kg] * [1]
-    gas_boxes_new = timestep * emissions * partition_fraction * 1/decay_rate * ( 1. - decay_factor ) + gas_boxes_old * decay_factor
+    gasboxes_new = timestep * emissions[..., None] * partition_fraction * 1/decay_rate * ( 1. - decay_factor ) + gasboxes_old * decay_factor
     emissions_out = emissions + baseline_emissions
 
-    return emissions_out, gas_boxes_new, airborne_emissions_new
+    return emissions_out, gasboxes_new, airborne_emissions_new

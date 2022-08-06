@@ -1,11 +1,5 @@
 import numpy as np
 
-# todo:
-# read_scen
-# read_rcmip
-# read_scmdata
-# read_species_definition_csv
-
 def fill(var, data, **kwargs):
     """Fills a `fair` variable instance.
 

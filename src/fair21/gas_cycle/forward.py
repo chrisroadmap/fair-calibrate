@@ -6,11 +6,11 @@ import warnings
 
 import numpy as np
 
-from ..constants import GAS_BOX_AXIS
+from ..constants import GASBOX_AXIS
 
 def step_concentration(
     emissions,
-    gas_boxes_old,
+    gasboxes_old,
     airborne_emissions_old,
     alpha_lifetime,
     baseline_concentration,
@@ -80,14 +80,14 @@ def step_concentration(
     decay_factor = np.exp(-decay_rate)
 
     # additions and removals
-    gas_boxes_new = (
+    gasboxes_new = (
         partition_fraction *
         (emissions - baseline_emissions) *
         1 / decay_rate *
-        (1 - decay_factor) * timestep + gas_boxes_old * decay_factor
+        (1 - decay_factor) * timestep + gasboxes_old * decay_factor
     )
 
-    airborne_emissions_new = np.sum(gas_boxes_new, axis=GAS_BOX_AXIS, keepdims=True)
+    airborne_emissions_new = np.sum(gasboxes_new, axis=GASBOX_AXIS)
     concentration_out = baseline_concentration + concentration_per_emission * airborne_emissions_new
 
-    return concentration_out, gas_boxes_new, airborne_emissions_new
+    return concentration_out, gasboxes_new, airborne_emissions_new

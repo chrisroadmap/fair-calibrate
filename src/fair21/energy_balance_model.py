@@ -376,3 +376,38 @@ def multi_ebm(
         ebms["tcr"].loc[dict(config=config)]=ebm.tcr
 
     return ebms
+
+
+def step_temperature(
+    state_old,
+    eb_matrix_d,
+    forcing_vector_d,
+    stochastic_d,
+    forcing
+):
+    """TODO: docstring"""
+
+    state_new = (
+        (eb_matrix_d[0, ...] @ state_old[0, ..., None])[..., 0] +
+        forcing_vector_d[0, ...] * forcing[0, ..., 0, None] +
+        stochastic_d[0, ...]
+    )
+
+    return state_new
+
+
+def calculate_toa_imbalance_postrun(
+    state,
+    forcing,
+    ocean_heat_transfer,
+    deep_ocean_efficacy,
+):
+    """TODO: docstring"""
+    toa_imbalance = (
+        forcing -
+        ocean_heat_transfer[..., 0] *
+        state[..., 1] +
+        (1 - deep_ocean_efficacy) * ocean_heat_transfer[..., -1]
+        * (state[..., -2] - state[..., -1])
+    )
+    return toa_imbalance
