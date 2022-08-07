@@ -1,3 +1,4 @@
+import os
 import warnings
 
 import numpy as np
@@ -14,7 +15,11 @@ from .forcing.ghg import meinshausen2020 as calculate_ghg_forcing
 from .gas_cycle import calculate_alpha
 from .gas_cycle.forward import step_concentration
 from .gas_cycle.inverse import unstep_concentration
+from .interface import fill
 from .structure.species import species_types, valid_input_modes, multiple_allowed
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+DEFAULT_SPECIES_CONFIG_FILE = os.path.join(HERE, "defaults", "data", "ar6", "species_configs_properties.csv")
 
 # TODO:
 # the smith2021 and meinshausen2020 imports can be put inside if statements
@@ -46,8 +51,6 @@ class FAIR:
     def define_species(self, species, properties):
         self.species = species
         self._n_species = len(species)
-        self.properties = properties
-
 
         # 1. everything we want to run with defined?
         for specie in species:
@@ -62,6 +65,17 @@ class FAIR:
             if properties[specie]['input_mode'] not in valid_input_modes[properties[specie]['type']]:
                 raise ValueError(f"{properties[specie]['input_mode']} is not a valid input mode for {properties[specie]['type']}. Valid input modes are: {[m for m in valid_input_modes[properties[specie]['type']]]}")
 
+        # 4. on the way in, we don't mind if properties is over-specified, but
+        # by the time we call allocate(), species and properties must align, so
+        # we trim self.properties to match species.
+        self.properties = properties
+        self.properties_df = pd.DataFrame(self.properties).T.reindex(self.species)
+
+        # 4. check that unique species actually are
+        for specie_type in self.properties_df['type'].unique():
+            n_repeats = sum(self.properties_df['type']==specie_type)
+            if n_repeats > 1 and not multiple_allowed[specie_type]:
+                raise ValueError(f'{specie_type} is defined {n_repeats} times in the problem, but must be unique.')
 
     def run_control(
         self,
@@ -233,6 +247,42 @@ class FAIR:
             },
         )
 
+    def fill_species_configs(self, filename=DEFAULT_SPECIES_CONFIG_FILE):
+        print(filename)
+        df = pd.read_csv(filename, index_col=0)
+        for specie in self.species:
+            fill(self.species_configs['tropospheric_adjustment'], df.loc[specie].tropospheric_adjustment, specie=specie)
+            fill(self.species_configs['forcing_efficacy'], df.loc[specie].forcing_efficacy, specie=specie)
+            fill(self.species_configs['forcing_temperature_feedback'], df.loc[specie].forcing_temperature_feedback, specie=specie)
+            fill(self.species_configs['forcing_scale'], df.loc[specie].forcing_scale, specie=specie)
+            for gasbox in range(self._n_gasboxes):
+                fill(self.species_configs['partition_fraction'], df.loc[specie,f'partition_fraction{gasbox}'], specie=specie, gasbox=gasbox)
+                fill(self.species_configs['unperturbed_lifetime'], df.loc[specie,f'unperturbed_lifetime{gasbox}'], specie=specie, gasbox=gasbox)
+            fill(self.species_configs['molecular_weight'], df.loc[specie].molecular_weight, specie=specie)
+            fill(self.species_configs['baseline_concentration'], df.loc[specie].baseline_concentration, specie=specie)
+            fill(self.species_configs['forcing_scale'], df.loc[specie].forcing_scale, specie=specie)
+            fill(self.species_configs['iirf_0'], df.loc[specie].iirf_0, specie=specie)
+            fill(self.species_configs['iirf_airborne'], df.loc[specie].iirf_airborne, specie=specie)
+            fill(self.species_configs['iirf_uptake'], df.loc[specie].iirf_uptake, specie=specie)
+            fill(self.species_configs['iirf_temperature'], df.loc[specie].iirf_temperature, specie=specie)
+            fill(self.species_configs['baseline_emissions'], df.loc[specie].baseline_emissions, specie=specie)
+            fill(self.species_configs['g0'], df.loc[specie].g0, specie=specie)
+            fill(self.species_configs['g1'], df.loc[specie].g1, specie=specie)
+            fill(self.species_configs['greenhouse_gas_radiative_efficiency'], df.loc[specie].greenhouse_gas_radiative_efficiency, specie=specie)
+            fill(self.species_configs['contrails_radiative_efficiency'], df.loc[specie].contrails_radiative_efficiency, specie=specie)
+            fill(self.species_configs['erfari_radiative_efficiency'], df.loc[specie].erfari_radiative_efficiency, specie=specie)
+            fill(self.species_configs['h2o_stratospheric_factor'], df.loc[specie].h2o_stratospheric_factor, specie=specie)
+            fill(self.species_configs['lapsi_radiative_efficiency'], df.loc[specie].lapsi_radiative_efficiency, specie=specie)
+            fill(self.species_configs['land_use_cumulative_emissions_to_forcing'], df.loc[specie].land_use_cumulative_emissions_to_forcing, specie=specie)
+            fill(self.species_configs['ozone_radiative_efficiency'], df.loc[specie].ozone_radiative_efficiency, specie=specie)
+            fill(self.species_configs['cl_atoms'], df.loc[specie].cl_atoms, specie=specie)
+            fill(self.species_configs['br_atoms'], df.loc[specie].br_atoms, specie=specie)
+            fill(self.species_configs['fractional_release'], df.loc[specie].fractional_release, specie=specie)
+        if 'aci' in list(self.properties_df['type']):
+            fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_scale, aci_parameter='scale')
+            fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_Sulfur, aci_parameter='Sulfur')
+            fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_BCOC, aci_parameter='BC+OC')
+
 
     # greenhouse gas convenience functions
     def calculate_iirf0(self, iirf_horizon=100):
@@ -288,9 +338,9 @@ class FAIR:
         def _raise_if_nan(specie, input_mode):
             raise ValueError(f"{specie} contains NaN values in its {input_mode} array, which you are trying to drive the simulation with.")
 
-        # check if emissions, concentration, forcing have been defined
+        # 5. check if emissions, concentration, forcing have been defined and
+        # that we have non-nan data in every case
         for specie in self.species:
-            # 4. do we have non-nan data in every case?
             if self.properties[specie]['input_mode'] == 'emissions':
                 n_nan = np.isnan(self.emissions.loc[dict(specie=specie)]).sum()
                 if n_nan > 0: _raise_if_nan(specie, 'emissions')
@@ -301,39 +351,37 @@ class FAIR:
                 n_nan = np.isnan(self.forcing.loc[dict(specie=specie)]).sum()
                 if n_nan > 0: _raise_if_nan(specie, 'forcing')
 
-        properties_df = pd.DataFrame(self.properties).T.reindex(self.species)
-
-        # 5. special dependency cases
-        if 'co2' in list(properties_df.loc[properties_df['input_mode']=='calculated']['type']):
+        # 6. special dependency cases
+        if 'co2' in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
             if (
-                'co2 ffi' not in list(properties_df.loc[properties_df['input_mode']=='emissions']['type']) or
-                'co2 afolu' not in list(properties_df.loc[properties_df['input_mode']=='emissions']['type'])
+                'co2 ffi' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) or
+                'co2 afolu' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type'])
             ):
                 raise ValueError('`co2` in `calculated` mode requires `co2 ffi` and `co2 afolu` in `emissions` mode.')
 
-        if 'land use' in list(properties_df.loc[properties_df['input_mode']=='calculated']['type']):
-            if 'co2 afolu' not in list(properties_df.loc[properties_df['input_mode']=='emissions']['type']):
+        if 'land use' in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
+            if 'co2 afolu' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']):
                 raise ValueError('`land use` in `calculated` mode requires `co2 afolu` in `emissions` mode.')
 
-        if 'aerosol-cloud interactions' in list(properties_df.loc[properties_df['input_mode']=='calculated']['type']):
-            if 'sulfur' not in list(properties_df.loc[properties_df['input_mode']=='emissions']['type']):
-                raise ValueError('`aerosol-cloud interactions` in `calculated` mode requires `sulfur` in `emissions` mode for `aci_method = stevens2015`.')
+        if 'aci' in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
+            if 'sulfur' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']):
+                raise ValueError('`aci` in `calculated` mode requires `sulfur` in `emissions` mode for `aci_method = stevens2015`.')
             elif (
                 self.aci_method=='smith2021' and
-                'black carbon' not in list(properties_df.loc[properties_df['input_mode']=='emissions']['type']) and
-                'organic carbon' not in list(properties_df.loc[properties_df['input_mode']=='emissions']['type'])
+                'bc' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) and
+                'oc' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type'])
             ):
-                raise ValueError('`aerosol-cloud interactions` in `calculated` mode requires `sulfur`, `black carbon` and `organic carbon` in `emissions` mode for `aci_method = smith2021`.')
+                raise ValueError('`aci` in `calculated` mode requires `sulfur`, `black carbon` and `organic carbon` in `emissions` mode for `aci_method = smith2021`.')
 
         co2_to_forcing = False
         ch4_to_forcing = False
         n2o_to_forcing = False
 
-        if 'co2' in list(properties_df.loc[properties_df['input_mode']=='calculated']['type']) or 'co2' in list(properties_df.loc[properties_df['input_mode']=='emissions']['type']) or 'co2' in list(properties_df.loc[properties_df['input_mode']=='concentration']['type']):
+        if 'co2' in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']) or 'co2' in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) or 'co2' in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type']):
             co2_to_forcing=True
-        if 'ch4' in list(properties_df.loc[properties_df['input_mode']=='emissions']['type']) or 'ch4' in list(properties_df.loc[properties_df['input_mode']=='concentration']['type']):
+        if 'ch4' in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) or 'ch4' in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type']):
             ch4_to_forcing=True
-        if 'n2o' in list(properties_df.loc[properties_df['input_mode']=='emissions']['type']) or 'n2o' in list(properties_df.loc[properties_df['input_mode']=='concentration']['type']):
+        if 'n2o' in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) or 'n2o' in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type']):
             n2o_to_forcing=True
         if self.ghg_method in ['meinshausen2020', 'etminan2016']:
             if 0 < co2_to_forcing+ch4_to_forcing+n2o_to_forcing < 3:
@@ -341,14 +389,6 @@ class FAIR:
         elif self.ghg_method=='myhre1998':
             if 0 < ch4_to_forcing+n2o_to_forcing < 2:
                 raise ValueError("For `ghg_method` either `myhre1998`, either both of `ch4` and `n2o` must be provided in a form that can be converted to concentrations, or neither")
-
-        # 6. uniques
-        for specie_type in properties_df['type'].unique():
-            n_repeats = sum(properties_df['type']==specie_type)
-            if n_repeats > 1 and not multiple_allowed[specie_type]:
-                raise ValueError(f'{specie_type} is defined {n_repeats} times in the problem, but must be unique.')
-
-        self.properties_df = properties_df
 
 
     def _make_indices(self):
@@ -361,18 +401,16 @@ class FAIR:
 
         # these define which species do what in FaIR
         self._ghg_indices = np.asarray(self.properties_df.loc[:, 'greenhouse_gas'].values, dtype=bool)
-        self._ari_precursor_indices = np.asarray(self.properties_df.loc[:, 'aerosol_radiation_precursor'].values, dtype=bool)
-        self._aci_precursor_indices = np.asarray(self.properties_df.loc[:, 'aerosol_cloud_precursor'].values, dtype=bool)
         self._co2_ffi_indices = np.asarray(self.properties_df['type']=='co2 ffi', dtype=bool)
         self._co2_afolu_indices = np.asarray(self.properties_df['type']=='co2 afolu', dtype=bool)
         self._co2_indices = np.asarray(self.properties_df['type']=='co2', dtype=bool)
         self._ch4_indices = np.asarray(self.properties_df['type']=='ch4', dtype=bool)
         self._n2o_indices = np.asarray(self.properties_df['type']=='n2o', dtype=bool)
         self._sulfur_indices = np.asarray(self.properties_df['type']=='sulfur', dtype=bool)
-        self._bc_indices = np.asarray(self.properties_df['type']=='black carbon', dtype=bool)
-        self._oc_indices = np.asarray(self.properties_df['type']=='organic carbon', dtype=bool)
-        self._ari_indices = np.asarray(self.properties_df['type']=='aerosol-radiation interactions', dtype=bool)
-        self._aci_indices = np.asarray(self.properties_df['type']=='aerosol-cloud interactions', dtype=bool)
+        self._bc_indices = np.asarray(self.properties_df['type']=='bc', dtype=bool)
+        self._oc_indices = np.asarray(self.properties_df['type']=='oc', dtype=bool)
+        self._ari_indices = np.asarray(self.properties_df['type']=='ari', dtype=bool)
+        self._aci_indices = np.asarray(self.properties_df['type']=='aci', dtype=bool)
         self._minor_ghg_indices = self._ghg_indices ^ self._co2_indices ^ self._ch4_indices ^ self._n2o_indices
 
         # and these ones are more specific, tripping certain behaviours or functions
@@ -432,7 +470,7 @@ class FAIR:
         erfaci_shape_sulfur_array = self.species_configs['aci_parameters'].data[:,1]
         erfaci_shape_bcoc_array = self.species_configs['aci_parameters'].data[:,2]
         forcing_array = self.forcing.data
-        forcing_scale_array = self.species_configs['forcing_scale'].data
+        forcing_scale_array = self.species_configs['forcing_scale'].data * (1 + self.species_configs['tropospheric_adjustment'].data)
         forcing_efficacy_array = self.species_configs['forcing_efficacy'].data
         forcing_efficacy_sum_array = np.ones((self._n_timebounds, self._n_scenarios, self._n_configs)) * np.nan
         forcing_sum_array = self.forcing_sum.data
