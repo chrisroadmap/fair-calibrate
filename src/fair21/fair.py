@@ -27,7 +27,7 @@ DEFAULT_SPECIES_CONFIG_FILE = os.path.join(HERE, "defaults", "data", "ar6", "spe
 
 class FAIR:
     def __init__(self):
-        pass
+        self.run_control()
 
 
     def define_time(self, start, end, step):
@@ -105,6 +105,17 @@ class FAIR:
 
 
     def allocate(self):
+        # check dimensions declared
+        required_attributes_and_uncalled_method = {
+            '_n_timepoints': 'define_time()',
+            '_n_scenarios': 'define_scenarios()',
+            '_n_configs': 'define_configs()',
+            '_n_species': 'define_species()',
+        }
+        for attr, method in required_attributes_and_uncalled_method.items():
+            if not hasattr(self, attr):
+                raise AttributeError(f"'FAIR' object has no attribute '{attr}'. Did you forget to call '{method}'?")
+
         # driver/output variables
         self.emissions = xr.DataArray(
             np.ones((self._n_timepoints, self._n_scenarios, self._n_configs, self._n_species)) * np.nan,
