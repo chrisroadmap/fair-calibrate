@@ -363,7 +363,7 @@ def multi_ebm(
             sigma_eta=sigma_eta[i_conf],
             sigma_xi=sigma_xi[i_conf],
             gamma_autocorrelation=gamma_autocorrelation[i_conf],
-            seed=seed[i_run] if use_seed[i_conf] else None,
+            seed=seed.data[i_conf] if use_seed[i_conf] else None,
             forcing_4co2=forcing_4co2[i_conf],
             timestep=timestep,
             n_timesteps=n_timebounds,

@@ -259,7 +259,6 @@ class FAIR:
         )
 
     def fill_species_configs(self, filename=DEFAULT_SPECIES_CONFIG_FILE):
-        print(filename)
         df = pd.read_csv(filename, index_col=0)
         for specie in self.species:
             fill(self.species_configs['tropospheric_adjustment'], df.loc[specie].tropospheric_adjustment, specie=specie)
@@ -293,7 +292,7 @@ class FAIR:
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_scale, aci_parameter='scale')
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_Sulfur, aci_parameter='Sulfur')
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_BCOC, aci_parameter='BC+OC')
-
+        self.calculate_concentration_per_emission()
 
     # greenhouse gas convenience functions
     def calculate_iirf0(self, iirf_horizon=100):
@@ -368,7 +367,7 @@ class FAIR:
                 'co2 ffi' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) or
                 'co2 afolu' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type'])
             ):
-                raise ValueError('`co2` in `calculated` mode requires `co2 ffi` and `co2 afolu` in `emissions` mode.')
+                raise ValueError("co2 in calculated mode requires co2 ffi and co2 afolu in emissions mode.")
 
         if 'land use' in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
             if 'co2 afolu' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']):
@@ -376,13 +375,13 @@ class FAIR:
 
         if 'aci' in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
             if 'sulfur' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']):
-                raise ValueError('`aci` in `calculated` mode requires `sulfur` in `emissions` mode for `aci_method = stevens2015`.')
+                raise ValueError("`aci` in `calculated` mode requires `sulfur` in `emissions` mode for `aci_method = stevens2015`.")
             elif (
                 self.aci_method=='smith2021' and
-                'bc' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) and
-                'oc' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type'])
+                'black carbon' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) and
+                'organic carbon' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type'])
             ):
-                raise ValueError('`aci` in `calculated` mode requires `sulfur`, `black carbon` and `organic carbon` in `emissions` mode for `aci_method = smith2021`.')
+                raise ValueError("aci in 'calculated' mode requires sulfur, black carbon and organic carbon in 'emissions' mode for aci_method = smith2021S.")
 
         co2_to_forcing = False
         ch4_to_forcing = False
