@@ -10,9 +10,11 @@ from .constants import TIME_AXIS, SPECIES_AXIS, GASBOX_AXIS
 from .earth_params import earth_radius, mass_atmosphere, seconds_per_year
 from .energy_balance_model import step_temperature, calculate_toa_imbalance_postrun, multi_ebm
 from .forcing.aerosol.erfari import calculate_erfari_forcing
-from .forcing.aerosol.erfaci import stevens2015 as calculate_erfaci_forcing
+from .forcing.aerosol.erfaci import stevens2015, smith2021
 from .forcing.ghg import meinshausen2020 as calculate_ghg_forcing
+from .forcing.ozone import thornhill2021
 from .gas_cycle import calculate_alpha
+from .gas_cycle.eesc import calculate_eesc
 from .gas_cycle.forward import step_concentration
 from .gas_cycle.inverse import unstep_concentration
 from .interface import fill
@@ -82,14 +84,24 @@ class FAIR:
         n_gasboxes=4,
         n_layers=3,
         iirf_max=100,
+        br_cl_ods_potential=45,
+        stratospheric_ods=True,
         aci_method='smith2021',
         ghg_method='meinshausen2020',
-        ch4_method='leach2021'
+        ch4_method='leach2021',
+        ozone_method='thornhill2021'
     ):
         self.gasboxes = range(n_gasboxes)
         self.layers = range(n_layers)
         self.iirf_max = iirf_max
+        self.br_cl_ods_potential = br_cl_ods_potential
+        self.stratospheric_ods = stratospheric_ods
         aci_method=aci_method.lower()
+        ghg_method=ghg_method.lower()
+        ch4_method=ch4_method.lower()
+        ozone_method=ozone_method.lower()
+
+        # refactor target
         if aci_method in ['smith2021', 'stevens2015']:
             self.aci_method = aci_method
         else:
@@ -98,6 +110,16 @@ class FAIR:
             self.ghg_method = ghg_method
         else:
             raise ValueError(f"`ghg_method` should be one of [leach2021, meinshausen2020, etminan2016, myhre1998]; you provided {ghg_method}.")
+        if ch4_method in ['thornhill2021', 'leach2021']:
+            self.ch4_method = ch4_method
+        else:
+            raise ValueError(f"ch4_method should be thornhill2021 or leach2021; you provided {ch4_method}.")
+        if ozone_method in ['thornhill2021', 'stevenson2013']:
+            self.ozone_method = ozone_method
+        else:
+            raise ValueError(f"ozone_method should be one of [thornhill2021, stevenson2013, None]; you provided {ozone_method}.")
+
+
         self._n_gasboxes = n_gasboxes
         self._n_layers = n_layers
         #self._n_aci_parameters = 3 if aci_method=='smith2021' else 2
@@ -383,6 +405,15 @@ class FAIR:
             ):
                 raise ValueError("aci in 'calculated' mode requires sulfur, black carbon and organic carbon in 'emissions' mode for aci_method = smith2021S.")
 
+        self._calculate_eesc = False
+        if self.ch4_method=='thornhill2021':
+            self._calculate_eesc = True
+            if (
+                'cfc-11' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) and
+                'cfc-11' not in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type'])
+            ):
+                raise ValueError("For ch4_method = thornhill2021, we need to calculate EESC, which requires at least cfc-11 to be provided in emissions or concentration driven mode.")
+
         co2_to_forcing = False
         ch4_to_forcing = False
         n2o_to_forcing = False
@@ -395,10 +426,10 @@ class FAIR:
             n2o_to_forcing=True
         if self.ghg_method in ['meinshausen2020', 'etminan2016']:
             if 0 < co2_to_forcing+ch4_to_forcing+n2o_to_forcing < 3:
-                raise ValueError("For `ghg_method` either `meinshausen2016` or `etminan2016`, either all of `co2`, `ch4` and `n2o` must be provided in a form that can be converted to concentrations, or none")
+                raise ValueError("For ghg_method either meinshausen2020 or etminan2016, either all of co2, ch4 and n2o must be provided in a form that can be converted to concentrations, or none")
         elif self.ghg_method=='myhre1998':
             if 0 < ch4_to_forcing+n2o_to_forcing < 2:
-                raise ValueError("For `ghg_method` either `myhre1998`, either both of `ch4` and `n2o` must be provided in a form that can be converted to concentrations, or neither")
+                raise ValueError("For ghg_method = myhre1998, either both of ch4 and n2o must be given as emissions or concentrations, or neither")
 
 
     def _make_indices(self):
@@ -416,12 +447,15 @@ class FAIR:
         self._co2_indices = np.asarray(self.properties_df['type']=='co2', dtype=bool)
         self._ch4_indices = np.asarray(self.properties_df['type']=='ch4', dtype=bool)
         self._n2o_indices = np.asarray(self.properties_df['type']=='n2o', dtype=bool)
+        self._cfc11_indices = np.asarray(self.properties_df['type']=='cfc-11', dtype=bool)
         self._sulfur_indices = np.asarray(self.properties_df['type']=='sulfur', dtype=bool)
-        self._bc_indices = np.asarray(self.properties_df['type']=='bc', dtype=bool)
-        self._oc_indices = np.asarray(self.properties_df['type']=='oc', dtype=bool)
+        self._bc_indices = np.asarray(self.properties_df['type']=='black carbon', dtype=bool)
+        self._oc_indices = np.asarray(self.properties_df['type']=='organic carbon', dtype=bool)
         self._ari_indices = np.asarray(self.properties_df['type']=='ari', dtype=bool)
         self._aci_indices = np.asarray(self.properties_df['type']=='aci', dtype=bool)
+        self._ozone_indices = np.asarray(self.properties_df['type']=='ozone', dtype=bool)
         self._minor_ghg_indices = self._ghg_indices ^ self._co2_indices ^ self._ch4_indices ^ self._n2o_indices
+        self._halogen_indices = self._cfc11_indices | np.asarray(self.properties_df['type']=='other halogen', dtype=bool)
 
         # and these ones are more specific, tripping certain behaviours or functions
         self._ghg_forward_indices = np.asarray(
@@ -451,6 +485,18 @@ class FAIR:
                 (self.properties_df.loc[:,'aerosol_radiation_precursor'])
             ).values, dtype=bool
         )
+        self._ozone_from_emissions_indices = np.asarray(
+            (
+                ~(self.properties_df.loc[:,'greenhouse_gas'])&
+                (self.properties_df.loc[:,'ozone_precursor'])
+            ).values, dtype=bool
+        )
+        self._ozone_from_concentration_indices = np.asarray(
+            (
+                (self.properties_df.loc[:,'greenhouse_gas'])&
+                (self.properties_df.loc[:,'ozone_precursor'])
+            ).values, dtype=bool
+        )
 
 
     def run(self, progress=True):
@@ -468,6 +514,8 @@ class FAIR:
         airborne_emissions_array = self.airborne_emissions.data
         baseline_concentration_array = self.species_configs['baseline_concentration'].data
         baseline_emissions_array = self.species_configs['baseline_emissions'].data
+        br_atoms_array = self.species_configs['br_atoms'].data
+        cl_atoms_array = self.species_configs['cl_atoms'].data
         concentration_array = self.concentration.data
         concentration_per_emission_array = self.species_configs['concentration_per_emission'].data
         cummins_state_array = np.ones((self._n_timebounds, self._n_scenarios, self._n_configs, self._n_layers+1)) * np.nan
@@ -485,6 +533,7 @@ class FAIR:
         forcing_efficacy_sum_array = np.ones((self._n_timebounds, self._n_scenarios, self._n_configs)) * np.nan
         forcing_sum_array = self.forcing_sum.data
         forcing_vector_d_array = self.ebms['forcing_vector_d'].data
+        fractional_release_array = self.species_configs['fractional_release'].data
         g0_array = self.species_configs['g0'].data
         g1_array = self.species_configs['g1'].data
         gas_partitions_array = np.zeros((self._n_scenarios, self._n_configs, self._n_species, self._n_gasboxes))
@@ -508,6 +557,9 @@ class FAIR:
         cummins_state_array[0, ..., 0] = forcing_sum_array[0, ...]
         cummins_state_array[..., 1:] = self.temperature.data
 
+        # flags
+        do_ozone = self._ozone_indices.sum()
+
         # it's all been leading to this : FaIR MAIN LOOP
         for i_timepoint in tqdm(range(self._n_timepoints), disable=1-progress, desc="Timestepping"):
 
@@ -526,6 +578,25 @@ class FAIR:
             )
 
             # 2. methane lifetime here
+            # EESC is a timepoint behind for concentrations because we need
+            # it for methane and ozone forward stepping. It shouldn't be too
+            # bad.
+            if self._calculate_eesc:
+                eesc = calculate_eesc(
+                    concentration_array[i_timepoint:i_timepoint+1, ...],
+                    baseline_concentration_array[None, ...],
+                    fractional_release_array[None, None, ...],
+                    cl_atoms_array[None, None, ...],
+                    br_atoms_array[None, None, ...],
+                    self._cfc11_indices,
+                    self._halogen_indices,
+                    self.br_cl_ods_potential,
+                )
+                # put interactive methane lifetime here
+            else:
+                eesc = 0
+
+
             # 3. emissions to concentrations
             (
                 concentration_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_forward_indices],
@@ -589,20 +660,46 @@ class FAIR:
             )
 
             # 7. aerosol indirect forcing
-            forcing_array[i_timepoint+1:i_timepoint+2, ..., self._aci_indices] = calculate_erfaci_forcing(
-                emissions_array[i_timepoint:i_timepoint+1, ...],
-                baseline_emissions_array[None, None, ...],
-                forcing_scale_array[None, None, ..., self._aci_indices],
-                erfaci_scale_array[None, None, :, None],
-                erfaci_shape_sulfur_array[None, None, :, None],
-                #erfaci_shape_bcoc_array[None, None, :, None],
-                self._sulfur_indices,
-                #self._bc_indices,
-                #self._oc_indices,
-                #self.aci_method
-            )
+            if self.aci_method=='stevens2015':
+                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._aci_indices] = stevens2015(
+                    emissions_array[i_timepoint:i_timepoint+1, ...],
+                    baseline_emissions_array[None, None, ...],
+                    forcing_scale_array[None, None, ..., self._aci_indices],
+                    erfaci_scale_array[None, None, :, None],
+                    erfaci_shape_sulfur_array[None, None, :, None],
+                    self._sulfur_indices,
+                )
+            elif self.aci_method=='smith2021':
+                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._aci_indices] = smith2021(
+                    emissions_array[i_timepoint:i_timepoint+1, ...],
+                    baseline_emissions_array[None, None, ...],
+                    forcing_scale_array[None, None, ..., self._aci_indices],
+                    erfaci_scale_array[None, None, :, None],
+                    erfaci_shape_sulfur_array[None, None, :, None],
+                    erfaci_shape_bcoc_array[None, None, :, None],
+                    self._sulfur_indices,
+                    self._bc_indices,
+                    self._oc_indices,
+                )
 
-            # 8. ozone
+            # 8. ozone SRT HERE
+            if do_ozone and self.ozone_method=='thornhill2021':
+                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ozone_indices]
+
+
+                    emissions,
+                    concentration,
+                    baseline_emissions,
+                    baseline_concentration,
+                    eesc,
+                    forcing_scaling,
+                    ozone_radiative_efficiency,
+                    temperature,
+                    temperature_feedback,
+                    slcf_indices,
+                    ghg_indices
+
+
             # 9. contrails from NOx
             # 10. BC and OC to LAPSI
             # 11. CH4 to stratospheric water vapour

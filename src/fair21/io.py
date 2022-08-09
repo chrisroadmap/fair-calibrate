@@ -45,6 +45,7 @@ def read_properties(filename=DEFAULT_PROPERTIES_FILE, species=None):
             'input_mode': df.loc[specie].input_mode,
             'greenhouse_gas': bool(df.loc[specie].greenhouse_gas),
             'aerosol_radiation_precursor': bool(df.loc[specie].aerosol_radiation_precursor),
+            'ozone_precursor': bool(df.loc[specie].ozone_precursor),
         }
     return properties
 

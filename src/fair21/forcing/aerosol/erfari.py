@@ -53,7 +53,7 @@ def calculate_erfari_forcing(
 
     # concentration-driven forcers
     erf_out[..., concentration_indices] = (
-        (concentration[..., concentration_indices] - baseline_emissions[..., concentration_indices])
+        (concentration[..., concentration_indices] - baseline_concentration[..., concentration_indices])
         * radiative_efficiency[..., concentration_indices]
     ) * forcing_scaling[..., concentration_indices]
 
