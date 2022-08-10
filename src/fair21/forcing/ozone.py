@@ -17,6 +17,7 @@ def thornhill2021(
     ozone_radiative_efficiency,
     temperature,
     temperature_feedback,
+    cfc11_indices,
     slcf_indices,
     ghg_indices
 ):
@@ -95,27 +96,30 @@ def thornhill2021(
     """
 
     array_shape = emissions.shape
-    n_timesteps, n_scenarios, n_configs, n_species, _ = array_shape
+    n_timesteps, n_scenarios, n_configs, n_species = array_shape
 
     # revisit this if we ever want to dump out intermediate calculations like the feedback strength.
-    _erf = np.ones((n_timesteps, n_scenarios, n_configs, 4, 1)) * np.nan
+    _erf = np.ones((n_timesteps, n_scenarios, n_configs, 4)) * np.nan
 
-    # Halogen GHGs expressed as EESC precalculated
-    _erf[:, :, :, 0, :] = np.nansum(eesc * ozone_radiative_efficiency * forcing_scaling, axis=SPECIES_AXIS)
+    # Halogens
+    _erf[:, :, :, 0] = np.sum(eesc * ozone_radiative_efficiency[:, :, :, cfc11_indices] * forcing_scaling, axis=SPECIES_AXIS)
 
     # Non-Halogen GHGs, with a concentration-given ozone radiative_efficiency
-    _erf[:, :, :, 1, :] = np.sum(
-        (concentration[:, :, :, ghg_indices, :] - baseline_concentration[:, :, :, ghg_indices, :]) *
-    ozone_radiative_efficiency[:, :, :, ghg_indices, :], axis=SPECIES_AXIS)
+    _erf[:, :, :, 1] = np.sum(
+        (concentration[:, :, :, ghg_indices] - baseline_concentration[:, :, :, ghg_indices]) *
+    ozone_radiative_efficiency[:, :, :, ghg_indices] * forcing_scaling, axis=SPECIES_AXIS)
 
     # Emissions-based precursors
-    _erf[:, :, :, 2, :] = np.sum(
-        (emissions[:, :, :, slcf_indices, :] - baseline_emissions[:, :, :, slcf_indices, :]) *
-    ozone_radiative_efficiency[:, :, :, slcf_indices, :], axis=SPECIES_AXIS)
+    _erf[:, :, :, 2] = np.sum(
+        (emissions[:, :, :, slcf_indices] - baseline_emissions[:, :, :, slcf_indices]) *
+    ozone_radiative_efficiency[:, :, :, slcf_indices] * forcing_scaling, axis=SPECIES_AXIS)
 
     # Temperature feedback
-    _erf[:, :, :, [3], :] = (
-        temperature_feedback * temperature * np.sum(_erf[:, :, :, :3, :], axis=SPECIES_AXIS, keepdims=True)
-    )
+    # print(temperature_feedback.shape)
+    # print(temperature.shape)
+    # print(_erf.shape)
+    # print(np.sum(_erf[:, :, :, :3], axis=SPECIES_AXIS, keepdims=True).shape)
+    # W m-2 K-1 * K = W m-2
+    _erf[:, :, :, 3:4] = (temperature_feedback * temperature)
     erf_out = np.sum(_erf, axis=SPECIES_AXIS, keepdims=True)
     return erf_out

@@ -12,6 +12,7 @@ from .energy_balance_model import step_temperature, calculate_toa_imbalance_post
 from .forcing.aerosol.erfari import calculate_erfari_forcing
 from .forcing.aerosol.erfaci import stevens2015, smith2021
 from .forcing.ghg import meinshausen2020 as calculate_ghg_forcing
+from .forcing.minor import calculate_linear_forcing
 from .forcing.ozone import thornhill2021
 from .gas_cycle import calculate_alpha
 from .gas_cycle.eesc import calculate_eesc
@@ -370,6 +371,14 @@ class FAIR:
         def _raise_if_nan(specie, input_mode):
             raise ValueError(f"{specie} contains NaN values in its {input_mode} array, which you are trying to drive the simulation with.")
 
+        self._routine_flags = {
+            'eesc': False,
+            'contrails': False,
+            'ozone': False,
+            'land use': False,
+            'lapsi': False,
+            'h2o stratospheric': False
+        }
         # 5. check if emissions, concentration, forcing have been defined and
         # that we have non-nan data in every case
         for specie in self.species:
@@ -405,9 +414,8 @@ class FAIR:
             ):
                 raise ValueError("aci in 'calculated' mode requires sulfur, black carbon and organic carbon in 'emissions' mode for aci_method = smith2021S.")
 
-        self._calculate_eesc = False
         if self.ch4_method=='thornhill2021':
-            self._calculate_eesc = True
+            self._routine_flags['eesc'] = True  # move
             if (
                 'cfc-11' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) and
                 'cfc-11' not in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type'])
@@ -431,6 +439,10 @@ class FAIR:
             if 0 < ch4_to_forcing+n2o_to_forcing < 2:
                 raise ValueError("For ghg_method = myhre1998, either both of ch4 and n2o must be given as emissions or concentrations, or neither")
 
+        for flag in ['ozone', 'contrails', 'lapsi', 'land use', 'h2o stratospheric']:
+            if flag in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
+                self._routine_flags[flag]=True
+
 
     def _make_indices(self):
         # the following are all n_species-length boolean arrays
@@ -451,9 +463,14 @@ class FAIR:
         self._sulfur_indices = np.asarray(self.properties_df['type']=='sulfur', dtype=bool)
         self._bc_indices = np.asarray(self.properties_df['type']=='black carbon', dtype=bool)
         self._oc_indices = np.asarray(self.properties_df['type']=='organic carbon', dtype=bool)
+        self._aviation_nox_indices = np.asarray(self.properties_df['type']=='aviation nox', dtype=bool)
         self._ari_indices = np.asarray(self.properties_df['type']=='ari', dtype=bool)
         self._aci_indices = np.asarray(self.properties_df['type']=='aci', dtype=bool)
         self._ozone_indices = np.asarray(self.properties_df['type']=='ozone', dtype=bool)
+        self._contrails_indices = np.asarray(self.properties_df['type']=='contrails', dtype=bool)
+        self._lapsi_indices = np.asarray(self.properties_df['type']=='lapsi', dtype=bool)
+        self._landuse_indices = np.asarray(self.properties_df['type']=='land use', dtype=bool)
+        self._h2ostrat_indices = np.asarray(self.properties_df['type']=='h2o stratospheric', dtype=bool)
         self._minor_ghg_indices = self._ghg_indices ^ self._co2_indices ^ self._ch4_indices ^ self._n2o_indices
         self._halogen_indices = self._cfc11_indices | np.asarray(self.properties_df['type']=='other halogen', dtype=bool)
 
@@ -499,10 +516,13 @@ class FAIR:
         )
 
 
-    def run(self, progress=True):
+    def run(self, progress=True, suppress_warnings=True):
         self._check_properties()
         self._make_indices()
-        self._make_ebms()
+        with warnings.catch_warnings():
+            if suppress_warnings:
+                warnings.filterwarnings("ignore", message="covariance is not positive-semidefinite.")
+            self._make_ebms()
 
         # part of pre-run: TODO move to a new method
         if self._co2_indices.sum() + self._co2_ffi_indices.sum() + self._co2_afolu_indices.sum()==3:
@@ -518,6 +538,7 @@ class FAIR:
         cl_atoms_array = self.species_configs['cl_atoms'].data
         concentration_array = self.concentration.data
         concentration_per_emission_array = self.species_configs['concentration_per_emission'].data
+        contrails_radiative_efficiency_array = self.species_configs['contrails_radiative_efficiency'].data
         cummins_state_array = np.ones((self._n_timebounds, self._n_scenarios, self._n_configs, self._n_layers+1)) * np.nan
         cumulative_emissions_array = self.cumulative_emissions.data
         deep_ocean_efficacy_array = self.climate_configs['deep_ocean_efficacy'].data
@@ -532,18 +553,23 @@ class FAIR:
         forcing_efficacy_array = self.species_configs['forcing_efficacy'].data
         forcing_efficacy_sum_array = np.ones((self._n_timebounds, self._n_scenarios, self._n_configs)) * np.nan
         forcing_sum_array = self.forcing_sum.data
+        forcing_temperature_feedback_array = self.species_configs['forcing_temperature_feedback'].data
         forcing_vector_d_array = self.ebms['forcing_vector_d'].data
         fractional_release_array = self.species_configs['fractional_release'].data
         g0_array = self.species_configs['g0'].data
         g1_array = self.species_configs['g1'].data
         gas_partitions_array = np.zeros((self._n_scenarios, self._n_configs, self._n_species, self._n_gasboxes))
         greenhouse_gas_radiative_efficiency_array = self.species_configs['greenhouse_gas_radiative_efficiency'].data
+        h2o_stratospheric_factor_array = self.species_configs['h2o_stratospheric_factor'].data
         iirf_0_array = self.species_configs['iirf_0'].data
         iirf_airborne_array = self.species_configs['iirf_airborne'].data
         iirf_temperature_array = self.species_configs['iirf_temperature'].data
         iirf_uptake_array = self.species_configs['iirf_uptake'].data
         iirf_temperature = self.species_configs['iirf_temperature'].data
+        land_use_cumulative_emissions_to_forcing_array = self.species_configs['land_use_cumulative_emissions_to_forcing'].data
+        lapsi_radiative_efficiency_array = self.species_configs['lapsi_radiative_efficiency'].data
         ocean_heat_transfer_array = self.climate_configs['ocean_heat_transfer'].data
+        ozone_radiative_efficiency_array = self.species_configs['ozone_radiative_efficiency'].data
         partition_fraction_array = self.species_configs['partition_fraction'].data
         stochastic_d_array = self.ebms['stochastic_d'].data
         unperturbed_lifetime_array = self.species_configs['unperturbed_lifetime'].data
@@ -561,7 +587,7 @@ class FAIR:
         do_ozone = self._ozone_indices.sum()
 
         # it's all been leading to this : FaIR MAIN LOOP
-        for i_timepoint in tqdm(range(self._n_timepoints), disable=1-progress, desc="Timestepping"):
+        for i_timepoint in tqdm(range(self._n_timepoints), disable=1-progress, desc=f"Running {self._n_scenarios*self._n_configs} projections in parallel", unit='timesteps'):
 
             # 1. alpha scaling
             alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ghg_indices] = calculate_alpha(   # this timepoint
@@ -577,11 +603,11 @@ class FAIR:
                 self.iirf_max
             )
 
-            # 2. methane lifetime here
+            # 2. equivalent effective stratospheric chlorine
             # EESC is a timepoint behind for concentrations because we need
             # it for methane and ozone forward stepping. It shouldn't be too
-            # bad.
-            if self._calculate_eesc:
+            # bad an approximation.
+            if self._routine_flags['eesc']:
                 eesc = calculate_eesc(
                     concentration_array[i_timepoint:i_timepoint+1, ...],
                     baseline_concentration_array[None, ...],
@@ -592,12 +618,12 @@ class FAIR:
                     self._halogen_indices,
                     self.br_cl_ods_potential,
                 )
-                # put interactive methane lifetime here
             else:
                 eesc = 0
 
+            # 3. multi-species methane lifetime
 
-            # 3. emissions to concentrations
+            # 4. greenhouse emissions to concentrations
             (
                 concentration_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_forward_indices],
                 gas_partitions_array[..., self._ghg_forward_indices, :],
@@ -615,7 +641,8 @@ class FAIR:
                 partition_fraction_array[None, None, ..., self._ghg_forward_indices, :],
                 self.timestep,
             )
-            # 4. concentrations to emissions
+
+            # 4. greenhouse gas concentrations to emissions
             (
                 emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_inverse_indices],
                 gas_partitions_array[..., self._ghg_inverse_indices, :],
@@ -682,29 +709,64 @@ class FAIR:
                     self._oc_indices,
                 )
 
-            # 8. ozone SRT HERE
-            if do_ozone and self.ozone_method=='thornhill2021':
-                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ozone_indices]
+            # 8. ozone emissions & concentrations to forcing
+            # TODO argument ordering
+            if self._routine_flags['ozone'] and self.ozone_method=='thornhill2021':
+                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ozone_indices] = thornhill2021(
+                    emissions_array[i_timepoint:i_timepoint+1, ...],
+                    concentration_array[i_timepoint+1:i_timepoint+2, ...],
+                    baseline_emissions_array[None, None, ...],
+                    baseline_concentration_array[None, None, ...],
+                    eesc[..., None],
+                    forcing_scale_array[None, None, ..., self._ozone_indices],
+                    ozone_radiative_efficiency_array[None, None, ...],
+                    cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
+                    forcing_temperature_feedback_array[None, None, :, self._ozone_indices],
+                    self._cfc11_indices,
+                    self._ozone_from_emissions_indices,
+                    self._ozone_from_concentration_indices,
+                )
 
+            # 9. contrails forcing from NOx emissions
+            if self._routine_flags['contrails']:
+                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._contrails_indices] = calculate_linear_forcing(
+                    emissions_array[i_timepoint:i_timepoint+1, ...],
+                    baseline_emissions_array[None, None, ...],
+                    forcing_scale_array[None, None, ..., self._contrails_indices],
+                    contrails_radiative_efficiency_array[None, None, ...],
+                )
 
-                    emissions,
-                    concentration,
-                    baseline_emissions,
-                    baseline_concentration,
-                    eesc,
-                    forcing_scaling,
-                    ozone_radiative_efficiency,
-                    temperature,
-                    temperature_feedback,
-                    slcf_indices,
-                    ghg_indices
+            # 10. LAPSI forcing from BC and OC emissions
+            if self._routine_flags['lapsi']:
+                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._lapsi_indices] = calculate_linear_forcing(
+                    emissions_array[i_timepoint:i_timepoint+1, ...],
+                    baseline_emissions_array[None, None, ...],
+                    forcing_scale_array[None, None, ..., self._lapsi_indices],
+                    lapsi_radiative_efficiency_array[None, None, ...],
+                )
 
+            # 11. CH4 forcing to stratospheric water vapour forcing
+            if self._routine_flags['h2o stratospheric']:
+                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._h2ostrat_indices] = calculate_linear_forcing(
+                    forcing_array[i_timepoint+1:i_timepoint+2, ...],
+                    forcing_array[0:1, ...],
+                    forcing_scale_array[None, None, ..., self._h2ostrat_indices],
+                    h2o_stratospheric_factor_array[None, None, ...],
+                )
 
-            # 9. contrails from NOx
-            # 10. BC and OC to LAPSI
-            # 11. CH4 to stratospheric water vapour
-            # 12. CO2 cumulative to land use change
-            # 13. volcanic forcing temperature dependence?
+            # 12. CO2 cumulative emissions to land use change forcing
+            if self._routine_flags['land use']:
+                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._landuse_indices] = calculate_linear_forcing(
+                    cumulative_emissions_array[i_timepoint:i_timepoint+1, ...],
+                    cumulative_emissions_array[0:1, ...],
+                    forcing_scale_array[None, None, ..., self._landuse_indices],
+                    land_use_cumulative_emissions_to_forcing_array[None, None, ...],
+                )
+
+            # 13. apply temperature-forcing dependence here. Currently only
+            # implemented for ozone forcing, and indirectly through IIRF for
+            # greenhouse gases.
+
             # 14. sum forcings
             forcing_sum_array[i_timepoint+1:i_timepoint+2, ...] = np.nansum(
                 forcing_array[i_timepoint+1:i_timepoint+2, ...], axis=SPECIES_AXIS
@@ -724,9 +786,10 @@ class FAIR:
             )
 
         # 16. TOA imbalance
+        # forcing is not efficacy adjusted here, is this correct?
         toa_imbalance_array = calculate_toa_imbalance_postrun(
             cummins_state_array,
-            forcing_sum_array,#[..., None],  # not efficacy adjusted, is this correct?
+            forcing_sum_array,#[..., None],
             ocean_heat_transfer_array,
             deep_ocean_efficacy_array,
         )
