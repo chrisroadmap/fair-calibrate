@@ -16,7 +16,6 @@ def calculate_alpha_ch4(
     normalisation,
     eesc_normalisation,
     ch4_lifetime_chemical_sensitivity,
-    ch4_lifetime_eesc_sensitivity,
     ch4_lifetime_temperature_sensitivity,
     slcf_indices,
     ghg_indices,
@@ -32,19 +31,18 @@ def calculate_alpha_ch4(
         np.sum(
             np.log(
                 1 +
-                (emissions[:,:,:,slcf_indices,:]-baseline_emissions[:,:,:,slcf_indices,:])/normalisation[:,:,:,slcf_indices,:]
-                * ch4_lifetime_chemical_sensitivity[:,:,:,slcf_indices,:]
+                (emissions-baseline_emissions)
+                * ch4_lifetime_chemical_sensitivity
             ),
         axis=SPECIES_AXIS, keepdims=True) +
         np.sum(
             np.log(
                 1 +
-                (concentration[:,:,:,ghg_indices,:]-baseline_concentration[:,:,:,ghg_indices,:])/
-                normalisation[:,:,:,ghg_indices,:]
-                * ch4_lifetime_chemical_sensitivity[:,:,:,ghg_indices,:],
+                (concentration-baseline_concentration)
+                * ch4_lifetime_chemical_sensitivity,
             ),
         axis=SPECIES_AXIS, keepdims=True) +
-        np.log(1 + (eesc/eesc_normalisation * ch4_lifetime_eesc_sensitivity)) +
+        np.log(1 + (eesc * cfc11_lifetime_eesc_sensitivity)) +
         np.log(1 + temperature * ch4_lifetime_temperature_sensitivity)
     )
     #    except Warning:

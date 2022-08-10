@@ -311,6 +311,8 @@ class FAIR:
             fill(self.species_configs['cl_atoms'], df.loc[specie].cl_atoms, specie=specie)
             fill(self.species_configs['br_atoms'], df.loc[specie].br_atoms, specie=specie)
             fill(self.species_configs['fractional_release'], df.loc[specie].fractional_release, specie=specie)
+            fill(self.species_configs['ch4_lifetime_chemical_sensitivity'], df.loc[specie].ch4_lifetime_chemical_sensitivity, specie=specie)
+            fill(self.species_configs['ch4_lifetime_temperature_sensitivity'], df.loc[specie].ch4_lifetime_temperature_sensitivity, specie=specie)
         if 'aci' in list(self.properties_df['type']):
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_scale, aci_parameter='scale')
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_Sulfur, aci_parameter='Sulfur')
@@ -622,6 +624,19 @@ class FAIR:
                 eesc = 0
 
             # 3. multi-species methane lifetime
+            if self.ch4_method=='thornhill2021':
+                alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ghg_indices] = calculate_alpha_ch4(
+                    emissions_array[i_timepoint:i_timepoint+1, ..., None],
+                    concentration_array[i_timepoint+1:i_timepoint+2, ..., None],
+                    eesc[..., None],
+                    cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
+                    baseline_emissions_array[None, None, ...],
+                    baseline_concentration_array[None, None, ...],
+                    ch4_lifetime_chemical_sensitivity,
+                    ch4_lifetime_temperature_sensitivity,
+                    slcf_indices,
+                    ghg_indices,
+                ):
 
             # 4. greenhouse emissions to concentrations
             (
