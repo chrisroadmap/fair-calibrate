@@ -46,5 +46,5 @@ def calculate_eesc(
     eesc_out = np.nansum((
         cl_atoms * (concentration - baseline_concentration) * fractional_release / cfc11_fr +
         br_cl_ratio * br_atoms * (concentration - baseline_concentration) * fractional_release / cfc11_fr
-    ) * cfc11_fr, axis=SPECIES_AXIS)
+    ) * cfc11_fr, axis=SPECIES_AXIS, keepdims=True)
     return eesc_out

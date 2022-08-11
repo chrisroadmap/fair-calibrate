@@ -12,12 +12,10 @@ def thornhill2021(
     concentration,
     baseline_emissions,
     baseline_concentration,
-    eesc,
     forcing_scaling,
     ozone_radiative_efficiency,
     temperature,
     temperature_feedback,
-    cfc11_indices,
     slcf_indices,
     ghg_indices
 ):
@@ -70,11 +68,6 @@ def thornhill2021(
         temperature feedback on ozone forcing (W m-2 K-1)
     br_cl_ratio : float, default=45
         how much more effective bromine is as an ozone depletor than chlorine.
-    cfc_11_index : int or None
-        array index along SPECIES_AXIS corresponding to CFC-11.
-    halogen_indices : list of int
-        provides a mapping of which halogen species corresponds to which
-        index along the SPECIES_AXIS.
     slcf_indices : list of int
         provides a mapping of which aerosol species corresponds to which emitted
         species index along the SPECIES_AXIS.
@@ -99,18 +92,15 @@ def thornhill2021(
     n_timesteps, n_scenarios, n_configs, n_species = array_shape
 
     # revisit this if we ever want to dump out intermediate calculations like the feedback strength.
-    _erf = np.ones((n_timesteps, n_scenarios, n_configs, 4)) * np.nan
+    _erf = np.ones((n_timesteps, n_scenarios, n_configs, 3)) * np.nan
 
-    # Halogens
-    _erf[:, :, :, 0] = np.sum(eesc * ozone_radiative_efficiency[:, :, :, cfc11_indices] * forcing_scaling, axis=SPECIES_AXIS)
-
-    # Non-Halogen GHGs, with a concentration-given ozone radiative_efficiency
-    _erf[:, :, :, 1] = np.sum(
+    # GHGs, with a concentration-given ozone radiative_efficiency, including EESC
+    _erf[:, :, :, 0] = np.sum(
         (concentration[:, :, :, ghg_indices] - baseline_concentration[:, :, :, ghg_indices]) *
     ozone_radiative_efficiency[:, :, :, ghg_indices] * forcing_scaling, axis=SPECIES_AXIS)
 
     # Emissions-based precursors
-    _erf[:, :, :, 2] = np.sum(
+    _erf[:, :, :, 1] = np.sum(
         (emissions[:, :, :, slcf_indices] - baseline_emissions[:, :, :, slcf_indices]) *
     ozone_radiative_efficiency[:, :, :, slcf_indices] * forcing_scaling, axis=SPECIES_AXIS)
 
@@ -120,6 +110,7 @@ def thornhill2021(
     # print(_erf.shape)
     # print(np.sum(_erf[:, :, :, :3], axis=SPECIES_AXIS, keepdims=True).shape)
     # W m-2 K-1 * K = W m-2
-    _erf[:, :, :, 3:4] = (temperature_feedback * temperature)
+    _erf[:, :, :, 2:3] = (temperature_feedback * temperature)
+    #print(_erf[0,0,0,:])
     erf_out = np.sum(_erf, axis=SPECIES_AXIS, keepdims=True)
     return erf_out

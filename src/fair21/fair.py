@@ -15,6 +15,7 @@ from .forcing.ghg import meinshausen2020 as calculate_ghg_forcing
 from .forcing.minor import calculate_linear_forcing
 from .forcing.ozone import thornhill2021
 from .gas_cycle import calculate_alpha
+from .gas_cycle.ch4_lifetime import calculate_alpha_ch4
 from .gas_cycle.eesc import calculate_eesc
 from .gas_cycle.forward import step_concentration
 from .gas_cycle.inverse import unstep_concentration
@@ -269,8 +270,12 @@ class FAIR:
                 'br_atoms': ("specie", np.zeros(self._n_species)),
                 'fractional_release': (["config", "specie"], np.zeros((self._n_configs, self._n_species))),
 
+                # specific parameters for methane lifetime
+                'ch4_lifetime_chemical_sensitivity': (["config", "specie"], np.ones((self._n_configs, self._n_species)) * np.nan),
+                'ch4_lifetime_temperature_sensitivity': (["config"], np.ones((self._n_configs)) * np.nan),
+
                 # specific parameters for aerosol-cloud interactions
-                'aci_parameters': (["config", "aci_parameter"], np.ones((self._n_configs, 3)) * np.nan)
+                'aci_parameters': (["config", "aci_parameter"], np.ones((self._n_configs, 3)) * np.nan),
 
             },
             coords = {
@@ -312,11 +317,11 @@ class FAIR:
             fill(self.species_configs['br_atoms'], df.loc[specie].br_atoms, specie=specie)
             fill(self.species_configs['fractional_release'], df.loc[specie].fractional_release, specie=specie)
             fill(self.species_configs['ch4_lifetime_chemical_sensitivity'], df.loc[specie].ch4_lifetime_chemical_sensitivity, specie=specie)
-            fill(self.species_configs['ch4_lifetime_temperature_sensitivity'], df.loc[specie].ch4_lifetime_temperature_sensitivity, specie=specie)
         if 'aci' in list(self.properties_df['type']):
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_scale, aci_parameter='scale')
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_Sulfur, aci_parameter='Sulfur')
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_BCOC, aci_parameter='BC+OC')
+        fill(self.species_configs['ch4_lifetime_temperature_sensitivity'], df.loc[df["type"]=="ch4"].ch4_lifetime_temperature_sensitivity)
         self.calculate_concentration_per_emission()
 
     # greenhouse gas convenience functions
@@ -379,7 +384,8 @@ class FAIR:
             'ozone': False,
             'land use': False,
             'lapsi': False,
-            'h2o stratospheric': False
+            'h2o stratospheric': False,
+            'ch4 concentration update': False
         }
         # 5. check if emissions, concentration, forcing have been defined and
         # that we have non-nan data in every case
@@ -416,13 +422,18 @@ class FAIR:
             ):
                 raise ValueError("aci in 'calculated' mode requires sulfur, black carbon and organic carbon in 'emissions' mode for aci_method = smith2021S.")
 
-        if self.ch4_method=='thornhill2021':
-            self._routine_flags['eesc'] = True  # move
-            if (
-                'cfc-11' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) and
-                'cfc-11' not in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type'])
-            ):
-                raise ValueError("For ch4_method = thornhill2021, we need to calculate EESC, which requires at least cfc-11 to be provided in emissions or concentration driven mode.")
+        if (
+            'eesc' not in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type']) and (
+                'eesc' in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']) and (
+                    'cfc-11' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) and
+                    'cfc-11' not in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type'])
+                )
+            )
+        ):
+            if self.ch4_method=='thornhill2021':
+                raise ValueError("For ch4_method = thornhill2021, EESC needs to be input as concentrations, or to be calculated from emissions of halogenated species which requires at least cfc-11 to be provided in emissions or concentration driven mode.")
+            elif self.ozone_method=='thornhill2021':
+                raise ValueError("For ozone_method = thornhill2021, EESC needs to be input as concentrations, or to be calculated from emissions of halogenated species which requires at least cfc-11 to be provided in emissions or concentration driven mode.")
 
         co2_to_forcing = False
         ch4_to_forcing = False
@@ -441,7 +452,7 @@ class FAIR:
             if 0 < ch4_to_forcing+n2o_to_forcing < 2:
                 raise ValueError("For ghg_method = myhre1998, either both of ch4 and n2o must be given as emissions or concentrations, or neither")
 
-        for flag in ['ozone', 'contrails', 'lapsi', 'land use', 'h2o stratospheric']:
+        for flag in ['ozone', 'contrails', 'lapsi', 'land use', 'h2o stratospheric', 'eesc']:
             if flag in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
                 self._routine_flags[flag]=True
 
@@ -473,8 +484,11 @@ class FAIR:
         self._lapsi_indices = np.asarray(self.properties_df['type']=='lapsi', dtype=bool)
         self._landuse_indices = np.asarray(self.properties_df['type']=='land use', dtype=bool)
         self._h2ostrat_indices = np.asarray(self.properties_df['type']=='h2o stratospheric', dtype=bool)
+        self._eesc_indices = np.asarray(self.properties_df['type']=='eesc', dtype=bool)
         self._minor_ghg_indices = self._ghg_indices ^ self._co2_indices ^ self._ch4_indices ^ self._n2o_indices
         self._halogen_indices = self._cfc11_indices | np.asarray(self.properties_df['type']=='other halogen', dtype=bool)
+        self._aerosol_chemistry_from_emissions_indices = np.asarray(self.properties_df.loc[:,'aerosol_chemistry_from_emissions'].values, dtype=bool)
+        self._aerosol_chemistry_from_concentration_indices = np.asarray(self.properties_df.loc[:,'aerosol_chemistry_from_concentration'].values, dtype=bool)
 
         # and these ones are more specific, tripping certain behaviours or functions
         self._ghg_forward_indices = np.asarray(
@@ -492,30 +506,9 @@ class FAIR:
                 (self.properties_df.loc[:,'greenhouse_gas'])
             ).values, dtype=bool
         )
-        self._ari_from_emissions_indices = np.asarray(
-            (
-                ~(self.properties_df.loc[:,'greenhouse_gas'])&
-                (self.properties_df.loc[:,'aerosol_radiation_precursor'])
-            ).values, dtype=bool
-        )
-        self._ari_from_concentration_indices = np.asarray(
-            (
-                (self.properties_df.loc[:,'greenhouse_gas'])&
-                (self.properties_df.loc[:,'aerosol_radiation_precursor'])
-            ).values, dtype=bool
-        )
-        self._ozone_from_emissions_indices = np.asarray(
-            (
-                ~(self.properties_df.loc[:,'greenhouse_gas'])&
-                (self.properties_df.loc[:,'ozone_precursor'])
-            ).values, dtype=bool
-        )
-        self._ozone_from_concentration_indices = np.asarray(
-            (
-                (self.properties_df.loc[:,'greenhouse_gas'])&
-                (self.properties_df.loc[:,'ozone_precursor'])
-            ).values, dtype=bool
-        )
+
+        if sum(self._ch4_indices * self._ghg_forward_indices) == 1:
+            self._routine_flags['ch4 concentration update'] = True
 
 
     def run(self, progress=True, suppress_warnings=True):
@@ -537,6 +530,8 @@ class FAIR:
         baseline_concentration_array = self.species_configs['baseline_concentration'].data
         baseline_emissions_array = self.species_configs['baseline_emissions'].data
         br_atoms_array = self.species_configs['br_atoms'].data
+        ch4_lifetime_chemical_sensitivity_array = self.species_configs['ch4_lifetime_chemical_sensitivity'].data
+        ch4_lifetime_temperature_sensitivity_array = self.species_configs['ch4_lifetime_temperature_sensitivity'].data
         cl_atoms_array = self.species_configs['cl_atoms'].data
         concentration_array = self.concentration.data
         concentration_per_emission_array = self.species_configs['concentration_per_emission'].data
@@ -605,13 +600,12 @@ class FAIR:
                 self.iirf_max
             )
 
-            # 2. equivalent effective stratospheric chlorine
-            # EESC is a timepoint behind for concentrations because we need
-            # it for methane and ozone forward stepping. It shouldn't be too
-            # bad an approximation.
+            # 2. equivalent effective stratospheric chlorine for methane and ozone
+            # timepoints from 0 to 2 because we need current (for methane alpha) and
+            # next (for ozone)
             if self._routine_flags['eesc']:
-                eesc = calculate_eesc(
-                    concentration_array[i_timepoint:i_timepoint+1, ...],
+                concentration_array[i_timepoint+0:i_timepoint+2, ..., self._eesc_indices] = calculate_eesc(
+                    concentration_array[i_timepoint+0:i_timepoint+2, ...],
                     baseline_concentration_array[None, ...],
                     fractional_release_array[None, None, ...],
                     cl_atoms_array[None, None, ...],
@@ -620,25 +614,23 @@ class FAIR:
                     self._halogen_indices,
                     self.br_cl_ods_potential,
                 )
-            else:
-                eesc = 0
 
-            # 3. multi-species methane lifetime
+            # 3. multi-species methane lifetime if desired; update GHG concentration for CH4
+            # needs previous timebound but this is no different to the generic
             if self.ch4_method=='thornhill2021':
-                alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ghg_indices] = calculate_alpha_ch4(
-                    emissions_array[i_timepoint:i_timepoint+1, ..., None],
-                    concentration_array[i_timepoint+1:i_timepoint+2, ..., None],
-                    eesc[..., None],
+                alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ch4_indices] = calculate_alpha_ch4(
+                    emissions_array[i_timepoint:i_timepoint+1, ...],
+                    concentration_array[i_timepoint:i_timepoint+1, ...],
                     cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
                     baseline_emissions_array[None, None, ...],
                     baseline_concentration_array[None, None, ...],
-                    ch4_lifetime_chemical_sensitivity,
-                    ch4_lifetime_temperature_sensitivity,
-                    slcf_indices,
-                    ghg_indices,
-                ):
+                    ch4_lifetime_chemical_sensitivity_array[None, None, ...],
+                    ch4_lifetime_temperature_sensitivity_array[None, None, :, None],
+                    self._aerosol_chemistry_from_emissions_indices,
+                    self._aerosol_chemistry_from_concentration_indices,
+                )
 
-            # 4. greenhouse emissions to concentrations
+            # 4. greenhouse emissions to concentrations; include methane from IIRF
             (
                 concentration_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_forward_indices],
                 gas_partitions_array[..., self._ghg_forward_indices, :],
@@ -657,7 +649,7 @@ class FAIR:
                 self.timestep,
             )
 
-            # 4. greenhouse gas concentrations to emissions
+            # 5. greenhouse gas concentrations to emissions
             (
                 emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_inverse_indices],
                 gas_partitions_array[..., self._ghg_inverse_indices, :],
@@ -697,8 +689,8 @@ class FAIR:
                 baseline_concentration_array[None, None, ...],
                 forcing_scale_array[None, None, ...],
                 erfari_radiative_efficiency_array[None, None, ...],
-                self._ari_from_emissions_indices,
-                self._ari_from_concentration_indices,
+                self._aerosol_chemistry_from_emissions_indices,
+                self._aerosol_chemistry_from_concentration_indices,
             )
 
             # 7. aerosol indirect forcing
@@ -732,14 +724,12 @@ class FAIR:
                     concentration_array[i_timepoint+1:i_timepoint+2, ...],
                     baseline_emissions_array[None, None, ...],
                     baseline_concentration_array[None, None, ...],
-                    eesc[..., None],
                     forcing_scale_array[None, None, ..., self._ozone_indices],
                     ozone_radiative_efficiency_array[None, None, ...],
                     cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
                     forcing_temperature_feedback_array[None, None, :, self._ozone_indices],
-                    self._cfc11_indices,
-                    self._ozone_from_emissions_indices,
-                    self._ozone_from_concentration_indices,
+                    self._aerosol_chemistry_from_emissions_indices,
+                    self._aerosol_chemistry_from_concentration_indices,
                 )
 
             # 9. contrails forcing from NOx emissions

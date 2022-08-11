@@ -44,8 +44,8 @@ def read_properties(filename=DEFAULT_PROPERTIES_FILE, species=None):
             'forcing': bool(df.loc[specie].forcing),
             'input_mode': df.loc[specie].input_mode,
             'greenhouse_gas': bool(df.loc[specie].greenhouse_gas),
-            'aerosol_radiation_precursor': bool(df.loc[specie].aerosol_radiation_precursor),
-            'ozone_precursor': bool(df.loc[specie].ozone_precursor),
+            'aerosol_chemistry_from_emissions': bool(df.loc[specie].aerosol_chemistry_from_emissions),
+            'aerosol_chemistry_from_concentration': bool(df.loc[specie].aerosol_chemistry_from_concentration),
         }
     return properties
 
