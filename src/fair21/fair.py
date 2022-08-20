@@ -30,8 +30,75 @@ DEFAULT_SPECIES_CONFIG_FILE = os.path.join(HERE, "defaults", "data", "ar6", "spe
 # lower in the code, which will allow for alternative treatments.
 
 class FAIR:
-    def __init__(self):
-        self.run_control()
+    def __init__(
+        self,
+        n_gasboxes=4,
+        n_layers=3,
+        iirf_max=100,
+        br_cl_ods_potential=45,
+        aci_method='smith2021',
+        ghg_method='meinshausen2020',
+        ch4_method='leach2021',
+        ozone_method='thornhill2021'
+    ):
+        self._aci_method = aci_method
+        self._ghg_method = ghg_method
+        self._ch4_method = ch4_method
+        self._ozone_method = ozone_method
+        self.gasboxes = range(n_gasboxes)
+        self.layers = range(n_layers)
+        self.iirf_max = iirf_max
+        self.br_cl_ods_potential = br_cl_ods_potential
+        self._n_gasboxes = n_gasboxes
+        self._n_layers = n_layers
+        self.aci_parameters = ['scale', 'Sulfur', 'BC+OC']
+
+    # must be a less cumbsersome way to code this
+    @property
+    def aci_method(self):
+        return self._aci_method
+
+    @aci_method.setter
+    def aci_method(self, value):
+        if value.lower() in ['smith2021', 'stevens2015']:
+            self._aci_method = value.lower()
+        else:
+            raise ValueError(f"aci_method should be smith2021 or stevens2015; you provided {value.lower()}.")
+
+    @property
+    def ch4_method(self):
+        return self._ch4_method
+
+    @ch4_method.setter
+    def ch4_method(self, value):
+        if value.lower() in ['thornhill2021', 'leach2021']:
+            self._ch4_method = value.lower()
+        else:
+            raise ValueError(f"ch4_method should be thornhill2021 or leach2021; you provided {value.lower()}.")
+
+    @property
+    def ghg_method(self):
+        return self._ghg_method
+
+    # TODO: implement Leach2021, Etminan2016, Myhre1998
+    @ghg_method.setter
+    def ghg_method(self, value):
+        if value.lower() in ['leach2021', 'meinshausen2020', 'etminan2016', 'myhre1998']:
+            self._ghg_method = value.lower()
+        else:
+            raise ValueError(f"ghg_method should be one of [leach2021, meinshausen2020, etminan2016, myhre1998]; you provided {value.lower()}.")
+
+    @property
+    def ozone_method(self):
+        return self._ozone_method
+
+    # TODO: actually implement Stevenson2013
+    @ozone_method.setter
+    def ozone_method(self, value):
+        if value in ['thornhill2021', 'stevenson2013']:
+            self._ozone_method = value.lower()
+        else:
+            raise ValueError(f"ozone_method should thornhill2021 or stevenson2013; you provided {value.lower()}.")
 
 
     def define_time(self, start, end, step):
@@ -81,51 +148,7 @@ class FAIR:
             if n_repeats > 1 and not multiple_allowed[specie_type]:
                 raise ValueError(f'{specie_type} is defined {n_repeats} times in the problem, but must be unique.')
 
-    def run_control(
-        self,
-        n_gasboxes=4,
-        n_layers=3,
-        iirf_max=100,
-        br_cl_ods_potential=45,
-        stratospheric_ods=True,
-        aci_method='smith2021',
-        ghg_method='meinshausen2020',
-        ch4_method='leach2021',
-        ozone_method='thornhill2021'
-    ):
-        self.gasboxes = range(n_gasboxes)
-        self.layers = range(n_layers)
-        self.iirf_max = iirf_max
-        self.br_cl_ods_potential = br_cl_ods_potential
-        self.stratospheric_ods = stratospheric_ods
-        aci_method=aci_method.lower()
-        ghg_method=ghg_method.lower()
-        ch4_method=ch4_method.lower()
-        ozone_method=ozone_method.lower()
 
-        # refactor target
-        if aci_method in ['smith2021', 'stevens2015']:
-            self.aci_method = aci_method
-        else:
-            raise ValueError(f"aci_method should be smith2021 or stevens2015; you provided {aci_method}.")
-        if ghg_method in ['leach2021', 'meinshausen2020', 'etminan2016', 'myhre1998']:
-            self.ghg_method = ghg_method
-        else:
-            raise ValueError(f"`ghg_method` should be one of [leach2021, meinshausen2020, etminan2016, myhre1998]; you provided {ghg_method}.")
-        if ch4_method in ['thornhill2021', 'leach2021']:
-            self.ch4_method = ch4_method
-        else:
-            raise ValueError(f"ch4_method should be thornhill2021 or leach2021; you provided {ch4_method}.")
-        if ozone_method in ['thornhill2021', 'stevenson2013']:
-            self.ozone_method = ozone_method
-        else:
-            raise ValueError(f"ozone_method should be one of [thornhill2021, stevenson2013, None]; you provided {ozone_method}.")
-
-
-        self._n_gasboxes = n_gasboxes
-        self._n_layers = n_layers
-        #self._n_aci_parameters = 3 if aci_method=='smith2021' else 2
-        self.aci_parameters = ['scale', 'Sulfur', 'BC+OC']#[:self._n_aci_parameters]
 
 
     def allocate(self):
@@ -600,24 +623,10 @@ class FAIR:
                 self.iirf_max
             )
 
-            # 2. equivalent effective stratospheric chlorine for methane and ozone
-            # timepoints from 0 to 2 because we need current (for methane alpha) and
-            # next (for ozone)
-            if self._routine_flags['eesc']:
-                concentration_array[i_timepoint+0:i_timepoint+2, ..., self._eesc_indices] = calculate_eesc(
-                    concentration_array[i_timepoint+0:i_timepoint+2, ...],
-                    baseline_concentration_array[None, ...],
-                    fractional_release_array[None, None, ...],
-                    cl_atoms_array[None, None, ...],
-                    br_atoms_array[None, None, ...],
-                    self._cfc11_indices,
-                    self._halogen_indices,
-                    self.br_cl_ods_potential,
-                )
-
-            # 3. multi-species methane lifetime if desired; update GHG concentration for CH4
+            # 2. multi-species methane lifetime if desired; update GHG concentration for CH4
             # needs previous timebound but this is no different to the generic
             if self.ch4_method=='thornhill2021':
+
                 alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ch4_indices] = calculate_alpha_ch4(
                     emissions_array[i_timepoint:i_timepoint+1, ...],
                     concentration_array[i_timepoint:i_timepoint+1, ...],
@@ -630,7 +639,7 @@ class FAIR:
                     self._aerosol_chemistry_from_concentration_indices,
                 )
 
-            # 4. greenhouse emissions to concentrations; include methane from IIRF
+            # 3. greenhouse emissions to concentrations; include methane from IIRF
             (
                 concentration_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_forward_indices],
                 gas_partitions_array[..., self._ghg_forward_indices, :],
@@ -649,7 +658,7 @@ class FAIR:
                 self.timestep,
             )
 
-            # 5. greenhouse gas concentrations to emissions
+            # 4. greenhouse gas concentrations to emissions
             (
                 emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_inverse_indices],
                 gas_partitions_array[..., self._ghg_inverse_indices, :],
@@ -716,7 +725,21 @@ class FAIR:
                     self._oc_indices,
                 )
 
-            # 8. ozone emissions & concentrations to forcing
+            # 8. calculate EESC this timestep for ozone forcing (and use it for
+            # methane lifetime in the following timestep)
+            if self._routine_flags['eesc']:
+                concentration_array[i_timepoint+1:i_timepoint+2, ..., self._eesc_indices] = calculate_eesc(
+                    concentration_array[i_timepoint+1:i_timepoint+2, ...],
+                    baseline_concentration_array[None, ...],
+                    fractional_release_array[None, None, ...],
+                    cl_atoms_array[None, None, ...],
+                    br_atoms_array[None, None, ...],
+                    self._cfc11_indices,
+                    self._halogen_indices,
+                    self.br_cl_ods_potential,
+                )
+
+            # 9. ozone emissions & concentrations to forcing
             # TODO argument ordering
             if self._routine_flags['ozone'] and self.ozone_method=='thornhill2021':
                 forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ozone_indices] = thornhill2021(
@@ -732,7 +755,7 @@ class FAIR:
                     self._aerosol_chemistry_from_concentration_indices,
                 )
 
-            # 9. contrails forcing from NOx emissions
+            # 10. contrails forcing from NOx emissions
             if self._routine_flags['contrails']:
                 forcing_array[i_timepoint+1:i_timepoint+2, ..., self._contrails_indices] = calculate_linear_forcing(
                     emissions_array[i_timepoint:i_timepoint+1, ...],
@@ -741,7 +764,7 @@ class FAIR:
                     contrails_radiative_efficiency_array[None, None, ...],
                 )
 
-            # 10. LAPSI forcing from BC and OC emissions
+            # 11. LAPSI forcing from BC and OC emissions
             if self._routine_flags['lapsi']:
                 forcing_array[i_timepoint+1:i_timepoint+2, ..., self._lapsi_indices] = calculate_linear_forcing(
                     emissions_array[i_timepoint:i_timepoint+1, ...],
@@ -750,7 +773,7 @@ class FAIR:
                     lapsi_radiative_efficiency_array[None, None, ...],
                 )
 
-            # 11. CH4 forcing to stratospheric water vapour forcing
+            # 12. CH4 forcing to stratospheric water vapour forcing
             if self._routine_flags['h2o stratospheric']:
                 forcing_array[i_timepoint+1:i_timepoint+2, ..., self._h2ostrat_indices] = calculate_linear_forcing(
                     forcing_array[i_timepoint+1:i_timepoint+2, ...],
@@ -759,7 +782,7 @@ class FAIR:
                     h2o_stratospheric_factor_array[None, None, ...],
                 )
 
-            # 12. CO2 cumulative emissions to land use change forcing
+            # 13. CO2 cumulative emissions to land use change forcing
             if self._routine_flags['land use']:
                 forcing_array[i_timepoint+1:i_timepoint+2, ..., self._landuse_indices] = calculate_linear_forcing(
                     cumulative_emissions_array[i_timepoint:i_timepoint+1, ...],
@@ -768,11 +791,11 @@ class FAIR:
                     land_use_cumulative_emissions_to_forcing_array[None, None, ...],
                 )
 
-            # 13. apply temperature-forcing dependence here. Currently only
+            # 14. apply temperature-forcing dependence here. Currently only
             # implemented for ozone forcing, and indirectly through IIRF for
             # greenhouse gases.
 
-            # 14. sum forcings
+            # 15. sum forcings
             forcing_sum_array[i_timepoint+1:i_timepoint+2, ...] = np.nansum(
                 forcing_array[i_timepoint+1:i_timepoint+2, ...], axis=SPECIES_AXIS
             )
@@ -780,7 +803,7 @@ class FAIR:
                 forcing_array[i_timepoint+1:i_timepoint+2, ...]*forcing_efficacy_array[None, None, ...], axis=SPECIES_AXIS
             )
 
-            # 15. forcing to temperature
+            # 16. forcing to temperature
             #if not self.run_config.temperature_prescribed:
             cummins_state_array[i_timepoint+1:i_timepoint+2, ...] = step_temperature(
                 cummins_state_array[i_timepoint:i_timepoint+1, ...],
@@ -790,7 +813,7 @@ class FAIR:
                 forcing_efficacy_sum_array[i_timepoint+1:i_timepoint+2, ..., None]
             )
 
-        # 16. TOA imbalance
+        # 17. TOA imbalance
         # forcing is not efficacy adjusted here, is this correct?
         toa_imbalance_array = calculate_toa_imbalance_postrun(
             cummins_state_array,
@@ -799,17 +822,17 @@ class FAIR:
             deep_ocean_efficacy_array,
         )
 
-        # 17. Ocean heat content change
+        # 18. Ocean heat content change
         ocean_heat_content_change_array = (
             np.cumsum(toa_imbalance_array * self.timestep, axis=TIME_AXIS) * earth_radius**2 * 4 * np.pi * seconds_per_year
         )
 
-        # 18. calculate airborne fraction - we have NaNs and zeros we know about, and we don't mind
+        # 19. calculate airborne fraction - we have NaNs and zeros we know about, and we don't mind
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             airborne_fraction_array = airborne_emissions_array / cumulative_emissions_array
 
-        # 19. (Re)allocate to xarray
+        # 20. (Re)allocate to xarray
         self.temperature.data = cummins_state_array[..., 1:]
         self.concentration.data = concentration_array
         self.emissions.data = emissions_array
