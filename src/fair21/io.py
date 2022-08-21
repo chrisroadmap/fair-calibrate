@@ -1,16 +1,80 @@
 import os
+import pkg_resources
 
 import pandas as pd
 
-HERE = os.path.dirname(os.path.realpath(__file__))
-DEFAULT_PROPERTIES_FILE = os.path.join(HERE, "defaults", "data", "ar6", "species_configs_properties.csv")
-
+from .structure.units import desired_emissions_units, desired_concentration_units
 
 # todo:
+# use pooch for RCMIP data
+
 # read_fair1
 # read_scen
 # read_rcmip
 # read_scmdata
+# write_configs
+# write_output
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+DEFAULT_PROPERTIES_FILE = os.path.join(HERE, "defaults", "data", "ar6", "species_configs_properties.csv")
+
+_default_ghg_and_slcfs = [
+    'CO2 FFI',
+    'CO2 AFOLU',
+    'CO2',
+    'CH4',
+    'N2O',
+    'Sulfur',
+    'BC',
+    'OC',
+    'NH3',
+    'NOx',
+    'VOC',
+    'CO',
+    'CFC-11',
+    'CFC-12',
+    'CFC-113',
+    'CFC-114',
+    'CFC-115',
+    'HCFC-22',
+    'HCFC-141b',
+    'HCFC-142b',
+    'CCl4',
+    'CHCl3',
+    'CH2Cl2',
+    'CH3Cl',
+    'CH3CCl3',
+    'CH3Br',
+    'Halon-1211',
+    'Halon-1301',
+    'Halon-2402',
+    'CF4',
+    'C2F6',
+    'C3F8',
+    'c-C4F8',
+    'C4F10',
+    'C5F12',
+    'C6F14',
+    'C7F16',
+    'C8F18',
+    'NF3',
+    'SF6',
+    'SO2F2',
+    'HFC-125',
+    'HFC-134a',
+    'HFC-143a',
+    'HFC-152a',
+    'HFC-227ea',
+    'HFC-23',
+    'HFC-236fa',
+    'HFC-245fa',
+    'HFC-32',
+    'HFC-365mfc',
+    'HFC-4310mee',
+    'NOx aviation',
+]
+
+
 def read_properties(filename=DEFAULT_PROPERTIES_FILE, species=None):
     """Gets a properties file.
 
@@ -39,17 +103,9 @@ def read_properties(filename=DEFAULT_PROPERTIES_FILE, species=None):
     for specie in species:
         properties[specie] = {
             'type': df.loc[specie].type,
-            'emissions': bool(df.loc[specie].emissions),
-            'concentration': bool(df.loc[specie].concentration),
-            'forcing': bool(df.loc[specie].forcing),
             'input_mode': df.loc[specie].input_mode,
             'greenhouse_gas': bool(df.loc[specie].greenhouse_gas),
             'aerosol_chemistry_from_emissions': bool(df.loc[specie].aerosol_chemistry_from_emissions),
             'aerosol_chemistry_from_concentration': bool(df.loc[specie].aerosol_chemistry_from_concentration),
         }
     return properties
-
-
-
-# write_configs
-# write_output

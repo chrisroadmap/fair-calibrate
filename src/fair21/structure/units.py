@@ -2,6 +2,22 @@
 # a different unit; in the rcmip files they will get converted automatically.
 # You are not required to use these species names, but sticking to these will
 # make loading up defaults much less painful.
+
+# publicly importable stuff:
+# time_convert
+# species_convert
+# prefix_convert
+
+import os
+
+import numpy as np
+import pandas as pd
+
+from ..earth_params import seconds_per_year
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+DEFAULT_PROPERTIES_FILE = os.path.join(HERE, "..", "defaults", "data", "ar6", "species_configs_properties.csv")
+
 desired_emissions_units = {
     'CO2 FFI': 'Gt CO2/yr',
     'CO2 AFOLU': 'Gt CO2/yr',
@@ -102,4 +118,129 @@ desired_concentration_units = {
     'HFC-365mfc': 'ppt',
     'HFC-4310mee': 'ppt',
     'Equivalent effective stratospheric chlorine': 'ppt'
+}
+
+
+# Convert one compound to another based on molecular weight
+compound_convert = {}
+df = pd.read_csv(DEFAULT_PROPERTIES_FILE, index_col=0)
+species_molwts = {specie.replace("-",""): value for specie, value in dict(df['molecular_weight']).items()}
+species_molwts['C'] = 12.011
+species_molwts['NO2'] = 46.006
+species_molwts['NO'] = 30.006
+species_molwts['N'] = 14.007
+species_molwts['N2'] = 28.014
+species_molwts['SO2'] = 64.069
+species_molwts['S'] = 32.07
+for specie_from, mw_from in species_molwts.items():
+     if ~np.isnan(mw_from):
+        compound_convert[specie_from.replace("-", "")] = {}
+        for specie_to, mw_to in species_molwts.items():
+            if ~np.isnan(mw_to):
+                compound_convert[specie_from.replace("-", "")][specie_to] = mw_to/mw_from
+
+
+# convert between time units
+time_convert = {
+    'yr': {
+        'yr': 1,
+        'day': 1 / (seconds_per_year / 3600 / 24),
+        's': 1 / seconds_per_year,
+    },
+    'day' : {
+        'yr': seconds_per_year / 3600 / 24,
+        'day': 1,
+        's': 3600 * 24,
+    },
+    's' : {
+        'yr': seconds_per_year,
+        'day': 1 / 3600 / 24,
+        's': 1,
+    }
+}
+
+
+# convert between prefixes
+prefix_convert = {
+    'Gt': {
+        'Gt': 1,
+        'Tg': 1000,
+        'Mt': 1000,
+        'kt': 1e6,
+        't': 1e9,
+        'kg': 1e12,
+        'g': 1e15
+    },
+    'Tg': {
+        'Gt': 0.001,
+        'Tg': 1,
+        'Mt': 1,
+        'kt': 1000,
+        't': 1e6,
+        'kg': 1e9,
+        'g': 1e12
+    },
+    'Mt': {
+        'Gt': 0.001,
+        'Tg': 1,
+        'Mt': 1,
+        'kt': 1000,
+        't': 1e6,
+        'kg': 1e9,
+        'g': 1e12
+    },
+    'kt': {
+        'Gt': 1e-6,
+        'Tg': 1e-3,
+        'Mt': 1e-3,
+        'kt': 1,
+        't': 1e3,
+        'kg': 1e6,
+        'g': 1e9
+    },
+    't': {
+        'Gt': 1e-9,
+        'Tg': 1e-6,
+        'Mt': 1e-6,
+        'kt': 1e-3,
+        't': 1,
+        'kg': 1e3,
+        'g': 1e6
+    },
+    'kg': {
+        'Gt': 1e-12,
+        'Tg': 1e-9,
+        'Mt': 1e-9,
+        'kt': 1e-6,
+        't': 1e-3,
+        'kg': 1,
+        'g': 1e3
+    },
+    'g': {
+        'Gt': 1e-15,
+        'Tg': 1e-12,
+        'Mt': 1e-12,
+        'kt': 1e-9,
+        't': 1e-6,
+        'kg': 1e-3,
+        'g': 1
+    },
+}
+
+mixing_ratio_convert = {
+    'ppm': {
+        'ppm': 1,
+        'ppb': 1000,
+        'ppt': 1e6,
+    },
+    'ppb': {
+        'ppm': 0.001,
+        'ppb': 1,
+        'ppt': 1000,
+    },
+    'ppt': {
+        'ppm': 1e-6,
+        'ppb': 0.001,
+        'ppt': 1,
+    }
 }

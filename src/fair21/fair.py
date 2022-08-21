@@ -3,8 +3,9 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import xarray as xr
+from scipy.interpolate import interp1d
 from tqdm.auto import tqdm
+import xarray as xr
 
 from .constants import TIME_AXIS, SPECIES_AXIS, GASBOX_AXIS
 from .earth_params import earth_radius, mass_atmosphere, seconds_per_year
@@ -21,6 +22,7 @@ from .gas_cycle.forward import step_concentration
 from .gas_cycle.inverse import unstep_concentration
 from .interface import fill
 from .structure.species import species_types, valid_input_modes, multiple_allowed
+from .structure.units import prefix_convert, compound_convert, time_convert, mixing_ratio_convert, desired_emissions_units, desired_concentration_units
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 DEFAULT_SPECIES_CONFIG_FILE = os.path.join(HERE, "defaults", "data", "ar6", "species_configs_properties.csv")
@@ -378,6 +380,127 @@ class FAIR:
         )
 
 
+    def fill_from_rcmip(self):
+        # lookup converting FaIR default names to RCMIP names
+        species_to_rcmip = {specie: specie.replace("-", "") for specie in self.species}
+        species_to_rcmip['CO2 FFI'] = 'CO2|MAGICC Fossil and Industrial'
+        species_to_rcmip['CO2 AFOLU'] = 'CO2|MAGICC AFOLU'
+        species_to_rcmip['NOx aviation'] = 'NOx|MAGICC Fossil and Industrial|Aircraft'
+        species_to_rcmip['Aerosol-radiation interactions'] = 'Aerosols-radiation interactions'
+        species_to_rcmip['Aerosol-cloud interactions'] = 'Aerosols-radiation interactions'
+        species_to_rcmip['Contrails'] = 'Contrails and Contrail-induced Cirrus'
+        species_to_rcmip['Light absorbing particles on snow and ice'] = 'BC on Snow'
+        species_to_rcmip['Stratospheric water vapour'] = 'CH4 Oxidation Stratospheric H2O'
+        species_to_rcmip['Land use'] = 'Albedo Change'
+        # for specie in ['CO2', 'Solar', 'Volcanic', 'Aerosol-radiation interactions', 'Aerosol-cloud interactions', 'Ozone',
+        #     'Contrails', 'Light absorbing particles on snow and ice', 'Stratospheric water vapour', 'Land use',
+        #     'Equivalent effective stratospheric chlorine']:
+        #     del(species_to_rcmip[specie])
+
+        # todo: pooch from rcmip.org and make part of self-contained package
+        df_emis = pd.read_csv(os.path.join(HERE, "..", "..", "data", "rcmip", "rcmip-emissions-annual-means-v5-1-0.csv"))
+        df_conc = pd.read_csv(os.path.join(HERE, "..", "..", "data", "rcmip", "rcmip-concentrations-annual-means-v5-1-0.csv"))
+        df_forc = pd.read_csv(os.path.join(HERE, "..", "..", "data", "rcmip", "rcmip-radiative-forcing-annual-means-v5-1-0.csv"))
+
+        for scenario in self.scenarios:
+            for specie, specie_rcmip_name in species_to_rcmip.items():
+                if self.properties_df.loc[specie, 'input_mode']=='emissions':
+                    # Grab raw emissions from dataframe
+                    emis_in = df_emis.loc[
+                        (df_emis['Scenario']==scenario) & (df_emis['Variable'].str.endswith("|"+specie_rcmip_name)) &
+                        (df_emis['Region']=='World'), '1750':'2500'
+                    ].interpolate(axis=1).values.squeeze()
+
+                    # throw error if data missing
+                    if emis_in.shape[0] == 0:
+                        raise ValueError(f"I can't find a value for scenario={scenario}, variable name ending with {specie_rcmip_name} in the RCMIP emissions database.")
+
+                    # RCMIP are "annual averages"; for emissions this is basically
+                    # the emissions over the year, for concentrations and forcing
+                    # it would be midyear values. In every case, we can assume
+                    # midyear values and interpolate to our time grid.
+                    rcmip_index = np.arange(1750.5, 2501.5)
+                    interpolator = interp1d(rcmip_index, emis_in, fill_value='extrapolate', bounds_error=False)
+                    emis = interpolator(self.timepoints)
+
+                    # We won't throw an error if the time is out of range for RCMIP,
+                    # but we will fill with NaN to allow a user to manually specify
+                    # pre- and post- emissions.
+                    emis[self.timepoints<1750] = np.nan
+                    emis[self.timepoints>2501] = np.nan
+
+                    # Parse and possibly convert unit in input file to what FaIR wants
+                    unit = df_emis.loc[
+                        (df_emis['Scenario']==scenario) & (df_emis['Variable'].str.endswith("|"+specie_rcmip_name)) &
+                        (df_emis['Region']=='World'), 'Unit'
+                    ].values[0]
+                    emis = emis * (
+                        prefix_convert[unit.split()[0]][desired_emissions_units[specie].split()[0]] *
+                        compound_convert[unit.split()[1].split('/')[0]][desired_emissions_units[specie].split()[1].split('/')[0]] *
+                        time_convert[unit.split()[1].split('/')[1]][desired_emissions_units[specie].split()[1].split('/')[1]]
+                    ) * self.timestep
+
+                    # fill FaIR xarray
+                    fill(self.emissions, emis[:, None], specie=specie, scenario=scenario)
+
+                if self.properties_df.loc[specie, 'input_mode']=='concentration':
+                    # Grab raw concentration from dataframe
+                    conc_in = df_emis.loc[
+                        (df_conc['Scenario']==scenario) & (df_conc['Variable'].str.endswith("|"+specie_rcmip_name)) &
+                        (df_conc['Region']=='World'), '1700':'2500'
+                    ].interpolate(axis=1).values.squeeze()
+
+                    # throw error if data missing
+                    if conc_in.shape[0] == 0:
+                        raise ValueError(f"I can't find a value for scenario={scenario}, variable name ending with {specie_rcmip_name} in the RCMIP concentration database.")
+
+                    # interpolate: this time to timebounds
+                    rcmip_index = np.arange(1700.5, 2501.5)
+                    interpolator = interp1d(rcmip_index, conc_in, fill_value='extrapolate', bounds_error=False)
+                    conc = interpolator(self.timebounds)
+
+                    # strip out pre- and post-
+                    conc[self.timebounds<1700] = np.nan
+                    conc[self.timebounds>2501] = np.nan
+
+                    # Parse and possibly convert unit in input file to what FaIR wants
+                    unit = df_conc.loc[
+                        (df_conc['Scenario']==scenario) & (df_conc['Variable'].str.endswith("|"+specie_rcmip_name)) &
+                        (df_conc['Region']=='World'), 'Unit'
+                    ].values[0]
+                    conc = conc * (
+                        mixing_ratio_convert[unit][desired_concentration_units[specie]]
+                    )
+
+                    # fill FaIR xarray
+                    fill(self.concentration, conc[:, None], specie=specie, scenario=scenario)
+
+                if self.properties_df.loc[specie, 'input_mode']=='forcing':
+                    # Grab raw concentration from dataframe
+                    forc_in = df_forc.loc[
+                        (df_forc['Scenario']==scenario) & (df_forc['Variable'].str.endswith("|"+specie_rcmip_name)) &
+                        (df_forc['Region']=='World'), '1750':'2500'
+                    ].interpolate(axis=1).values.squeeze()
+
+                    # throw error if data missing
+                    if forc_in.shape[0] == 0:
+                        raise ValueError(f"I can't find a value for scenario={scenario}, variable name ending with {specie_rcmip_name} in the RCMIP radiative forcing database.")
+
+                    # interpolate: this time to timebounds
+                    rcmip_index = np.arange(1750.5, 2501.5)
+                    interpolator = interp1d(rcmip_index, forc_in, fill_value='extrapolate', bounds_error=False)
+                    forc = interpolator(self.timebounds)
+
+                    # strip out pre- and post-
+                    forc[self.timebounds<1750] = np.nan
+                    forc[self.timebounds>2501] = np.nan
+
+                    # Forcing so far is always W m-2, but perhaps this will change.
+
+                    # fill FaIR xarray
+                    fill(self.forcing, forc[:, None], specie=specie, scenario=scenario)
+
+
     # climate response
     def _make_ebms(self):
         self.ebms = multi_ebm(
@@ -482,11 +605,6 @@ class FAIR:
 
     def _make_indices(self):
         # the following are all n_species-length boolean arrays
-
-        # these define what we utimately want input or output from
-        self._emissions_species = list(self.properties_df.loc[self.properties_df.loc[:,'emissions']==True].index)
-        self._concentration_species = list(self.properties_df.loc[self.properties_df.loc[:,'concentration']==True].index)
-        self._forcing_species = list(self.properties_df.loc[self.properties_df.loc[:,'forcing']==True].index)
 
         # these define which species do what in FaIR
         self._ghg_indices = np.asarray(self.properties_df.loc[:, 'greenhouse_gas'].values, dtype=bool)
