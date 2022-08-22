@@ -12,7 +12,7 @@ from .earth_params import earth_radius, mass_atmosphere, seconds_per_year
 from .energy_balance_model import step_temperature, calculate_toa_imbalance_postrun, multi_ebm
 from .forcing.aerosol.erfari import calculate_erfari_forcing
 from .forcing.aerosol.erfaci import stevens2015, smith2021
-from .forcing.ghg import meinshausen2020 as calculate_ghg_forcing
+from .forcing.ghg import meinshausen2020
 from .forcing.minor import calculate_linear_forcing
 from .forcing.ozone import thornhill2021
 from .gas_cycle import calculate_alpha
@@ -520,6 +520,9 @@ class FAIR:
             raise ValueError(f"{specie} contains NaN values in its {input_mode} array, which you are trying to drive the simulation with.")
 
         self._routine_flags = {
+            'ghgs': False,
+            'ari': False,
+            'aci': False,
             'eesc': False,
             'contrails': False,
             'ozone': False,
@@ -586,16 +589,16 @@ class FAIR:
             ch4_to_forcing=True
         if 'n2o' in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) or 'n2o' in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type']):
             n2o_to_forcing=True
-        if self.ghg_method in ['meinshausen2020', 'etminan2016']:
+        if self.ghg_method in ['meinshausen2020', 'etminan2016', 'myhre1998']:
             if 0 < co2_to_forcing+ch4_to_forcing+n2o_to_forcing < 3:
-                raise ValueError("For ghg_method either meinshausen2020 or etminan2016, either all of co2, ch4 and n2o must be provided in a form that can be converted to concentrations, or none")
-        elif self.ghg_method=='myhre1998':
-            if 0 < ch4_to_forcing+n2o_to_forcing < 2:
-                raise ValueError("For ghg_method = myhre1998, either both of ch4 and n2o must be given as emissions or concentrations, or neither")
+                raise ValueError("For ghg_method in meinshausen2020, etminan2016 or myhre1998, either all of co2, ch4 and n2o must be provided in a form that can be converted to concentrations, or none")
 
-        for flag in ['ozone', 'contrails', 'lapsi', 'land use', 'h2o stratospheric', 'eesc']:
+        for flag in ['ari', 'aci', 'ozone', 'contrails', 'lapsi', 'land use', 'h2o stratospheric', 'eesc']:
             if flag in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
                 self._routine_flags[flag]=True
+
+        # Needs more care. I might want to run for a single GHG emissions driven with the rest forcing.
+        self._routine_flags['ghg'] = co2_to_forcing * ch4_to_forcing * n2o_to_forcing
 
 
     def _make_indices(self):
@@ -647,7 +650,7 @@ class FAIR:
             self._routine_flags['ch4 concentration update'] = True
 
 
-    def run(self, progress=True, suppress_warnings=True):
+    def run(self, progress=True, suppress_warnings=True, calculate_forcing_first_timebound=True):
         self._check_properties()
         self._make_indices()
         with warnings.catch_warnings():
@@ -716,84 +719,10 @@ class FAIR:
         cummins_state_array[0, ..., 0] = forcing_sum_array[0, ...]
         cummins_state_array[..., 1:] = self.temperature.data
 
-        # flags
-        do_ozone = self._ozone_indices.sum()
-
-        # it's all been leading to this : FaIR MAIN LOOP
-        for i_timepoint in tqdm(range(self._n_timepoints), disable=1-progress, desc=f"Running {self._n_scenarios*self._n_configs} projections in parallel", unit='timesteps'):
-
-            # 1. alpha scaling
-            alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ghg_indices] = calculate_alpha(   # this timepoint
-                airborne_emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_indices],  # last timebound
-                cumulative_emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_indices],  # last timebound
-                g0_array[None, None, ..., self._ghg_indices],
-                g1_array[None, None, ..., self._ghg_indices],
-                iirf_0_array[None, None, ..., self._ghg_indices],
-                iirf_airborne_array[None, None, ..., self._ghg_indices],
-                iirf_temperature_array[None, None, ..., self._ghg_indices],
-                iirf_uptake_array[None, None, ..., self._ghg_indices],
-                cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
-                self.iirf_max
-            )
-
-            # 2. multi-species methane lifetime if desired; update GHG concentration for CH4
-            # needs previous timebound but this is no different to the generic
-            if self.ch4_method=='thornhill2021':
-
-                alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ch4_indices] = calculate_alpha_ch4(
-                    emissions_array[i_timepoint:i_timepoint+1, ...],
-                    concentration_array[i_timepoint:i_timepoint+1, ...],
-                    cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
-                    baseline_emissions_array[None, None, ...],
-                    baseline_concentration_array[None, None, ...],
-                    ch4_lifetime_chemical_sensitivity_array[None, None, ...],
-                    ch4_lifetime_temperature_sensitivity_array[None, None, :, None],
-                    self._aerosol_chemistry_from_emissions_indices,
-                    self._aerosol_chemistry_from_concentration_indices,
-                )
-
-            # 3. greenhouse emissions to concentrations; include methane from IIRF
-            (
-                concentration_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_forward_indices],
-                gas_partitions_array[..., self._ghg_forward_indices, :],
-                airborne_emissions_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_forward_indices]
-            ) = step_concentration(
-                emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_forward_indices, None],  # this timepoint
-                gas_partitions_array[..., self._ghg_forward_indices, :], # last timebound
-                airborne_emissions_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_forward_indices, None],  # last timebound
-                alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ghg_forward_indices, None],
-                baseline_concentration_array[None, None, ..., self._ghg_forward_indices],
-                baseline_emissions_array[None, None, ..., self._ghg_forward_indices, None],
-                concentration_per_emission_array[None, None, ..., self._ghg_forward_indices],
-                unperturbed_lifetime_array[None, None, ..., self._ghg_forward_indices, :],
-        #        oxidation_matrix,
-                partition_fraction_array[None, None, ..., self._ghg_forward_indices, :],
-                self.timestep,
-            )
-
-            # 4. greenhouse gas concentrations to emissions
-            (
-                emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_inverse_indices],
-                gas_partitions_array[..., self._ghg_inverse_indices, :],
-                airborne_emissions_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_inverse_indices]
-            ) = unstep_concentration(
-                concentration_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_inverse_indices],  # this timepoint
-                gas_partitions_array[None, ..., self._ghg_inverse_indices, :], # last timebound
-                airborne_emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_inverse_indices, None],  # last timebound
-                alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ghg_inverse_indices, None],
-                baseline_concentration_array[None, None, ..., self._ghg_inverse_indices],
-                baseline_emissions_array[None, None, ..., self._ghg_inverse_indices],
-                concentration_per_emission_array[None, None, ..., self._ghg_inverse_indices],
-                unperturbed_lifetime_array[None, None, ..., self._ghg_inverse_indices, :],
-        #        oxidation_matrix,
-                partition_fraction_array[None, None, ..., self._ghg_inverse_indices, :],
-                self.timestep,
-            )
-            cumulative_emissions_array[i_timepoint+1, ..., self._ghg_inverse_indices] = cumulative_emissions_array[i_timepoint, ..., self._ghg_inverse_indices] + emissions_array[i_timepoint, ..., self._ghg_inverse_indices] * self.timestep
-
-            # 5. greenhouse gas concentrations to forcing
-            forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = calculate_ghg_forcing(
-                concentration_array[i_timepoint+1:i_timepoint+2, ...],
+        # calculate the forcing at first timebound from concentrations
+        if calculate_forcing_first_timebound and self._routine_flags['ghg']:
+            forcing_array[0:1, ..., self._ghg_indices] = meinshausen2020(
+                concentration_array[0:1, ...],
                 baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
                 forcing_scale_array[None, None, ...],
                 greenhouse_gas_radiative_efficiency_array[None, None, ...],
@@ -803,20 +732,120 @@ class FAIR:
                 self._minor_ghg_indices,
             )[0:1, ..., self._ghg_indices]
 
-            # 6. aerosol direct forcing
-            forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ari_indices] = calculate_erfari_forcing(
-                emissions_array[i_timepoint:i_timepoint+1, ...],
-                concentration_array[i_timepoint+1:i_timepoint+2, ...],
-                baseline_emissions_array[None, None, ...],
-                baseline_concentration_array[None, None, ...],
-                forcing_scale_array[None, None, ...],
-                erfari_radiative_efficiency_array[None, None, ...],
-                self._aerosol_chemistry_from_emissions_indices,
-                self._aerosol_chemistry_from_concentration_indices,
+            forcing_sum_array[0:1, ...] = np.nansum(
+                forcing_array[0:1, ...], axis=SPECIES_AXIS
             )
 
+        # it's all been leading to this : FaIR MAIN LOOP
+        for i_timepoint in tqdm(range(self._n_timepoints), disable=1-progress, desc=f"Running {self._n_scenarios*self._n_configs} projections in parallel", unit='timesteps'):
+
+            if self._routine_flags['ghg']:
+                # 1. alpha scaling
+                alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ghg_indices] = calculate_alpha(   # this timepoint
+                    airborne_emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_indices],  # last timebound
+                    cumulative_emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_indices],  # last timebound
+                    g0_array[None, None, ..., self._ghg_indices],
+                    g1_array[None, None, ..., self._ghg_indices],
+                    iirf_0_array[None, None, ..., self._ghg_indices],
+                    iirf_airborne_array[None, None, ..., self._ghg_indices],
+                    iirf_temperature_array[None, None, ..., self._ghg_indices],
+                    iirf_uptake_array[None, None, ..., self._ghg_indices],
+                    cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
+                    self.iirf_max
+                )
+
+                # 2. multi-species methane lifetime if desired; update GHG concentration for CH4
+                # needs previous timebound but this is no different to the generic
+                if self.ch4_method=='thornhill2021':
+                    alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ch4_indices] = calculate_alpha_ch4(
+                        emissions_array[i_timepoint:i_timepoint+1, ...],
+                        concentration_array[i_timepoint:i_timepoint+1, ...],
+                        cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
+                        baseline_emissions_array[None, None, ...],
+                        baseline_concentration_array[None, None, ...],
+                        ch4_lifetime_chemical_sensitivity_array[None, None, ...],
+                        ch4_lifetime_temperature_sensitivity_array[None, None, :, None],
+                        self._aerosol_chemistry_from_emissions_indices,
+                        self._aerosol_chemistry_from_concentration_indices,
+                    )
+
+                # 3. greenhouse emissions to concentrations; include methane from IIRF
+                (
+                    concentration_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_forward_indices],
+                    gas_partitions_array[..., self._ghg_forward_indices, :],
+                    airborne_emissions_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_forward_indices]
+                ) = step_concentration(
+                    emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_forward_indices, None],  # this timepoint
+                    gas_partitions_array[..., self._ghg_forward_indices, :], # last timebound
+                    airborne_emissions_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_forward_indices, None],  # last timebound
+                    alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ghg_forward_indices, None],
+                    baseline_concentration_array[None, None, ..., self._ghg_forward_indices],
+                    baseline_emissions_array[None, None, ..., self._ghg_forward_indices, None],
+                    concentration_per_emission_array[None, None, ..., self._ghg_forward_indices],
+                    unperturbed_lifetime_array[None, None, ..., self._ghg_forward_indices, :],
+            #        oxidation_matrix,
+                    partition_fraction_array[None, None, ..., self._ghg_forward_indices, :],
+                    self.timestep,
+                )
+
+                # 4. greenhouse gas concentrations to emissions
+                (
+                    emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_inverse_indices],
+                    gas_partitions_array[..., self._ghg_inverse_indices, :],
+                    airborne_emissions_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_inverse_indices]
+                ) = unstep_concentration(
+                    concentration_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_inverse_indices],  # this timepoint
+                    gas_partitions_array[None, ..., self._ghg_inverse_indices, :], # last timebound
+                    airborne_emissions_array[i_timepoint:i_timepoint+1, ..., self._ghg_inverse_indices, None],  # last timebound
+                    alpha_lifetime_array[i_timepoint:i_timepoint+1, ..., self._ghg_inverse_indices, None],
+                    baseline_concentration_array[None, None, ..., self._ghg_inverse_indices],
+                    baseline_emissions_array[None, None, ..., self._ghg_inverse_indices],
+                    concentration_per_emission_array[None, None, ..., self._ghg_inverse_indices],
+                    unperturbed_lifetime_array[None, None, ..., self._ghg_inverse_indices, :],
+            #        oxidation_matrix,
+                    partition_fraction_array[None, None, ..., self._ghg_inverse_indices, :],
+                    self.timestep,
+                )
+                cumulative_emissions_array[i_timepoint+1, ..., self._ghg_inverse_indices] = cumulative_emissions_array[i_timepoint, ..., self._ghg_inverse_indices] + emissions_array[i_timepoint, ..., self._ghg_inverse_indices] * self.timestep
+
+                # 5. greenhouse gas concentrations to forcing
+                # if self.ghg_method=='meinshausen2020':
+                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = meinshausen2020(
+                    concentration_array[i_timepoint+1:i_timepoint+2, ...],
+                    baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
+                    forcing_scale_array[None, None, ...],
+                    greenhouse_gas_radiative_efficiency_array[None, None, ...],
+                    self._co2_indices,
+                    self._ch4_indices,
+                    self._n2o_indices,
+                    self._minor_ghg_indices,
+                )[0:1, ..., self._ghg_indices]
+                # elif self.ghg_method=='myhre1998':
+                #     forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = myhre1998(
+                #         concentration_array[i_timepoint+1:i_timepoint+2, ...],
+                #         baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
+                #         forcing_scale_array[None, None, ...],
+                #         greenhouse_gas_radiative_efficiency_array[None, None, ...],
+                #         self._co2_indices,
+                #         self._ch4_indices,
+                #         self._n2o_indices,
+                #     )[0:1, ..., self._ghg_indices]
+
+            # 6. aerosol direct forcing
+            if self._routine_flags['ari']:
+                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ari_indices] = calculate_erfari_forcing(
+                    emissions_array[i_timepoint:i_timepoint+1, ...],
+                    concentration_array[i_timepoint+1:i_timepoint+2, ...],
+                    baseline_emissions_array[None, None, ...],
+                    baseline_concentration_array[None, None, ...],
+                    forcing_scale_array[None, None, ...],
+                    erfari_radiative_efficiency_array[None, None, ...],
+                    self._aerosol_chemistry_from_emissions_indices,
+                    self._aerosol_chemistry_from_concentration_indices,
+                )
+
             # 7. aerosol indirect forcing
-            if self.aci_method=='stevens2015':
+            if self._routine_flags['aci'] and self.aci_method=='stevens2015':
                 forcing_array[i_timepoint+1:i_timepoint+2, ..., self._aci_indices] = stevens2015(
                     emissions_array[i_timepoint:i_timepoint+1, ...],
                     baseline_emissions_array[None, None, ...],
@@ -825,7 +854,7 @@ class FAIR:
                     erfaci_shape_sulfur_array[None, None, :, None],
                     self._sulfur_indices,
                 )
-            elif self.aci_method=='smith2021':
+            elif self._routine_flags['aci'] and self.aci_method=='smith2021':
                 forcing_array[i_timepoint+1:i_timepoint+2, ..., self._aci_indices] = smith2021(
                     emissions_array[i_timepoint:i_timepoint+1, ...],
                     baseline_emissions_array[None, None, ...],
