@@ -90,6 +90,8 @@ def read_properties(filename=DEFAULT_PROPERTIES_FILE, species=None):
 
     Returns
     -------
+    species : list
+        a list of species names that are included in the FaIR run.
     properties : dict
         species properties that control the FaIR run
     """
@@ -108,4 +110,4 @@ def read_properties(filename=DEFAULT_PROPERTIES_FILE, species=None):
             'aerosol_chemistry_from_emissions': bool(df.loc[specie].aerosol_chemistry_from_emissions),
             'aerosol_chemistry_from_concentration': bool(df.loc[specie].aerosol_chemistry_from_concentration),
         }
-    return properties
+    return species, properties

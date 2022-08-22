@@ -104,7 +104,7 @@ class FAIR:
 
 
     def define_time(self, start, end, step):
-        self.timebounds = np.arange(start, end+step, step)
+        self.timebounds = np.arange(start, end+step/2, step)
         self.timepoints = 0.5 * (self.timebounds[1:] + self.timebounds[:-1])
         self.timestep = step
         self._n_timebounds = len(self.timebounds)
@@ -214,11 +214,6 @@ class FAIR:
             dims = ('timebounds', 'scenario', 'config')
         )
         self.toa_imbalance = xr.DataArray(
-            np.ones((self._n_timebounds, self._n_scenarios, self._n_configs)) * np.nan,
-            coords = (self.timebounds, self.scenarios, self.configs),
-            dims = ('timebounds', 'scenario', 'config')
-        )
-        self.ocean_heat_content_change = xr.DataArray(
             np.ones((self._n_timebounds, self._n_scenarios, self._n_configs)) * np.nan,
             coords = (self.timebounds, self.scenarios, self.configs),
             dims = ('timebounds', 'scenario', 'config')
@@ -438,7 +433,7 @@ class FAIR:
                         prefix_convert[unit.split()[0]][desired_emissions_units[specie].split()[0]] *
                         compound_convert[unit.split()[1].split('/')[0]][desired_emissions_units[specie].split()[1].split('/')[0]] *
                         time_convert[unit.split()[1].split('/')[1]][desired_emissions_units[specie].split()[1].split('/')[1]]
-                    ) * self.timestep
+                    ) #* self.timestep
 
                     # fill FaIR xarray
                     fill(self.emissions, emis[:, None], specie=specie, scenario=scenario)
