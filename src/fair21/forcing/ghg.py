@@ -2,6 +2,129 @@ import numpy as np
 
 from ..constants import SPECIES_AXIS
 
+def etminan2016(
+    concentration,
+    baseline_concentration,
+    forcing_scaling,
+    radiative_efficiency,
+    co2_indices,
+    ch4_indices,
+    n2o_indices,
+    minor_greenhouse_gas_indices,
+    a1 = -2.4e-7,
+    b1 = 7.2e-4,
+    c1 = -2.1e-4,
+    d1 = 5.36,
+    a2 = -8e-6,
+    b2 = 4.2e-6,
+    c2 = -4.9e-6,
+    d2 = 0.117,
+    a3 = -1.3e-6,
+    b3 = -8.2e-6,
+    d3 = 0.043,
+    ):
+    """Greenhouse gas forcing from CO2, CH4 and N2O including band overlaps.
+
+    Source: Etminan et al. (2016) [1]_. Note that the relationship can be
+    poorly behaved outside of the range of valid values in Etminan et al.,
+    (180-2000 ppm CO2, 340-3500 ppb CH4, 200-525 ppb N2O) particularly for CO2
+    concentrations above 2000 ppm. It is recommended to use `meinshausen2020`,
+    which is a re-fit of the coefficients and extension to be better behaved
+    outside of the valid concentration range.
+
+    Parameters
+    ----------
+    concentration : ndarray
+        concentration of greenhouse gases. "CO2", "CH4" and "N2O" must be
+        included in units of [ppm, ppb, ppb]. Other GHGs are units of ppt.
+    baseline_concentration : ndarray
+        pre-industrial concentration of the gases (see above).
+    forcing_scaling : ndarray
+        scaling of the calculated radiative forcing (e.g. for conversion to
+        effective radiative forcing and forcing uncertainty).
+    radiative_efficiency : ndarray
+        radiative efficiency to use for linear-forcing gases, in W m-2 ppb-1
+    co2_indices : np.ndarray of bool
+        index along SPECIES_AXIS relating to CO2.
+    ch4_indices : np.ndarray of bool
+        index along SPECIES_AXIS relating to CH4.
+    n2o_indices : np.ndarray of bool
+        index along SPECIES AXIS relating to N2O.
+    minor_greenhouse_gas_indices : np.ndarray of bool
+        indices of other GHGs that are not CO2, CH4 or N2O.
+    a1 : float
+        fitting parameter (see Etminan et al. 2016)
+    b1 : float
+        fitting parameter (see Etminan et al. 2016)
+    c1 : float
+        fitting parameter (see Etminan et al. 2016)
+    d1 : float
+        fitting parameter (see Etminan et al. 2016)
+    a2 : float
+        fitting parameter (see Etminan et al. 2016)
+    b2 : float
+        fitting parameter (see Etminan et al. 2016)
+    c2 : float
+        fitting parameter (see Etminan et al. 2016)
+    d2 : float
+        fitting parameter (see Etminan et al. 2016)
+    a3 : float
+        fitting parameter (see Etminan et al. 2016)
+    b3 : float
+        fitting parameter (see Etminan et al. 2016)
+    d3 : float
+        fitting parameter (see Etminan et al. 2016)
+
+    Returns
+    -------
+    effective_radiative_forcing : np.ndarray
+        effective radiative forcing (W/m2) from greenhouse gases
+
+    References
+    ----------
+    .. [1] Etminan, M., Myhre, G., Highwood, E.J., Shine, K.P., (2016).
+        Radiative forcing of carbon dioxide, methane, and nitrous oxide: A
+        significant revision of the methane radiative forcing, Geophysical
+        Research Letters, 43, 12,614–12,623.
+    """
+
+    erf_out = np.ones_like(concentration) * np.nan
+
+    # easier to deal with smaller arrays
+    co2 = concentration[..., co2_indices]
+    ch4 = concentration[..., ch4_indices]
+    n2o = concentration[..., n2o_indices]
+    co2_base = baseline_concentration[..., co2_indices]
+    ch4_base = baseline_concentration[..., ch4_indices]
+    n2o_base = baseline_concentration[..., n2o_indices]
+
+    # CO2
+    erf_out[..., co2_indices] = (
+        a1 * (co2 - co2_base)**2 + b1 * np.abs(co2 - co2_base) + c1 * 0.5 * (n2o + n2o_base) + d1
+    ) * np.log(co2/co2_base) * (forcing_scaling[..., co2_indices])
+
+    # CH4
+    erf_out[..., ch4_indices] = (
+        (a3*0.5*(ch4 + ch4_base) + b3*0.5*(n2o + n2o_base) + d3) *
+        (np.sqrt(ch4) - np.sqrt(ch4_base))
+    )  * (forcing_scaling[..., ch4_indices])
+
+    # N2O
+    erf_out[..., n2o_indices] = (
+        (a2*0.5*(co2+co2_base) + b2*0.5*(n2o+n2o_base) + c2*0.5*(ch4+ch4_base) + d2) *
+        (np.sqrt(n2o) - np.sqrt(n2o_base))
+    )  * (forcing_scaling[..., n2o_indices])
+
+    # linear for other gases
+    # TODO: move to a general linear function
+    erf_out[..., minor_greenhouse_gas_indices] = (
+        (concentration[..., minor_greenhouse_gas_indices] - baseline_concentration[..., minor_greenhouse_gas_indices])
+        * radiative_efficiency[..., minor_greenhouse_gas_indices] * 0.001   # unit handling
+    ) * (forcing_scaling[..., minor_greenhouse_gas_indices])
+
+    return erf_out
+
+
 def meinshausen2020(
     concentration,
     baseline_concentration,

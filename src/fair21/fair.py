@@ -13,7 +13,7 @@ from .earth_params import earth_radius, mass_atmosphere, seconds_per_year
 from .energy_balance_model import step_temperature, calculate_toa_imbalance_postrun, multi_ebm
 from .forcing.aerosol.erfari import calculate_erfari_forcing
 from .forcing.aerosol.erfaci import stevens2015, smith2021
-from .forcing.ghg import myhre1998, meinshausen2020
+from .forcing.ghg import myhre1998, etminan2016, meinshausen2020
 from .forcing.minor import calculate_linear_forcing
 from .forcing.ozone import thornhill2021
 from .gas_cycle import calculate_alpha
@@ -815,6 +815,17 @@ class FAIR:
                 # 5. greenhouse gas concentrations to forcing
                 if self.ghg_method=='meinshausen2020':
                     forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = meinshausen2020(
+                        concentration_array[i_timepoint+1:i_timepoint+2, ...],
+                        baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
+                        forcing_scale_array[None, None, ...],
+                        greenhouse_gas_radiative_efficiency_array[None, None, ...],
+                        self._co2_indices,
+                        self._ch4_indices,
+                        self._n2o_indices,
+                        self._minor_ghg_indices,
+                    )[0:1, ..., self._ghg_indices]
+                elif self.ghg_method=='etminan2016':
+                    forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = etminan2016(
                         concentration_array[i_timepoint+1:i_timepoint+2, ...],
                         baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
                         forcing_scale_array[None, None, ...],
