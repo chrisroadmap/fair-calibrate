@@ -25,7 +25,7 @@ def meinshausen2020(
     ):
     """Greenhouse gas forcing from CO2, CH4 and N2O including band overlaps.
 
-    Modified Etminan relationship from Meinshausen et al. (2020)
+    Modified Etminan relationship from Meinshausen et al. (2020) [1]_
     https://gmd.copernicus.org/articles/13/3571/2020/
     table 3
 
@@ -79,8 +79,14 @@ def meinshausen2020(
 
     References
     ----------
-    [1] Meinshausen et al. 2020
-    [2] Myhre et al. 1998
+    .. [1] Meinshausen, M., Nicholls, Z.R.J., Lewis, J., Gidden, M.J.,
+       Vogel, E., Freund, M., Beyerle, U., Gessner, C., Nauels, A., Bauer, N.,
+       Canadell, J.G., Daniel, J.S., John, A., Krummel, P.B., Luderer, G.,
+       Meinshausen, N., Montzka, S.A., Rayner, P.J., Reimann, S., Smith, S.J.,
+       van den Berg, M., Velders, G.J.M., Vollmer, M.K., Wang, R.H.J. (2020).
+       The shared socio-economic pathway (SSP) greenhouse gas concentrations
+       and their extensions to 2500, Geoscientific Model Development, 13,
+       3571–3605.
     """
 
     erf_out = np.ones_like(concentration) * np.nan
@@ -116,6 +122,109 @@ def meinshausen2020(
         (a2*np.sqrt(co2) + b2*np.sqrt(n2o) + c2*np.sqrt(ch4) + d2) *
         (np.sqrt(n2o) - np.sqrt(n2o_base))
     )  * (forcing_scaling[..., n2o_indices])
+
+    # linear for other gases
+    # TODO: move to a general linear function
+    erf_out[..., minor_greenhouse_gas_indices] = (
+        (concentration[..., minor_greenhouse_gas_indices] - baseline_concentration[..., minor_greenhouse_gas_indices])
+        * radiative_efficiency[..., minor_greenhouse_gas_indices] * 0.001   # unit handling
+    ) * (forcing_scaling[..., minor_greenhouse_gas_indices])
+
+    return erf_out
+
+
+def myhre1998(
+    concentration,
+    baseline_concentration,
+    forcing_scaling,
+    radiative_efficiency,
+    co2_indices,
+    ch4_indices,
+    n2o_indices,
+    minor_greenhouse_gas_indices,
+    alpha_co2=5.35,
+    alpha_ch4=0.036,
+    alpha_n2o=0.12,
+    alpha_ch4_n2o=0.47,
+    a1=2.01e-5,
+    exp1=0.75,
+    a2=5.32e-15,
+    exp2=1.52
+    ):
+    """Greenhouse gas forcing from CO2, CH4 and N2O.
+
+    Band overlaps are included between CH4 and N2O. This relationship comes from
+    Myhre et al. (1998) [1]_, and was used up until the IPCC's Fifth Assessment
+    Report.
+
+    Parameters
+    ----------
+    concentration : ndarray
+        concentration of greenhouse gases. "CO2", "CH4" and "N2O" must be
+        included in units of [ppm, ppb, ppb]. Other GHGs are units of ppt.
+    baseline_concentration : ndarray
+        pre-industrial concentration of the gases (see above).
+    forcing_scaling : ndarray
+        scaling of the calculated radiative forcing (e.g. for conversion to
+        effective radiative forcing and forcing uncertainty).
+    radiative_efficiency : ndarray
+        radiative efficiency to use for linear-forcing gases, in W m-2 ppb-1
+    co2_indices : np.ndarray of bool
+        index along SPECIES_AXIS relating to CO2.
+    ch4_indices : np.ndarray of bool
+        index along SPECIES_AXIS relating to CH4.
+    n2o_indices : np.ndarray of bool
+        index along SPECIES AXIS relating to N2O.
+    minor_greenhouse_gas_indices : np.ndarray of bool
+        indices of other GHGs that are not CO2, CH4 or N2O.
+    alpha_co2 : float, default=5.35
+        factor relating logarithm of CO2 conentration to radiative forcing.
+    alpha_ch4: float, default=5.35
+        factor relating square root of CH4 conentration to radiative forcing.
+    alpha_n2o : float, default=5.35
+        factor relating square root of N2O conentration to radiative forcing.
+
+    Returns
+    -------
+    effective_radiative_forcing : np.ndarray
+        effective radiative forcing (W/m2) from greenhouse gases
+
+    References
+    ----------
+    .. [1] Myhre, G., Highwood, E.J., Shine, K. Stordal, F. (1998). New
+        estimates or radiative forcing due to well mixed greenhouse gases.
+        Geophysical Research Letters, 25 (14), 2715-2718.
+    """
+
+    def ch4_n2o_overlap(ch4, n2o, alpha_ch4_n2o, a1, exp1, a2, exp2):
+        return alpha_ch4_n2o * np.log(1 + a1 * (ch4*n2o)**exp1 + a2 * ch4 * (ch4*n2o)**exp2)
+
+    erf_out = np.ones_like(concentration) * np.nan
+
+    # easier to deal with smaller arrays
+    co2 = concentration[..., co2_indices]
+    ch4 = concentration[..., ch4_indices]
+    n2o = concentration[..., n2o_indices]
+    co2_base = baseline_concentration[..., co2_indices]
+    ch4_base = baseline_concentration[..., ch4_indices]
+    n2o_base = baseline_concentration[..., n2o_indices]
+
+    # CO2
+    erf_out[..., co2_indices] = alpha_co2 * np.log(co2/co2_base) * (forcing_scaling[..., co2_indices])
+
+    # CH4
+    erf_out[..., ch4_indices] = (
+        alpha_ch4 *
+        (np.sqrt(ch4) - np.sqrt(ch4_base)) -
+        (ch4_n2o_overlap(ch4, n2o_base, alpha_ch4_n2o, a1, exp1, a2, exp2) - ch4_n2o_overlap(ch4_base, n2o_base, alpha_ch4_n2o, a1, exp1, a2, exp2))
+    ) * forcing_scaling[..., ch4_indices]
+
+    # N2O
+    erf_out[..., n2o_indices] = (
+        alpha_n2o *
+        (np.sqrt(n2o) - np.sqrt(n2o_base)) -
+        (ch4_n2o_overlap(ch4_base, n2o, alpha_ch4_n2o, a1, exp1, a2, exp2) - ch4_n2o_overlap(ch4_base, n2o_base, alpha_ch4_n2o, a1, exp1, a2, exp2))
+    ) * forcing_scaling[..., n2o_indices]
 
     # linear for other gases
     # TODO: move to a general linear function

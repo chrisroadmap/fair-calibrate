@@ -1,3 +1,4 @@
+import copy
 import os
 import warnings
 
@@ -12,7 +13,7 @@ from .earth_params import earth_radius, mass_atmosphere, seconds_per_year
 from .energy_balance_model import step_temperature, calculate_toa_imbalance_postrun, multi_ebm
 from .forcing.aerosol.erfari import calculate_erfari_forcing
 from .forcing.aerosol.erfaci import stevens2015, smith2021
-from .forcing.ghg import meinshausen2020
+from .forcing.ghg import myhre1998, meinshausen2020
 from .forcing.minor import calculate_linear_forcing
 from .forcing.ozone import thornhill2021
 from .gas_cycle import calculate_alpha
@@ -82,7 +83,7 @@ class FAIR:
     def ghg_method(self):
         return self._ghg_method
 
-    # TODO: implement Leach2021, Etminan2016, Myhre1998
+    # TODO: implement Leach2021, Etminan2016
     @ghg_method.setter
     def ghg_method(self, value):
         if value.lower() in ['leach2021', 'meinshausen2020', 'etminan2016', 'myhre1998']:
@@ -387,10 +388,12 @@ class FAIR:
         species_to_rcmip['Light absorbing particles on snow and ice'] = 'BC on Snow'
         species_to_rcmip['Stratospheric water vapour'] = 'CH4 Oxidation Stratospheric H2O'
         species_to_rcmip['Land use'] = 'Albedo Change'
-        # for specie in ['CO2', 'Solar', 'Volcanic', 'Aerosol-radiation interactions', 'Aerosol-cloud interactions', 'Ozone',
-        #     'Contrails', 'Light absorbing particles on snow and ice', 'Stratospheric water vapour', 'Land use',
-        #     'Equivalent effective stratospheric chlorine']:
-        #     del(species_to_rcmip[specie])
+
+        species_to_rcmip_copy = copy.deepcopy(species_to_rcmip)
+
+        for specie in species_to_rcmip_copy:
+            if specie not in self.species:
+                del(species_to_rcmip[specie])
 
         # todo: pooch from rcmip.org and make part of self-contained package
         df_emis = pd.read_csv(os.path.join(HERE, "..", "..", "data", "rcmip", "rcmip-emissions-annual-means-v5-1-0.csv"))
@@ -440,7 +443,7 @@ class FAIR:
 
                 if self.properties_df.loc[specie, 'input_mode']=='concentration':
                     # Grab raw concentration from dataframe
-                    conc_in = df_emis.loc[
+                    conc_in = df_conc.loc[
                         (df_conc['Scenario']==scenario) & (df_conc['Variable'].str.endswith("|"+specie_rcmip_name)) &
                         (df_conc['Region']=='World'), '1700':'2500'
                     ].interpolate(axis=1).values.squeeze()
@@ -498,6 +501,15 @@ class FAIR:
 
     # climate response
     def _make_ebms(self):
+        # First check for NaNs
+        for var in ['ocean_heat_capacity', 'ocean_heat_transfer', 'deep_ocean_efficacy', 'gamma_autocorrelation']:
+            if np.isnan(self.climate_configs[var]).sum() > 0:
+                raise ValueError(f"There are NaN values in FAIR.climate_configs['{var}']")
+        if self.climate_configs['stochastic_run'].sum()>0:
+            for var in ['sigma_eta', 'sigma_xi', 'seed']:
+                if np.isnan(self.climate_configs[var]).sum() > 0:
+                    raise ValueError(f"There are NaN values in climate_configs['{var}'], which is not allowed for FAIR.climate_configs['stochastic_run']=True")
+
         self.ebms = multi_ebm(
             self.configs,
             ocean_heat_capacity=self.climate_configs['ocean_heat_capacity'],
@@ -589,16 +601,25 @@ class FAIR:
             ch4_to_forcing=True
         if 'n2o' in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) or 'n2o' in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type']):
             n2o_to_forcing=True
-        if self.ghg_method in ['meinshausen2020', 'etminan2016', 'myhre1998']:
+        if self.ghg_method in ['meinshausen2020', 'etminan2016']:
             if 0 < co2_to_forcing+ch4_to_forcing+n2o_to_forcing < 3:
-                raise ValueError("For ghg_method in meinshausen2020, etminan2016 or myhre1998, either all of co2, ch4 and n2o must be provided in a form that can be converted to concentrations, or none")
+                raise ValueError("For ghg_method in meinshausen2020, etminan2016, either all of co2, ch4 and n2o must be provided in a form that can be converted to concentrations, or none")
+        elif self.ghg_method == 'myhre1998':
+            if 0 < ch4_to_forcing+n2o_to_forcing < 2:
+                raise ValueError("for ghg_method=myhre1998, either both of ch4 and n2o must be provided, or neither.")
 
         for flag in ['ari', 'aci', 'ozone', 'contrails', 'lapsi', 'land use', 'h2o stratospheric', 'eesc']:
             if flag in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
                 self._routine_flags[flag]=True
 
-        # Needs more care. I might want to run for a single GHG emissions driven with the rest forcing.
-        self._routine_flags['ghg'] = co2_to_forcing * ch4_to_forcing * n2o_to_forcing
+        # if at least one GHG is emissions, concentration or calculated from
+        # precursor emissions, we want to run the forcing calculation
+        if (
+            (self.properties_df.loc[self.properties_df['greenhouse_gas']].input_mode=='concentration').sum() +
+            (self.properties_df.loc[self.properties_df['greenhouse_gas']].input_mode=='emissions').sum() +
+            (self.properties_df.loc[self.properties_df['greenhouse_gas']].input_mode=='calculated').sum()
+        ):
+            self._routine_flags['ghg'] = True
 
 
     def _make_indices(self):
@@ -650,7 +671,7 @@ class FAIR:
             self._routine_flags['ch4 concentration update'] = True
 
 
-    def run(self, progress=True, suppress_warnings=True, calculate_forcing_first_timebound=True):
+    def run(self, progress=True, suppress_warnings=True):
         self._check_properties()
         self._make_indices()
         with warnings.catch_warnings():
@@ -718,23 +739,6 @@ class FAIR:
         # this is the most important state vector
         cummins_state_array[0, ..., 0] = forcing_sum_array[0, ...]
         cummins_state_array[..., 1:] = self.temperature.data
-
-        # calculate the forcing at first timebound from concentrations
-        if calculate_forcing_first_timebound and self._routine_flags['ghg']:
-            forcing_array[0:1, ..., self._ghg_indices] = meinshausen2020(
-                concentration_array[0:1, ...],
-                baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
-                forcing_scale_array[None, None, ...],
-                greenhouse_gas_radiative_efficiency_array[None, None, ...],
-                self._co2_indices,
-                self._ch4_indices,
-                self._n2o_indices,
-                self._minor_ghg_indices,
-            )[0:1, ..., self._ghg_indices]
-
-            forcing_sum_array[0:1, ...] = np.nansum(
-                forcing_array[0:1, ...], axis=SPECIES_AXIS
-            )
 
         # it's all been leading to this : FaIR MAIN LOOP
         for i_timepoint in tqdm(range(self._n_timepoints), disable=1-progress, desc=f"Running {self._n_scenarios*self._n_configs} projections in parallel", unit='timesteps'):
@@ -809,27 +813,28 @@ class FAIR:
                 cumulative_emissions_array[i_timepoint+1, ..., self._ghg_inverse_indices] = cumulative_emissions_array[i_timepoint, ..., self._ghg_inverse_indices] + emissions_array[i_timepoint, ..., self._ghg_inverse_indices] * self.timestep
 
                 # 5. greenhouse gas concentrations to forcing
-                # if self.ghg_method=='meinshausen2020':
-                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = meinshausen2020(
-                    concentration_array[i_timepoint+1:i_timepoint+2, ...],
-                    baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
-                    forcing_scale_array[None, None, ...],
-                    greenhouse_gas_radiative_efficiency_array[None, None, ...],
-                    self._co2_indices,
-                    self._ch4_indices,
-                    self._n2o_indices,
-                    self._minor_ghg_indices,
-                )[0:1, ..., self._ghg_indices]
-                # elif self.ghg_method=='myhre1998':
-                #     forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = myhre1998(
-                #         concentration_array[i_timepoint+1:i_timepoint+2, ...],
-                #         baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
-                #         forcing_scale_array[None, None, ...],
-                #         greenhouse_gas_radiative_efficiency_array[None, None, ...],
-                #         self._co2_indices,
-                #         self._ch4_indices,
-                #         self._n2o_indices,
-                #     )[0:1, ..., self._ghg_indices]
+                if self.ghg_method=='meinshausen2020':
+                    forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = meinshausen2020(
+                        concentration_array[i_timepoint+1:i_timepoint+2, ...],
+                        baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
+                        forcing_scale_array[None, None, ...],
+                        greenhouse_gas_radiative_efficiency_array[None, None, ...],
+                        self._co2_indices,
+                        self._ch4_indices,
+                        self._n2o_indices,
+                        self._minor_ghg_indices,
+                    )[0:1, ..., self._ghg_indices]
+                elif self.ghg_method=='myhre1998':
+                    forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = myhre1998(
+                        concentration_array[i_timepoint+1:i_timepoint+2, ...],
+                        baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
+                        forcing_scale_array[None, None, ...],
+                        greenhouse_gas_radiative_efficiency_array[None, None, ...],
+                        self._co2_indices,
+                        self._ch4_indices,
+                        self._n2o_indices,
+                        self._minor_ghg_indices,
+                    )[0:1, ..., self._ghg_indices]
 
             # 6. aerosol direct forcing
             if self._routine_flags['ari']:

@@ -9,7 +9,7 @@ BC,black carbon,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,12.011,n
 OC,organic carbon,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,12.011,nan,nan,nan,nan,nan,15.44766815,nan,nan,nan,0,-3.96E-03,0,0,0,0,nan,nan,nan,nan,nan,nan,0,nan
 NH3,other slcf,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,17.031,nan,nan,nan,nan,nan,6.927690091,nan,nan,nan,0,-5.65E-04,0,0,0,0,nan,nan,nan,nan,nan,nan,0,nan
 NOx,other slcf,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,46.006,nan,nan,nan,nan,nan,12.73521194,nan,nan,nan,0,-6.70E-05,0,0,0,1.80E-03,nan,nan,nan,nan,nan,nan,-0.002704002,nan
-VOC,other slcf,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,60,nan,nan,nan,nan,nan,60.02182622,nan,nan,nan,0,-1.60E-05,0,0,0,3.29E-04,nan,nan,nan,nan,nan,nan,0.001619264,nan
+VOC,other slcf,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,59.746,nan,nan,nan,nan,nan,60.02182622,nan,nan,nan,0,-1.60E-05,0,0,0,3.29E-04,nan,nan,nan,nan,nan,nan,0.001619264,nan
 CO,other slcf,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,28.01,nan,nan,nan,nan,nan,348.5273588,nan,nan,nan,0,0,0,0,0,1.55E-04,nan,nan,nan,nan,nan,nan,0,nan
 CFC-11,cfc-11,emissions,1,0,0,1,0,0,0,52,52,52,52,0.13,1,0,1,137.36,0,44.39985903,0,0,0,0,29.78420333,0.225210813,0.25941,0,0.00E+00,0,0,0,0.00E+00,3,0,0.47,nan,nan,nan,0,nan
 CFC-12,other halogen,emissions,1,0,0,1,0,0,0,102,102,102,102,0.12,1,0,1,120.91,0,63.73327742,0,0,0,0,26.21688273,0.087948721,0.31998,0,0.00E+00,0,0,0,0.00E+00,2,0,0.23,nan,nan,nan,0,nan
