@@ -12,8 +12,8 @@ from .constants import TIME_AXIS, SPECIES_AXIS, GASBOX_AXIS
 from .earth_params import earth_radius, mass_atmosphere, seconds_per_year
 from .energy_balance_model import step_temperature, calculate_toa_imbalance_postrun, multi_ebm
 from .forcing.aerosol.erfari import calculate_erfari_forcing
-from .forcing.aerosol.erfaci import stevens2015, smith2021
-from .forcing.ghg import myhre1998, etminan2016, meinshausen2020, leach2021
+from .forcing.aerosol.erfaci import stevens2015, smith2021, leach2021aci
+from .forcing.ghg import myhre1998, etminan2016, meinshausen2020, leach2021ghg
 from .forcing.minor import calculate_linear_forcing
 from .forcing.ozone import thornhill2021
 from .gas_cycle import calculate_alpha
@@ -42,12 +42,10 @@ class FAIR:
         aci_method='smith2021',
         ghg_method='meinshausen2020',
         ch4_method='leach2021',
-        ozone_method='thornhill2021'
     ):
         self._aci_method = aci_method
         self._ghg_method = ghg_method
         self._ch4_method = ch4_method
-        self._ozone_method = ozone_method
         self.gasboxes = range(n_gasboxes)
         self.layers = range(n_layers)
         self.iirf_max = iirf_max
@@ -63,10 +61,10 @@ class FAIR:
 
     @aci_method.setter
     def aci_method(self, value):
-        if value.lower() in ['smith2021', 'stevens2015']:
+        if value.lower() in ['smith2021', 'stevens2015', 'leach2021']:
             self._aci_method = value.lower()
         else:
-            raise ValueError(f"aci_method should be smith2021 or stevens2015; you provided {value.lower()}.")
+            raise ValueError(f"aci_method should be one of [smith2021, stevens2015, leach2021]; you provided {value.lower()}.")
 
     @property
     def ch4_method(self):
@@ -83,25 +81,13 @@ class FAIR:
     def ghg_method(self):
         return self._ghg_method
 
-    # TODO: implement Leach2021, Etminan2016
+
     @ghg_method.setter
     def ghg_method(self, value):
         if value.lower() in ['leach2021', 'meinshausen2020', 'etminan2016', 'myhre1998']:
             self._ghg_method = value.lower()
         else:
             raise ValueError(f"ghg_method should be one of [leach2021, meinshausen2020, etminan2016, myhre1998]; you provided {value.lower()}.")
-
-    @property
-    def ozone_method(self):
-        return self._ozone_method
-
-    # TODO: actually implement Stevenson2013
-    @ozone_method.setter
-    def ozone_method(self, value):
-        if value in ['thornhill2021', 'stevenson2013']:
-            self._ozone_method = value.lower()
-        else:
-            raise ValueError(f"ozone_method should thornhill2021 or stevenson2013; you provided {value.lower()}.")
 
 
     def define_time(self, start, end, step):
@@ -126,20 +112,20 @@ class FAIR:
         self.species = species
         self._n_species = len(species)
 
-        # 1. everything we want to run with defined?
+        # everything we want to run with defined?
         for specie in species:
             if specie not in properties:
                 raise ValueError(f"{specie} does not have a corresponding key in `properties`.")
 
-            # 2. everything a valid species type?
+            # everything a valid species type?
             if properties[specie]['type'] not in species_types:
                 raise ValueError(f"{properties[specie]['type']} is not a valid species type. Valid types are: {[t for t in species_types]}")
 
-            # 3. input_modes valid?
+            # input_modes valid?
             if properties[specie]['input_mode'] not in valid_input_modes[properties[specie]['type']]:
                 raise ValueError(f"{properties[specie]['input_mode']} is not a valid input mode for {properties[specie]['type']}. Valid input modes are: {[m for m in valid_input_modes[properties[specie]['type']]]}")
 
-        # 4. on the way in, we don't mind if properties is over-specified, but
+        # on the way in, we don't mind if properties is over-specified, but
         # by the time we call allocate(), species and properties must align, so
         # we trim self.properties to match species.
         self.properties = properties
@@ -275,6 +261,7 @@ class FAIR:
                 'baseline_emissions': (["config", "specie"], np.zeros((self._n_configs, self._n_species))),
                 'g0': (["config", "specie"], np.ones((self._n_configs, self._n_species)) * np.nan),
                 'g1': (["config", "specie"], np.ones((self._n_configs, self._n_species)) * np.nan),
+                'concentration_per_emission': (["config", "specie"], np.ones((self._n_configs, self._n_species)) * np.nan),
 
                 # general parameters relating emissions, concentration or forcing of one species to forcing of another
                 # these are all linear factors
@@ -532,7 +519,7 @@ class FAIR:
             raise ValueError(f"{specie} contains NaN values in its {input_mode} array, which you are trying to drive the simulation with.")
 
         self._routine_flags = {
-            'ghgs': False,
+            'ghg': False,
             'ari': False,
             'aci': False,
             'eesc': False,
@@ -543,7 +530,7 @@ class FAIR:
             'h2o stratospheric': False,
             'ch4 concentration update': False
         }
-        # 5. check if emissions, concentration, forcing have been defined and
+        # check if emissions, concentration, forcing have been defined and
         # that we have non-nan data in every case
         for specie in self.species:
             if self.properties[specie]['input_mode'] == 'emissions':
@@ -556,7 +543,7 @@ class FAIR:
                 n_nan = np.isnan(self.forcing.loc[dict(specie=specie)]).sum()
                 if n_nan > 0: _raise_if_nan(specie, 'forcing')
 
-        # 6. special dependency cases
+        # special dependency cases
         if 'co2' in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
             if (
                 'co2 ffi' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) or
@@ -569,14 +556,14 @@ class FAIR:
                 raise ValueError('`land use` in `calculated` mode requires `co2 afolu` in `emissions` mode.')
 
         if 'aci' in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
-            if 'sulfur' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']):
-                raise ValueError("`aci` in `calculated` mode requires `sulfur` in `emissions` mode for `aci_method = stevens2015`.")
+            if self.aci_method=='stevens2015' and 'sulfur' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']):
+                raise ValueError("aci in 'calculated' mode requires sulfur in 'emissions' mode for aci_method = stevens2015.")
             elif (
                 self.aci_method=='smith2021' and
                 'black carbon' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type']) and
                 'organic carbon' not in list(self.properties_df.loc[self.properties_df['input_mode']=='emissions']['type'])
             ):
-                raise ValueError("aci in 'calculated' mode requires sulfur, black carbon and organic carbon in 'emissions' mode for aci_method = smith2021S.")
+                raise ValueError("aci in 'calculated' mode requires sulfur, black carbon and organic carbon in 'emissions' mode for aci_method = smith2021.")
 
         if (
             'eesc' not in list(self.properties_df.loc[self.properties_df['input_mode']=='concentration']['type']) and (
@@ -588,8 +575,6 @@ class FAIR:
         ):
             if self.ch4_method=='thornhill2021':
                 raise ValueError("For ch4_method = thornhill2021, EESC needs to be input as concentrations, or to be calculated from emissions of halogenated species which requires at least cfc-11 to be provided in emissions or concentration driven mode.")
-            elif self.ozone_method=='thornhill2021':
-                raise ValueError("For ozone_method = thornhill2021, EESC needs to be input as concentrations, or to be calculated from emissions of halogenated species which requires at least cfc-11 to be provided in emissions or concentration driven mode.")
 
         co2_to_forcing = False
         ch4_to_forcing = False
@@ -814,7 +799,7 @@ class FAIR:
 
                 # 5. greenhouse gas concentrations to forcing
                 if self.ghg_method=='leach2021':
-                    forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = leach2021(
+                    forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = leach2021ghg(
                         concentration_array[i_timepoint+1:i_timepoint+2, ...],
                         baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
                         forcing_scale_array[None, None, ...],
@@ -872,27 +857,40 @@ class FAIR:
                 )
 
             # 7. aerosol indirect forcing
-            if self._routine_flags['aci'] and self.aci_method=='stevens2015':
-                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._aci_indices] = stevens2015(
-                    emissions_array[i_timepoint:i_timepoint+1, ...],
-                    baseline_emissions_array[None, None, ...],
-                    forcing_scale_array[None, None, ..., self._aci_indices],
-                    erfaci_scale_array[None, None, :, None],
-                    erfaci_shape_sulfur_array[None, None, :, None],
-                    self._sulfur_indices,
-                )
-            elif self._routine_flags['aci'] and self.aci_method=='smith2021':
-                forcing_array[i_timepoint+1:i_timepoint+2, ..., self._aci_indices] = smith2021(
-                    emissions_array[i_timepoint:i_timepoint+1, ...],
-                    baseline_emissions_array[None, None, ...],
-                    forcing_scale_array[None, None, ..., self._aci_indices],
-                    erfaci_scale_array[None, None, :, None],
-                    erfaci_shape_sulfur_array[None, None, :, None],
-                    erfaci_shape_bcoc_array[None, None, :, None],
-                    self._sulfur_indices,
-                    self._bc_indices,
-                    self._oc_indices,
-                )
+            if self._routine_flags['aci']:
+                if self.aci_method=='stevens2015':
+                    forcing_array[i_timepoint+1:i_timepoint+2, ..., self._aci_indices] = stevens2015(
+                        emissions_array[i_timepoint:i_timepoint+1, ...],
+                        baseline_emissions_array[None, None, ...],
+                        forcing_scale_array[None, None, ..., self._aci_indices],
+                        erfaci_scale_array[None, None, :, None],
+                        erfaci_shape_sulfur_array[None, None, :, None],
+                        self._sulfur_indices,
+                    )
+                elif self.aci_method=='smith2021':
+                    forcing_array[i_timepoint+1:i_timepoint+2, ..., self._aci_indices] = smith2021(
+                        emissions_array[i_timepoint:i_timepoint+1, ...],
+                        baseline_emissions_array[None, None, ...],
+                        forcing_scale_array[None, None, ..., self._aci_indices],
+                        erfaci_scale_array[None, None, :, None],
+                        erfaci_shape_sulfur_array[None, None, :, None],
+                        erfaci_shape_bcoc_array[None, None, :, None],
+                        self._sulfur_indices,
+                        self._bc_indices,
+                        self._oc_indices,
+                    )
+                elif self.aci_method=='leach2021':
+                    forcing_array[i_timepoint+1:i_timepoint+2, ..., self._aci_indices] = leach2021aci(
+                        emissions_array[i_timepoint:i_timepoint+1, ...],
+                        baseline_emissions_array[None, None, ...],
+                        forcing_scale_array[None, None, ..., self._aci_indices],
+                        erfaci_scale_array[None, None, :, None],
+                        erfaci_shape_sulfur_array[None, None, :, None],
+                        erfaci_shape_bcoc_array[None, None, :, None],
+                        self._sulfur_indices,
+                        self._bc_indices,
+                        self._oc_indices,
+                    )
 
             # 8. calculate EESC this timestep for ozone forcing (and use it for
             # methane lifetime in the following timestep)
@@ -910,7 +908,7 @@ class FAIR:
 
             # 9. ozone emissions & concentrations to forcing
             # TODO argument ordering
-            if self._routine_flags['ozone'] and self.ozone_method=='thornhill2021':
+            if self._routine_flags['ozone']:
                 forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ozone_indices] = thornhill2021(
                     emissions_array[i_timepoint:i_timepoint+1, ...],
                     concentration_array[i_timepoint+1:i_timepoint+2, ...],
@@ -918,8 +916,8 @@ class FAIR:
                     baseline_concentration_array[None, None, ...],
                     forcing_scale_array[None, None, ..., self._ozone_indices],
                     ozone_radiative_efficiency_array[None, None, ...],
-                    cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
-                    forcing_temperature_feedback_array[None, None, :, self._ozone_indices],
+                    #cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
+                    #forcing_temperature_feedback_array[None, None, :, self._ozone_indices],
                     self._aerosol_chemistry_from_emissions_indices,
                     self._aerosol_chemistry_from_concentration_indices,
                 )
@@ -960,9 +958,12 @@ class FAIR:
                     land_use_cumulative_emissions_to_forcing_array[None, None, ...],
                 )
 
-            # 14. apply temperature-forcing dependence here. Currently only
-            # implemented for ozone forcing, and indirectly through IIRF for
-            # greenhouse gases.
+            # 14. apply temperature-forcing feedback here.
+            forcing_array[i_timepoint+1:i_timepoint+2, ...] = (
+                forcing_array[i_timepoint+1:i_timepoint+2, ...] +
+                cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2] *
+                forcing_temperature_feedback_array[None, None, ...]
+            )
 
             # 15. sum forcings
             forcing_sum_array[i_timepoint+1:i_timepoint+2, ...] = np.nansum(
