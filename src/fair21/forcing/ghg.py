@@ -23,14 +23,18 @@ def etminan2016(
     b3 = -8.2e-6,
     d3 = 0.043,
     ):
-    """Greenhouse gas forcing from CO2, CH4 and N2O including band overlaps.
+    """Greenhouse gas forcing from concentrations.
 
-    Source: Etminan et al. (2016) [1]_. Note that the relationship can be
-    poorly behaved outside of the range of valid values in Etminan et al.,
-    (180-2000 ppm CO2, 340-3500 ppb CH4, 200-525 ppb N2O) particularly for CO2
-    concentrations above 2000 ppm. It is recommended to use `meinshausen2020`,
-    which is a re-fit of the coefficients and extension to be better behaved
-    outside of the valid concentration range.
+    This uses the Etminan et al. (2016) [1]_ relationships for CO2, CH4 and N2O
+    including band overlaps between these three gases. Forcing from minor
+    greenhouse gases are a linear function of their concentration based on their
+    radiative efficiency.
+
+    Note that the relationship can be poorly behaved outside of the range of
+    valid values in Etminan et al., (180-2000 ppm CO2, 340-3500 ppb CH4, 200-525
+    ppb N2O) particularly for CO2 concentrations above 2000 ppm. It is
+    recommended to use `meinshausen2020`, which is a re-fit of the coefficients
+    and extension to be better behaved outside of the valid concentration range.
 
     Parameters
     ----------
@@ -146,11 +150,13 @@ def meinshausen2020(
     b3 = -0.00012462,
     d3 = 0.045194,
     ):
-    """Greenhouse gas forcing from CO2, CH4 and N2O including band overlaps.
+    """Greenhouse gas forcing from concentrations.
 
-    Modified Etminan relationship from Meinshausen et al. (2020) [1]_
-    https://gmd.copernicus.org/articles/13/3571/2020/
-    table 3
+    This uses the Meinshausen et al. (2020) [1]_ relationships for CO2, CH4 and
+    N2O including band overlaps between these three gases. This is a rescaled
+    Etminan et al. (2016) [2]_ function with improved stability outside the
+    range of validity in [2]_. Minor greenhouse gases are a linear function of
+    their concentration based on their radiative efficiency.
 
     Parameters
     ----------
@@ -210,6 +216,11 @@ def meinshausen2020(
        The shared socio-economic pathway (SSP) greenhouse gas concentrations
        and their extensions to 2500, Geoscientific Model Development, 13,
        3571–3605.
+
+    .. [2] Etminan, M., Myhre, G., Highwood, E.J., Shine, K.P., (2016).
+        Radiative forcing of carbon dioxide, methane, and nitrous oxide: A
+        significant revision of the methane radiative forcing, Geophysical
+        Research Letters, 43, 12,614–12,623.
     """
 
     erf_out = np.ones_like(concentration) * np.nan
@@ -274,11 +285,12 @@ def myhre1998(
     a2=5.32e-15,
     exp2=1.52
     ):
-    """Greenhouse gas forcing from CO2, CH4 and N2O.
+    """Greenhouse gas forcing from concentrations.
 
     Band overlaps are included between CH4 and N2O. This relationship comes from
     Myhre et al. (1998) [1]_, and was used up until the IPCC's Fifth Assessment
-    Report.
+    Report. Minor greenhouse gases are a linear function of their concentration
+    based on their radiative efficiency.
 
     Parameters
     ----------
@@ -302,9 +314,9 @@ def myhre1998(
         indices of other GHGs that are not CO2, CH4 or N2O.
     alpha_co2 : float, default=5.35
         factor relating logarithm of CO2 conentration to radiative forcing.
-    alpha_ch4: float, default=5.35
+    alpha_ch4: float, default=0.0036
         factor relating square root of CH4 conentration to radiative forcing.
-    alpha_n2o : float, default=5.35
+    alpha_n2o : float, default=0.12
         factor relating square root of N2O conentration to radiative forcing.
 
     Returns
@@ -348,6 +360,105 @@ def myhre1998(
         (np.sqrt(n2o) - np.sqrt(n2o_base)) -
         (ch4_n2o_overlap(ch4_base, n2o, alpha_ch4_n2o, a1, exp1, a2, exp2) - ch4_n2o_overlap(ch4_base, n2o_base, alpha_ch4_n2o, a1, exp1, a2, exp2))
     ) * forcing_scaling[..., n2o_indices]
+
+    # linear for other gases
+    # TODO: move to a general linear function
+    erf_out[..., minor_greenhouse_gas_indices] = (
+        (concentration[..., minor_greenhouse_gas_indices] - baseline_concentration[..., minor_greenhouse_gas_indices])
+        * radiative_efficiency[..., minor_greenhouse_gas_indices] * 0.001   # unit handling
+    ) * (forcing_scaling[..., minor_greenhouse_gas_indices])
+
+    return erf_out
+
+
+def leach2021(
+    concentration,
+    baseline_concentration,
+    forcing_scaling,
+    radiative_efficiency,
+    co2_indices,
+    ch4_indices,
+    n2o_indices,
+    minor_greenhouse_gas_indices,
+    f1_co2 = 4.57,
+    f3_co2 = 0.086,
+    f3_ch4 = 0.038,
+    f3_n2o = 0.106,
+    ):
+    """Greenhouse gas forcing from concentrations.
+
+    This uses the Leach et al. (2021) [1]_ relationships for CO2, CH4 and N2O
+    that do not include band overlaps between these gases, allowing
+    single-forcing runs. This is the default treatment in FaIR2.0. This is a
+    re-fit of the Etminan et al. (2016) [2]_ formulation with improved
+    coefficient fits. Minor greenhouse gases are a linear function of their
+    concentration based on their radiative efficiency.
+
+    Parameters
+    ----------
+    concentration : ndarray
+        concentration of greenhouse gases. "CO2", "CH4" and "N2O" must be
+        included in units of [ppm, ppb, ppb]. Other GHGs are units of ppt.
+    baseline_concentration : ndarray
+        pre-industrial concentration of the gases (see above).
+    forcing_scaling : ndarray
+        scaling of the calculated radiative forcing (e.g. for conversion to
+        effective radiative forcing and forcing uncertainty).
+    radiative_efficiency : ndarray
+        radiative efficiency to use for linear-forcing gases, in W m-2 ppb-1
+    co2_indices : np.ndarray of bool
+        index along SPECIES_AXIS relating to CO2.
+    ch4_indices : np.ndarray of bool
+        index along SPECIES_AXIS relating to CH4.
+    n2o_indices : np.ndarray of bool
+        index along SPECIES AXIS relating to N2O.
+    minor_greenhouse_gas_indices : np.ndarray of bool
+        indices of other GHGs that are not CO2, CH4 or N2O.
+    f1_co2 : float
+        factor relating logarithm of CO2 conentration to radiative forcing.
+    f3_co2 : float
+        factor relating square root of CO2 conentration to radiative forcing.
+    f3_ch4 : float
+        factor relating square root of CH4 conentration to radiative forcing.
+    f3_n2o : float
+        factor relating square root of N2O conentration to radiative forcing.
+
+    Returns
+    -------
+    effective_radiative_forcing : np.ndarray
+        effective radiative forcing (W/m2) from greenhouse gases
+
+    References
+    ----------
+    .. [1] Leach, N.J., Jenkins, S., Nicholls, Z., Smith, C.J., Lynch, J.,
+        Cain, M., Walsh, T., Wu, B., Tsutsui, J., Allen, M.R. (2021). FaIRv2.0.0:
+        a generalized impulse response model for climate uncertainty and future
+        scenario exploration, Geoscientific Model Development, 14, 3007–3036.
+
+    .. [2] Etminan, M., Myhre, G., Highwood, E.J., Shine, K.P., (2016).
+        Radiative forcing of carbon dioxide, methane, and nitrous oxide: A
+        significant revision of the methane radiative forcing, Geophysical
+        Research Letters, 43, 12,614–12,623.
+    """
+
+    erf_out = np.ones_like(concentration) * np.nan
+
+    # easier to deal with smaller arrays
+    co2 = concentration[..., co2_indices]
+    ch4 = concentration[..., ch4_indices]
+    n2o = concentration[..., n2o_indices]
+    co2_base = baseline_concentration[..., co2_indices]
+    ch4_base = baseline_concentration[..., ch4_indices]
+    n2o_base = baseline_concentration[..., n2o_indices]
+
+    # CO2
+    erf_out[..., co2_indices] = (f1_co2 * np.log(co2/co2_base) + f3_co2 * (np.sqrt(co2) - np.sqrt(co2_base))) * forcing_scaling[..., co2_indices]
+
+    # CH4
+    erf_out[..., ch4_indices] = f3_ch4 * (np.sqrt(ch4) - np.sqrt(ch4_base)) * forcing_scaling[..., ch4_indices]
+
+    # N2O
+    erf_out[..., n2o_indices] = f3_n2o * (np.sqrt(n2o) - np.sqrt(n2o_base)) * forcing_scaling[..., n2o_indices]
 
     # linear for other gases
     # TODO: move to a general linear function
