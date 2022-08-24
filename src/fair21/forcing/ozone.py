@@ -14,8 +14,8 @@ def thornhill2021(
     baseline_concentration,
     forcing_scaling,
     ozone_radiative_efficiency,
-    temperature,
-    temperature_feedback,
+    #temperature,
+    #temperature_feedback,
     slcf_indices,
     ghg_indices
 ):
@@ -24,11 +24,9 @@ def thornhill2021(
 
     Calculates total ozone forcing from precursor emissions and
     concentrations based on AerChemMIP and CMIP6 Historical behaviour in
-    Skeie et al. (2020) and Thornhill et al. (2021).
+    Skeie et al. (2020) [1]_ and Thornhill et al. (2021) [2]_.
 
-    In this hard-coded treatment, ozone forcing depends on concentrations of
-    CH4, N2O, ozone-depleting halogens, and emissions of CO, NVMOC and NOx,
-    but any combination of emissions and concentrations are allowed.
+    The treatment is identical to FaIR2.0 [3]_.
 
     Parameters
     ----------
@@ -80,19 +78,36 @@ def thornhill2021(
     erf_ozone : dict
         ozone forcing due to each component, and in total.
 
-    Notes
-    -----
-    Where array input is taken, the arrays always have the dimensions of
-    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
+    References
+    ----------
+    .. [1] Skeie, R.B., Myhre, G., Hodnebrog, Ø., Cameron-Smith, P.J.,
+        Deushi, M., Hegglin, M.I., Horowitz, L.W., Kramer, R.J., Michou, M.,
+        Mills, M.J., Olivié, D.J., Connor, F.M., Paynter, D., Samset, B.H.,
+        Sellar, A., Shindell, D., Takemura, T., Tilmes, S., Wu, T., 2020.
+        Historical total ozone radiative forcing derived from CMIP6 simulations,
+        npj Climate and Atmospheric Science, 3, 1–10.
+
+    .. [2] Thornhill, G.D., Collins, W.J., Kramer, R.J., Olivié, D., Skeie,
+        R.B., O'Connor, F.M., Abraham, N.L., Checa-Garcia, R., Bauer, S.E.,
+        Deushi, M., Emmons, L.K., Forster, P.M., Horowitz, L.W., Johnson, B.,
+        Keeble, J., Lamarque, J.-F., Michou, M., Mills, M.J., Mulcahy, J.P.,
+        Myhre, G., Nabat, P., Naik, V., Oshima, N., Schulz, M., Smith, C.J.,
+        Takemura, T., Tilmes, S., Wu, T., Zeng, G., Zhang, J. (2021). Effective
+        radiative forcing from emissions of reactive gases and aerosols – a
+        multi-model comparison, Atmospheric Chemistry and  Physics, 21, 853–874
+
+    .. [3] Leach, N.J., Jenkins, S., Nicholls, Z., Smith, C.J., Lynch, J.,
+        Cain, M., Walsh, T., Wu, B., Tsutsui, J., Allen, M.R. (2021). FaIRv2.0.0:
+        a generalized impulse response model for climate uncertainty and future
+        scenario exploration, Geoscientific Model Development, 14, 3007–3036.
+
     """
 
     array_shape = emissions.shape
     n_timesteps, n_scenarios, n_configs, n_species = array_shape
 
     # revisit this if we ever want to dump out intermediate calculations like the feedback strength.
-    _erf = np.ones((n_timesteps, n_scenarios, n_configs, 3)) * np.nan
+    _erf = np.ones((n_timesteps, n_scenarios, n_configs, 2)) * np.nan
 
     # GHGs, with a concentration-given ozone radiative_efficiency, including EESC
     _erf[:, :, :, 0] = np.sum(
@@ -110,7 +125,7 @@ def thornhill2021(
     # print(_erf.shape)
     # print(np.sum(_erf[:, :, :, :3], axis=SPECIES_AXIS, keepdims=True).shape)
     # W m-2 K-1 * K = W m-2
-    _erf[:, :, :, 2:3] = (temperature_feedback * temperature)
+    #_erf[:, :, :, 2:3] = (temperature_feedback * temperature)
     #print(_erf[0,0,0,:])
     erf_out = np.sum(_erf, axis=SPECIES_AXIS, keepdims=True)
     return erf_out

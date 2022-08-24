@@ -371,7 +371,7 @@ def myhre1998(
     return erf_out
 
 
-def leach2021(
+def leach2021ghg(
     concentration,
     baseline_concentration,
     forcing_scaling,
