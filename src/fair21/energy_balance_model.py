@@ -49,7 +49,7 @@ class EnergyBalanceModel:
         stochastic_run=False,
         sigma_eta=0.5,
         sigma_xi=0.5,
-        gamma_autocorrelation=2,
+        gamma_autocorrelation=1000,
         seed=None,
         timestep=1,
         n_timesteps=1
