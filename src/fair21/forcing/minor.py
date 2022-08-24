@@ -10,8 +10,8 @@ def calculate_linear_forcing(
     baseline_emissions,
     forcing_scaling,
     radiative_efficiency,
-    indices_in,
-    index_out,
+    #indices_in,
+    #index_out,
 ):
     """
     Calculate effective radiative forcing from a linear relationship of
@@ -47,10 +47,10 @@ def calculate_linear_forcing(
     calculation and speed.
     """
 
-    erf_out = np.sum(
+    erf_out = np.nansum(
         (
-            (emissions[:, :, :, indices_in, :] - baseline_emissions[:, :, :, indices_in, :])
-            * radiative_efficiency[:, :, :, indices_in, :]
-        ) * forcing_scaling[:, :, :, index_out, :],
+            (emissions - baseline_emissions)
+            * radiative_efficiency
+        ) * forcing_scaling,
     axis=SPECIES_AXIS, keepdims=True)
     return erf_out

@@ -9,8 +9,8 @@ def calculate_erfari_forcing(
     baseline_concentration,
     forcing_scaling,
     radiative_efficiency,
-    slcf_indices,
-    ghg_indices
+    emissions_indices,
+    concentration_indices
 ):
     """
     Calculate effective radiative forcing from aerosol-radiation interactions.
@@ -22,18 +22,18 @@ def calculate_erfari_forcing(
     concentration: ndarray
         concentrations in timestep
     baseline_emissions : ndarray
-        pre-industrial emissions
+        baseline emissions to evaluate forcing against
     baseline_concentration : ndarray
-        pre-industrial concentrations
+        baseline concentrations to evaluate forcing against
     forcing_scaling : ndarray
         scaling of the calculated radiative forcing (e.g. for conversion to
         effective radiative forcing and forcing uncertainty).
     radiative_efficiency : ndarray
         radiative efficiency (W m-2 (emission_unit yr-1)-1) of each species.
-    slcf_indices : list of int
+    emissions_indices : list of int
         provides a mapping of which aerosol species corresponds to which emitted
         species index along the SPECIES_AXIS.
-    ghg_indices : list of int
+    concentration_indices : list of int
         provides a mapping of which aerosol species corresponds to which
         atmospheric GHG concentration along the SPECIES_AXIS.
 
@@ -41,30 +41,22 @@ def calculate_erfari_forcing(
     -------
     effective_radiative_forcing : ndarray
         effective radiative forcing (W/m2) from aerosol-radiation interactions
-
-    Notes
-    -----
-    Where array input is taken, the arrays always have the dimensions of
-    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
     """
 
-    # zeros because nansum is slow?
-    erf_out = np.zeros((emissions.shape[0], emissions.shape[1], emissions.shape[2], emissions.shape[3]))
+    erf_out = np.ones_like(emissions) * np.nan
 
     # emissions-driven forcers
-    erf_out[:, :, :, slcf_indices] = (
-        (emissions[:, :, :, slcf_indices, 0] - baseline_emissions[:, :, :, slcf_indices, 0])
-        * radiative_efficiency[:, :, :, slcf_indices, 0]
-    ) * forcing_scaling[:, :, :, slcf_indices, 0]
+    erf_out[..., emissions_indices] = (
+        (emissions[..., emissions_indices] - baseline_emissions[..., emissions_indices])
+        * radiative_efficiency[..., emissions_indices]
+    ) * forcing_scaling[..., emissions_indices]
 
     # concentration-driven forcers
-    erf_out[:, :, :, ghg_indices] = (
-        (emissions[:, :, :, ghg_indices, 0] - baseline_emissions[:, :, :, ghg_indices, 0])
-        * radiative_efficiency[:, :, :, ghg_indices, 0]
-    ) * forcing_scaling[:, :, :, ghg_indices, 0]
+    erf_out[..., concentration_indices] = (
+        (concentration[..., concentration_indices] - baseline_concentration[..., concentration_indices])
+        * radiative_efficiency[..., concentration_indices]
+    ) * forcing_scaling[..., concentration_indices]
 
-    # in future we can retain contributions from each species. Will need one
+    # in future we can retain contributions from each species. Will need one ERFari
     # array index for each species so we don't do this here yet.
-    return erf_out.sum(axis=SPECIES_AXIS, keepdims=True)
+    return np.nansum(erf_out, axis=SPECIES_AXIS, keepdims=True)

@@ -6,20 +6,19 @@ import warnings
 
 import numpy as np
 
-from ..constants import GAS_BOX_AXIS
+from ..constants import GASBOX_AXIS
 
 def step_concentration(
     emissions,
-    gas_boxes_old,
+    gasboxes_old,
     airborne_emissions_old,
-    burden_per_emission,
-    lifetime,
     alpha_lifetime,
-    soil_lifetime,
+    baseline_concentration,
+    baseline_emissions,
+    concentration_per_emission,
+    lifetime,
     partition_fraction,
-    pre_industrial_concentration,
-    timestep=1,
-    natural_emissions_adjustment=0,
+    timestep,
 ):
     """
     Calculates concentrations from emissions of any greenhouse gas.
@@ -35,29 +34,24 @@ def step_concentration(
         The total airborne emissions at the beginning of the timestep. This is
         the concentrations above the pre-industrial control. It is also the sum
         of gas_boxes_old if this is an array.
-    burden_per_emission : ndarray
+    alpha_lifetime : ndarray
+        scaling factor for `lifetime`. Necessary where there is a state-
+        dependent feedback.
+    baseline_concentration : ndarray
+        original (possibly pre-industrial) concentration of gas(es) in question.
+    baseline_emissions : ndarray or float
+        original (possibly pre-industrial) emissions of gas(es) in question.
+    concentration_per_emission : ndarray
         how much atmospheric concentrations grow (e.g. in ppm) per unit (e.g.
         GtCO2) emission.
     lifetime : ndarray
         atmospheric burden lifetime of greenhouse gas (yr). For multiple
         lifetimes gases, it is the lifetime of each box.
-    alpha_lifetime : ndarray
-        scaling factor for `lifetime`. Necessary where there is a state-
-        dependent feedback.
-    soil_lifetime : ndarray
-        an additional loss pathway that does not scale with climate state;
-        should only be finite for methane lifetime scalings under the AerChemMIP
-        treatment, otherwise set to np.inf.
     partition_fraction : ndarray
         the partition fraction of emissions into each gas box. If array, the
         entries should be individually non-negative and sum to one.
-    pre_industrial_concentration : ndarray
-        pre-industrial concentration of gas(es) in question.
-    timestep : float, default=1
+    timestep : float
         emissions timestep in years.
-    natural_emissions_adjustment : ndarray or float, default=0
-        Amount to adjust emissions by for natural emissions given in the total
-        in emissions files.
 
     Notes
     -----
@@ -82,24 +76,18 @@ def step_concentration(
         at the end of the timestep.
     """
 
-    # this is needed because we set alphas to one and not nan, so non-GHGs
-    # cause a warning.
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        decay_rate = timestep/(1/(1/(alpha_lifetime * lifetime) + 1/soil_lifetime))
+    decay_rate = timestep/(alpha_lifetime * lifetime)
     decay_factor = np.exp(-decay_rate)
-    gas_boxes_new = (
+
+    # additions and removals
+    gasboxes_new = (
         partition_fraction *
-        (emissions-natural_emissions_adjustment) *
+        (emissions - baseline_emissions) *
         1 / decay_rate *
-        (1 - decay_factor) * timestep + gas_boxes_old * decay_factor
-    )
-    airborne_emissions_new = np.sum(gas_boxes_new, axis=GAS_BOX_AXIS, keepdims=True)
-    concentration_out = (
-        pre_industrial_concentration +
-        burden_per_emission * (
-            airborne_emissions_new + airborne_emissions_old
-        ) / 2
+        (1 - decay_factor) * timestep + gasboxes_old * decay_factor
     )
 
-    return concentration_out, gas_boxes_new, airborne_emissions_new
+    airborne_emissions_new = np.sum(gasboxes_new, axis=GASBOX_AXIS)
+    concentration_out = baseline_concentration + concentration_per_emission * airborne_emissions_new
+
+    return concentration_out, gasboxes_new, airborne_emissions_new
