@@ -28,7 +28,7 @@ species_types = [
 valid_input_modes = {
     'co2 ffi': ['emissions'],
     'co2 afolu': ['emissions'],
-    'co2': ['calculated', 'concentration', 'forcing'],
+    'co2': ['emissions', 'calculated', 'concentration', 'forcing'],
     'ch4': ['emissions', 'concentration', 'forcing'],
     'n2o': ['emissions', 'concentration', 'forcing'],
     'cfc-11': ['emissions', 'concentration', 'forcing'],
