@@ -62,11 +62,13 @@ def calculate_alpha(
     iirf = iirf_0 + iirf_uptake * (cumulative_emissions-airborne_emissions) + iirf_temperature * temperature + iirf_airborne * airborne_emissions
     iirf = (iirf>iirf_max) * iirf_max + iirf * (iirf<iirf_max)
     # overflow and invalid value errors occur with very large and small values
-    # in the exponential. This happens with very long lifetime GHGs. Usually
-    # these GHGs don't have a temperature dependence on IIRF but even if they
-    # did the lifetimes are so long that it is unlikely to have an effect.
+    # in the exponential. This happens with very long lifetime GHGs, in practice
+    # only CF4. Usually these GHGs don't have a temperature dependence on IIRF
+    # but even if they did the lifetimes are so long that it is unlikely to have
+    # a measurable effect, so we just set alpha to 1.
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         alpha = g0 * np.exp(iirf / g1)
+        alpha[np.isnan(alpha)] = 1
 
     return alpha

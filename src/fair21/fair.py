@@ -42,6 +42,7 @@ class FAIR:
         aci_method='smith2021',
         ghg_method='meinshausen2020',
         ch4_method='leach2021',
+        temperature_prescribed=False
     ):
         self._aci_method = aci_method
         self._ghg_method = ghg_method
@@ -53,6 +54,7 @@ class FAIR:
         self._n_gasboxes = n_gasboxes
         self._n_layers = n_layers
         self.aci_parameters = ['scale', 'Sulfur', 'BC+OC']
+        self.temperature_prescribed = temperature_prescribed
 
     # must be a less cumbsersome way to code this
     @property
@@ -240,6 +242,8 @@ class FAIR:
         self.species_configs = xr.Dataset(
             {
                 # general parameters applicable to all species
+                # NB: at present forcing_scale has NO EFFECT on species provided
+                # as prescribed forcing.
                 'tropospheric_adjustment': (["config", "specie"], np.zeros((self._n_configs, self._n_species))),
                 'forcing_efficacy': (["config", "specie"], np.ones((self._n_configs, self._n_species))),
                 'forcing_temperature_feedback': (["config", "specie"], np.zeros((self._n_configs, self._n_species))),
@@ -262,6 +266,7 @@ class FAIR:
                 'g0': (["config", "specie"], np.ones((self._n_configs, self._n_species)) * np.nan),
                 'g1': (["config", "specie"], np.ones((self._n_configs, self._n_species)) * np.nan),
                 'concentration_per_emission': (["config", "specie"], np.ones((self._n_configs, self._n_species)) * np.nan),
+                'forcing_reference_concentration': (["config", "specie"], np.ones((self._n_configs, self._n_species)) * np.nan),
 
                 # general parameters relating emissions, concentration or forcing of one species to forcing of another
                 # these are all linear factors
@@ -280,7 +285,7 @@ class FAIR:
 
                 # specific parameters for methane lifetime
                 'ch4_lifetime_chemical_sensitivity': (["config", "specie"], np.ones((self._n_configs, self._n_species)) * np.nan),
-                'ch4_lifetime_temperature_sensitivity': (["config"], np.ones((self._n_configs)) * np.nan),
+                'lifetime_temperature_sensitivity': (["config"], np.ones((self._n_configs)) * np.nan),
 
                 # specific parameters for aerosol-cloud interactions
                 'aci_parameters': (["config", "aci_parameter"], np.ones((self._n_configs, 3)) * np.nan),
@@ -307,6 +312,7 @@ class FAIR:
             fill(self.species_configs['molecular_weight'], df.loc[specie].molecular_weight, specie=specie)
             fill(self.species_configs['baseline_concentration'], df.loc[specie].baseline_concentration, specie=specie)
             fill(self.species_configs['forcing_scale'], df.loc[specie].forcing_scale, specie=specie)
+            fill(self.species_configs['forcing_reference_concentration'], df.loc[specie].forcing_reference_concentration, specie=specie)
             fill(self.species_configs['iirf_0'], df.loc[specie].iirf_0, specie=specie)
             fill(self.species_configs['iirf_airborne'], df.loc[specie].iirf_airborne, specie=specie)
             fill(self.species_configs['iirf_uptake'], df.loc[specie].iirf_uptake, specie=specie)
@@ -329,7 +335,7 @@ class FAIR:
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_scale, aci_parameter='scale')
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_Sulfur, aci_parameter='Sulfur')
             fill(self.species_configs['aci_parameters'], df.loc['Aerosol-cloud interactions'].aci_params_BCOC, aci_parameter='BC+OC')
-        fill(self.species_configs['ch4_lifetime_temperature_sensitivity'], df.loc[df["type"]=="ch4"].ch4_lifetime_temperature_sensitivity)
+        fill(self.species_configs['lifetime_temperature_sensitivity'], df.loc[df["type"]=="ch4"].lifetime_temperature_sensitivity)
         self.calculate_concentration_per_emission()
 
     # greenhouse gas convenience functions
@@ -528,7 +534,7 @@ class FAIR:
             'land use': False,
             'lapsi': False,
             'h2o stratospheric': False,
-            'ch4 concentration update': False
+            'temperature': True
         }
         # check if emissions, concentration, forcing have been defined and
         # that we have non-nan data in every case
@@ -542,6 +548,13 @@ class FAIR:
             elif self.properties[specie]['input_mode'] == 'forcing':
                 n_nan = np.isnan(self.forcing.loc[dict(specie=specie)]).sum()
                 if n_nan > 0: _raise_if_nan(specie, 'forcing')
+
+        # same for if we are prescribing temperature; we must have non-nan
+        # values in the surface level
+        if self.temperature_prescribed:
+            n_nan = np.isnan(self.temperature.loc[dict(layer=0)]).sum()
+            if n_nan > 0:
+                raise ValueError("You are running with prescribed temperatures, but the FAIR.temperature xarray contains NaN values in the surface layer.")
 
         # special dependency cases
         if 'co2' in list(self.properties_df.loc[self.properties_df['input_mode']=='calculated']['type']):
@@ -606,6 +619,9 @@ class FAIR:
         ):
             self._routine_flags['ghg'] = True
 
+        if self.temperature_prescribed:
+            self._routine_flags['temperature'] = False
+
 
     def _make_indices(self):
         # the following are all n_species-length boolean arrays
@@ -652,17 +668,15 @@ class FAIR:
             ).values, dtype=bool
         )
 
-        if sum(self._ch4_indices * self._ghg_forward_indices) == 1:
-            self._routine_flags['ch4 concentration update'] = True
-
 
     def run(self, progress=True, suppress_warnings=True):
         self._check_properties()
         self._make_indices()
-        with warnings.catch_warnings():
-            if suppress_warnings:
-                warnings.filterwarnings("ignore", message="covariance is not positive-semidefinite.")
-            self._make_ebms()
+        if self._routine_flags['temperature']:
+            with warnings.catch_warnings():
+                if suppress_warnings:
+                    warnings.filterwarnings("ignore", message="covariance is not positive-semidefinite.")
+                self._make_ebms()
 
         # part of pre-run: TODO move to a new method
         if self._co2_indices.sum() + self._co2_ffi_indices.sum() + self._co2_afolu_indices.sum()==3:
@@ -676,7 +690,7 @@ class FAIR:
         baseline_emissions_array = self.species_configs['baseline_emissions'].data
         br_atoms_array = self.species_configs['br_atoms'].data
         ch4_lifetime_chemical_sensitivity_array = self.species_configs['ch4_lifetime_chemical_sensitivity'].data
-        ch4_lifetime_temperature_sensitivity_array = self.species_configs['ch4_lifetime_temperature_sensitivity'].data
+        lifetime_temperature_sensitivity_array = self.species_configs['lifetime_temperature_sensitivity'].data
         cl_atoms_array = self.species_configs['cl_atoms'].data
         concentration_array = self.concentration.data
         concentration_per_emission_array = self.species_configs['concentration_per_emission'].data
@@ -684,7 +698,6 @@ class FAIR:
         cummins_state_array = np.ones((self._n_timebounds, self._n_scenarios, self._n_configs, self._n_layers+1)) * np.nan
         cumulative_emissions_array = self.cumulative_emissions.data
         deep_ocean_efficacy_array = self.climate_configs['deep_ocean_efficacy'].data
-        eb_matrix_d_array = self.ebms['eb_matrix_d'].data
         emissions_array = self.emissions.data
         erfari_radiative_efficiency_array = self.species_configs['erfari_radiative_efficiency'].data
         erfaci_scale_array = self.species_configs['aci_parameters'].data[:,0]
@@ -694,9 +707,9 @@ class FAIR:
         forcing_scale_array = self.species_configs['forcing_scale'].data * (1 + self.species_configs['tropospheric_adjustment'].data)
         forcing_efficacy_array = self.species_configs['forcing_efficacy'].data
         forcing_efficacy_sum_array = np.ones((self._n_timebounds, self._n_scenarios, self._n_configs)) * np.nan
+        forcing_reference_concentration_array = self.species_configs['forcing_reference_concentration'].data
         forcing_sum_array = self.forcing_sum.data
         forcing_temperature_feedback_array = self.species_configs['forcing_temperature_feedback'].data
-        forcing_vector_d_array = self.ebms['forcing_vector_d'].data
         fractional_release_array = self.species_configs['fractional_release'].data
         g0_array = self.species_configs['g0'].data
         g1_array = self.species_configs['g1'].data
@@ -713,8 +726,12 @@ class FAIR:
         ocean_heat_transfer_array = self.climate_configs['ocean_heat_transfer'].data
         ozone_radiative_efficiency_array = self.species_configs['ozone_radiative_efficiency'].data
         partition_fraction_array = self.species_configs['partition_fraction'].data
-        stochastic_d_array = self.ebms['stochastic_d'].data
         unperturbed_lifetime_array = self.species_configs['unperturbed_lifetime'].data
+
+        if self._routine_flags['temperature']:
+            eb_matrix_d_array = self.ebms['eb_matrix_d'].data
+            forcing_vector_d_array = self.ebms['forcing_vector_d'].data
+            stochastic_d_array = self.ebms['stochastic_d'].data
 
         # forcing should be initialised so this should not be nan. We could check, or allow silent fail as some species don't take forcings and would correctly be nan.
         forcing_sum_array[0:1, ...] = np.nansum(
@@ -725,7 +742,22 @@ class FAIR:
         cummins_state_array[0, ..., 0] = forcing_sum_array[0, ...]
         cummins_state_array[..., 1:] = self.temperature.data
 
-        # it's all been leading to this : FaIR MAIN LOOP
+        # to save calculating this every timestep, we'll pre-determine
+        # the forcing to use as the baseline value if we are using the
+        # Meinshausen regime.
+        if self._routine_flags['ghg'] and self.ghg_method=='meinshausen2020':
+            meinshausen_baseline = meinshausen2020(
+                baseline_concentration_array[None, None, ...],
+                forcing_reference_concentration_array[None, None, ...],
+                forcing_scale_array[None, None, ...],
+                greenhouse_gas_radiative_efficiency_array[None, None, ...],
+                self._co2_indices,
+                self._ch4_indices,
+                self._n2o_indices,
+                self._minor_ghg_indices
+            )
+
+        # it's all been leading up to this : FaIR MAIN LOOP
         for i_timepoint in tqdm(range(self._n_timepoints), disable=1-progress, desc=f"Running {self._n_scenarios*self._n_configs} projections in parallel", unit='timesteps'):
 
             if self._routine_flags['ghg']:
@@ -753,7 +785,7 @@ class FAIR:
                         baseline_emissions_array[None, None, ...],
                         baseline_concentration_array[None, None, ...],
                         ch4_lifetime_chemical_sensitivity_array[None, None, ...],
-                        ch4_lifetime_temperature_sensitivity_array[None, None, :, None],
+                        lifetime_temperature_sensitivity_array[None, None, :, None],
                         self._aerosol_chemistry_from_emissions_indices,
                         self._aerosol_chemistry_from_concentration_indices,
                     )
@@ -812,7 +844,7 @@ class FAIR:
                 if self.ghg_method=='meinshausen2020':
                     forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = meinshausen2020(
                         concentration_array[i_timepoint+1:i_timepoint+2, ...],
-                        baseline_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
+                        forcing_reference_concentration_array[None, None, ...] * np.ones((1, self._n_scenarios, self._n_configs, self._n_species)),
                         forcing_scale_array[None, None, ...],
                         greenhouse_gas_radiative_efficiency_array[None, None, ...],
                         self._co2_indices,
@@ -820,6 +852,10 @@ class FAIR:
                         self._n2o_indices,
                         self._minor_ghg_indices,
                     )[0:1, ..., self._ghg_indices]
+                    forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = (
+                        forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] -
+                        meinshausen_baseline[..., self._ghg_indices]
+                    )
                 elif self.ghg_method=='etminan2016':
                     forcing_array[i_timepoint+1:i_timepoint+2, ..., self._ghg_indices] = etminan2016(
                         concentration_array[i_timepoint+1:i_timepoint+2, ...],
@@ -974,14 +1010,14 @@ class FAIR:
             )
 
             # 16. forcing to temperature
-            #if not self.run_config.temperature_prescribed:
-            cummins_state_array[i_timepoint+1:i_timepoint+2, ...] = step_temperature(
-                cummins_state_array[i_timepoint:i_timepoint+1, ...],
-                eb_matrix_d_array[None, None, ...],
-                forcing_vector_d_array[None, None, ...],
-                stochastic_d_array[i_timepoint+1:i_timepoint+2, None, ...],
-                forcing_efficacy_sum_array[i_timepoint+1:i_timepoint+2, ..., None]
-            )
+            if self._routine_flags['temperature']:
+                cummins_state_array[i_timepoint+1:i_timepoint+2, ...] = step_temperature(
+                    cummins_state_array[i_timepoint:i_timepoint+1, ...],
+                    eb_matrix_d_array[None, None, ...],
+                    forcing_vector_d_array[None, None, ...],
+                    stochastic_d_array[i_timepoint+1:i_timepoint+2, None, ...],
+                    forcing_efficacy_sum_array[i_timepoint+1:i_timepoint+2, ..., None]
+                )
 
         # 17. TOA imbalance
         # forcing is not efficacy adjusted here, is this correct?

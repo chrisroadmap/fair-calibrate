@@ -10,8 +10,8 @@ def calculate_alpha_ch4(
     emissions,
     concentration,
     temperature,
-    baseline_emissions,
-    baseline_concentration,
+    initial_emissions,
+    initial_concentration,
     ch4_lifetime_chemical_sensitivity,
     ch4_lifetime_temperature_sensitivity,
     emissions_indices,
@@ -22,14 +22,14 @@ def calculate_alpha_ch4(
         np.sum(
             np.log(
                 1 +
-                (emissions[..., emissions_indices]-baseline_emissions[..., emissions_indices])
+                (emissions[..., emissions_indices]-initial_emissions[..., emissions_indices])
                 * ch4_lifetime_chemical_sensitivity[..., emissions_indices]
             ),
         axis=SPECIES_AXIS, keepdims=True) +
         np.sum(
             np.log(
                 1 +
-                (concentration[..., concentration_indices]-baseline_concentration[..., concentration_indices])
+                (concentration[..., concentration_indices]-initial_concentration[..., concentration_indices])
                 * ch4_lifetime_chemical_sensitivity[..., concentration_indices],
             ),
         axis=SPECIES_AXIS, keepdims=True) +
