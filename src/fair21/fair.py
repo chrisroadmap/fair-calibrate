@@ -59,7 +59,7 @@ class FAIR:
     # must be a less cumbsersome way to code this
     @property
     def aci_method(self):
-        return self._aci_method
+        return self._aci_method.lower()
 
     @aci_method.setter
     def aci_method(self, value):
@@ -70,7 +70,7 @@ class FAIR:
 
     @property
     def ch4_method(self):
-        return self._ch4_method
+        return self._ch4_method.lower()
 
     @ch4_method.setter
     def ch4_method(self, value):
@@ -81,7 +81,7 @@ class FAIR:
 
     @property
     def ghg_method(self):
-        return self._ghg_method
+        return self._ghg_method.lower()
 
 
     @ghg_method.setter
