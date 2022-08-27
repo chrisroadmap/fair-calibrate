@@ -131,7 +131,7 @@ def etminan2016(
 
 def meinshausen2020(
     concentration,
-    baseline_concentration,
+    reference_concentration,
     forcing_scaling,
     radiative_efficiency,
     co2_indices,
@@ -163,8 +163,9 @@ def meinshausen2020(
     concentration : ndarray
         concentration of greenhouse gases. "CO2", "CH4" and "N2O" must be
         included in units of [ppm, ppb, ppb]. Other GHGs are units of ppt.
-    baseline_concentration : ndarray
-        pre-industrial concentration of the gases (see above).
+    reference_concentration : ndarray
+        pre-industrial concentration of the gases (see above) used as the
+        reference to calculate the forcing.
     forcing_scaling : ndarray
         scaling of the calculated radiative forcing (e.g. for conversion to
         effective radiative forcing and forcing uncertainty).
@@ -229,9 +230,9 @@ def meinshausen2020(
     co2 = concentration[..., co2_indices]
     ch4 = concentration[..., ch4_indices]
     n2o = concentration[..., n2o_indices]
-    co2_base = baseline_concentration[..., co2_indices]
-    ch4_base = baseline_concentration[..., ch4_indices]
-    n2o_base = baseline_concentration[..., n2o_indices]
+    co2_base = reference_concentration[..., co2_indices]
+    ch4_base = reference_concentration[..., ch4_indices]
+    n2o_base = reference_concentration[..., n2o_indices]
 
     # CO2
     ca_max = co2_base - b1/(2*a1)
@@ -260,7 +261,7 @@ def meinshausen2020(
     # linear for other gases
     # TODO: move to a general linear function
     erf_out[..., minor_greenhouse_gas_indices] = (
-        (concentration[..., minor_greenhouse_gas_indices] - baseline_concentration[..., minor_greenhouse_gas_indices])
+        (concentration[..., minor_greenhouse_gas_indices] - reference_concentration[..., minor_greenhouse_gas_indices])
         * radiative_efficiency[..., minor_greenhouse_gas_indices] * 0.001   # unit handling
     ) * (forcing_scaling[..., minor_greenhouse_gas_indices])
 

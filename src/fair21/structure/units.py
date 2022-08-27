@@ -21,6 +21,7 @@ DEFAULT_PROPERTIES_FILE = os.path.join(HERE, "..", "defaults", "data", "ar6", "s
 desired_emissions_units = {
     'CO2 FFI': 'Gt CO2/yr',
     'CO2 AFOLU': 'Gt CO2/yr',
+    'CO2': 'Gt CO2/yr',
     'CH4': 'Mt CH4/yr',
     'N2O': 'Mt N2O/yr',
     'Sulfur': 'Mt SO2/yr',
