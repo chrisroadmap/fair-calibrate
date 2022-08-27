@@ -24,6 +24,9 @@ What's new compared to v2.0 and v1.6:
 conda env create -f environment.yml
 conda activate fair2.1-calibrate
 nbstripout --install
+
+# the last step is then to install this local version of fair itself
+pip install -e .
 ```
 
 If you get module import errors running any of the notebooks, it's likely that your local environment is not up to date:
@@ -37,9 +40,6 @@ git pull
 # update environment
 conda activate fair2.1-calibrate
 conda env update -f environment.yml --prune
-
-# the last step is to install fair itself
-pip install -e .
 ```
 
 TODO: put all of this into a config/make file.
