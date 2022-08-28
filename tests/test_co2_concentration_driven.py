@@ -32,7 +32,7 @@ for iscen, scenario in enumerate(scenarios_to_include):
     #list_of_species.append(Species(species_ids['n2o'], concentration=np.ones(351)*270.1))
     scenarios.append(Scenario(scenario, list_of_species))
 
-df = pd.read_csv("data/calibration/4xCO2_cummins.csv")
+df = pd.read_csv("data/calibration/4xCO2_cummins_ebm3.csv")
 models = df['model'].unique()
 
 params = {}
