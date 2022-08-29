@@ -5,6 +5,7 @@ channels:
   - defaults
 dependencies:
   - climateforcing
+  - ipywidgets
   - jupyter
   - matplotlib
   - nbstripout
