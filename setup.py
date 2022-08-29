@@ -27,7 +27,7 @@ REQUIREMENTS_DEPLOY = [
 ]  # plus conda
 
 requirements_dev = [
-    *["bandit", "black", "flake8", "isort"],
+    *["bandit", "black", "flake8", "isort", "pydocstyle"],
     *REQUIREMENTS_NOTEBOOKS,
     *REQUIREMENTS_TESTS,
     *REQUIREMENTS_DOCS,

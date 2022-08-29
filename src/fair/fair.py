@@ -1,3 +1,5 @@
+"""Finite-amplitude Impulse Response (FaIR) simple climate model."""
+
 import copy
 import os
 import warnings
@@ -40,6 +42,26 @@ DEFAULT_SPECIES_CONFIG_FILE = os.path.join(
 
 
 class FAIR:
+    """FaIR simple climate model [1]_, [2]_, [3]_.
+
+    References
+    ----------
+    .. [1] Leach, N. J., Jenkins, S., Nicholls, Z., Smith, C. J., Lynch, J.,
+        Cain, M., Walsh, T., Wu, B., Tsutsui, J., and Allen, M. R. (2021).
+        FaIRv2.0.0: a generalized impulse response model for climate uncertainty
+        and future scenario exploration. Geoscientific Model Development, 14,
+        3007–3036
+
+    .. [2] Smith, C. J., Forster, P. M.,  Allen, M., Leach, N., Millar, R. J.,
+        Passerello, G. A., and Regayre, L. A. (2018). FAIR v1.3: a simple
+        emissions-based impulse response and carbon cycle model, Geosci. Model
+        Dev., 11, 2273–2297
+
+    .. [3] Millar, R.J., Nicholls, Z.R., Friedlingstein, P., Allen, M.R. (2017).
+        A modified impulse-response representation of the global near-surface
+        air temperature and atmospheric concentration response to carbon dioxide
+        emissions. Atmospheric Chemistry and Physics, 17, 7213-7228.
+    """
     def __init__(
         self,
         n_gasboxes=4,
@@ -51,6 +73,39 @@ class FAIR:
         ch4_method="leach2021",
         temperature_prescribed=False,
     ):
+        """Initialise FaIR.
+
+        Parameters
+        ----------
+        n_gasboxes : int, default=4
+            the number of atmospheric greenhouse gas boxes to run the model with
+        n_layers : int, default=3
+            the number of ocean layers in the energy balance or impulse
+            response model to run with
+        iirf_max : float, default=100
+            limit for time-integral of greenhouse gas impulse response function.
+        br_cl_ods_potential : float, default=45
+            factor describing the ratio of efficiency that each bromine atom
+            has as an ozone depleting substance relative to each chlorine atom.
+        aci_method : str, default="smith2021"
+            method to use for calculating forcing from aerosol-cloud
+            interactions. Valid methods are smith2021, leach2021 and
+            stevens2015.
+        ghg_method : str, default="meinshausen2020"
+            method to use for calculating greenhouse gas forcing from CO2, CH4
+            and N2O. Valid methods are leach2021, meinshausen2020,
+            etminan2016 and myhre1998.
+        ch4_method : str, default="leach2021"
+            method to use for calculating methane lifetime change. Valid
+            methods are leach2021 and thornhill2021.
+        temperature_prescribed : bool, default=False
+            Run FaIR with temperatures prescribed.
+
+        Raises
+        ------
+        ValueError :
+            if aci_method, ghg_method or ch4_method given are not valid methods.
+        """
         self._aci_method = aci_method
         self._ghg_method = ghg_method
         self._ch4_method = ch4_method
@@ -66,6 +121,7 @@ class FAIR:
     # must be a less cumbsersome way to code this
     @property
     def aci_method(self):
+        """Return aerosol-cloud interactions forcing method."""
         return self._aci_method.lower()
 
     @aci_method.setter
@@ -79,6 +135,7 @@ class FAIR:
 
     @property
     def ch4_method(self):
+        """Return methane lifetime method."""
         return self._ch4_method.lower()
 
     @ch4_method.setter
@@ -92,6 +149,7 @@ class FAIR:
 
     @property
     def ghg_method(self):
+        """Return greenhouse gas forcing method."""
         return self._ghg_method.lower()
 
     @ghg_method.setter
@@ -109,6 +167,17 @@ class FAIR:
             )
 
     def define_time(self, start, end, step):
+        """Define timebounds vector to run FaIR.
+
+        Parameters
+        ----------
+        start : float
+            first timebound of the model (year)
+        end : float
+            last timebound of the model (year)
+        step : float
+            timestep (year)
+        """
         self.timebounds = np.arange(start, end + step / 2, step)
         self.timepoints = 0.5 * (self.timebounds[1:] + self.timebounds[:-1])
         self.timestep = step
@@ -116,14 +185,61 @@ class FAIR:
         self._n_timepoints = len(self.timepoints)
 
     def define_scenarios(self, scenarios):
+        """Define scenarios to analyse in FaIR.
+
+        Parameters
+        ----------
+        scenarios : list
+            scenario names to run
+        """
         self.scenarios = scenarios
         self._n_scenarios = len(scenarios)
 
     def define_configs(self, configs):
+        """Define configs to analyse in FaIR.
+
+        Parameters
+        ----------
+        configs : list
+            config names to run
+        """
         self.configs = configs
         self._n_configs = len(configs)
 
     def define_species(self, species, properties):
+        """Define species to run in FaIR.
+
+        Parameters
+        ----------
+        species : list
+            names of species to include in FaIR
+        properties : dict
+            mapping of each specie to particular run properties. This is a 
+            nested dict, which must contain the five required entries.
+
+        Example
+        -------
+        species = ['CO2', 'CFC-12']
+        properties = {
+            "CO2": {
+                "type": "co2",
+
+            }
+        }
+
+        Raises
+        ------
+        ValueError :
+            if a specie in species does not have a matching key in properties.
+        ValueError :
+            if an invalid species type is specified.
+        ValueError :
+            if an invalid input_type (driving mode) is provided for a particular
+            type.
+        ValueError :
+            if duplicate species types are provided for types that must be
+            unique.
+        """
         self.species = species
         self._n_species = len(species)
 
@@ -164,6 +280,7 @@ class FAIR:
                 )
 
     def allocate(self):
+        """Create `xarray`s of data input and output."""
         # check dimensions declared
         required_attributes_and_uncalled_method = {
             "_n_timepoints": "define_time()",

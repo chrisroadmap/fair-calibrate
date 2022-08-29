@@ -1,6 +1,4 @@
-"""
-General constants
-"""
+"""General constants."""
 
 import numpy as np
 

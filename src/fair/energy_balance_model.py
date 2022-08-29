@@ -1,3 +1,5 @@
+"""n-layer energy balance representation of Earth's climate."""
+
 import numpy as np
 import scipy.linalg
 import scipy.stats
@@ -5,7 +7,6 @@ import xarray as xr
 
 from .constants import DOUBLING_TIME_1PCT
 from .earth_params import earth_radius, seconds_per_year
-from .exceptions import IncompatibleConfigError
 
 
 class EnergyBalanceModel:
@@ -19,7 +20,6 @@ class EnergyBalanceModel:
 
     References
     ----------
-
     .. [1] Leach, N. J., Jenkins, S., Nicholls, Z., Smith, C. J., Lynch, J.,
         Cain, M., Walsh, T., Wu, B., Tsutsui, J., and Allen, M. R. (2021).
         FaIRv2.0.0: a generalized impulse response model for climate uncertainty
@@ -99,7 +99,6 @@ class EnergyBalanceModel:
             Estimation of Stochastic Energy Balance Model Parameters, Journal of
             Climate, 33(18), 7909-7926.
         """
-
         # adjust ocean heat capacity to be a rate: units W m-2 K-1
         self.ocean_heat_transfer = np.asarray(ocean_heat_transfer)
         self.deep_ocean_efficacy = deep_ocean_efficacy
@@ -111,11 +110,11 @@ class EnergyBalanceModel:
         self.ocean_heat_capacity = np.asarray(ocean_heat_capacity) / timestep
         self.n_temperature_boxes = len(self.ocean_heat_capacity)
         if len(self.ocean_heat_transfer) != self.n_temperature_boxes:
-            raise IncompatibleConfigError(
+            raise ValueError(
                 "ocean_heat_capacity and ocean_heat_transfer must be arrays of the same shape."
             )
         if self.n_temperature_boxes < 2:
-            raise IncompatibleConfigError(
+            raise ValueError(
                 "At least two ocean layers must be specified in the energy balance model."
             )
         self.temperature = np.zeros((1, self.n_temperature_boxes + 1))
@@ -199,6 +198,7 @@ class EnergyBalanceModel:
 
     @property
     def eb_matrix_d(self):
+        """Return the discretised matrix exponential."""
         _eb_matrix_d = scipy.linalg.expm(self._eb_matrix())
         return _eb_matrix_d
 
@@ -209,6 +209,7 @@ class EnergyBalanceModel:
 
     @property
     def forcing_vector_d(self):
+        """Return the discretised forcing vector."""
         return scipy.linalg.solve(
             self._eb_matrix(),
             (self.eb_matrix_d - np.identity(self.n_temperature_boxes + 1))
@@ -217,6 +218,7 @@ class EnergyBalanceModel:
 
     @property
     def stochastic_d(self):
+        """Return the stochastic matrix."""
         # define stochastic matrix
         _stochastic_d = np.zeros((self.n_timesteps, self.n_temperature_boxes + 1))
 
@@ -247,7 +249,7 @@ class EnergyBalanceModel:
         return _stochastic_d
 
     def impulse_response(self):
-        """Converts the energy balance to impulse response."""
+        """Convert the energy balance to impulse response representation."""
         eb_matrix = self._eb_matrix()
 
         # calculate the eigenvectors and eigenvalues on the energy balance
@@ -266,7 +268,7 @@ class EnergyBalanceModel:
         )
 
     def emergent_parameters(self, forcing_2co2_4co2_ratio=0.5):
-        """Calculates emergent parameters from the energy balance parameters.
+        """Calculate emergent parameters from the energy balance parameters.
 
         Parameters
         ----------
@@ -297,11 +299,21 @@ class EnergyBalanceModel:
         )
 
     def add_forcing(self, forcing, timestep):
+        """Add a forcing time series to EnergyBalanceModel.
+
+        Parameters
+        ----------
+        forcing : np.ndarray
+            time series of [effective] radiative forcing
+        timestep : float
+            Model timestep, in years
+        """
         self.forcing = forcing
         self.timestep = timestep
         self.n_timesteps = len(forcing)
 
     def run(self):
+        """Run the EnergyBalanceModel."""
         # internal variables
         n_box = self.n_matrix - 1
         forcing_vector = self._forcing_vector()
@@ -343,9 +355,9 @@ class EnergyBalanceModel:
         )
 
     def step_temperature(self, temperature_boxes_old, forcing):
-        """Timestep the temperature forward.
+        """Step the temperature calculation forward one timestep.
 
-        Unlike the `run` instance, this increments a single timestep, and should
+        Unlike the `run` method, this increments a single timestep, and should
         prevent inverting a matrix each time.
 
         Parameters
@@ -360,7 +372,6 @@ class EnergyBalanceModel:
         temperature_boxes_new : ndarray
             array of temperature boxes
         """
-
         # forcing_vector and eb_matrix should both be determininstic if not running stochastically
         # and we probably can't make this quick if we were
         # actually we probably can...
@@ -392,8 +403,43 @@ def multi_ebm(
 
     We have to use a for loop at is does not look like the linear algebra functions in scipy are naturally
     parallel.
-    """
 
+    Parameters
+    ----------
+    configs : list
+        A named list of climate configurations.
+    ocean_heat_capacity : `np.ndarray`
+        Ocean heat capacity of each layer (top first), W m-2 yr K-1
+    ocean_heat_transfer : `np.ndarray`
+        Heat exchange coefficient between ocean layers (top first). The
+        first element of this array is akin to the climate feedback
+        parameter, with the convention that stabilising feedbacks are
+        positive (opposite to most climate sensitivity literature).
+        W m-2 K-1
+    deep_ocean_efficacy : float
+        efficacy of deepest ocean layer. See e.g. [1]_.
+    stochastic_run : bool
+        Activate the stochastic variability component from [2]_.
+    sigma_eta : float
+        Standard deviation of stochastic forcing component from [2]_.
+    sigma_xi : float
+        Standard deviation of stochastic disturbance applied to surface
+        layer. See [2]_.
+    gamma_autocorrelation : float
+        Stochastic forcing continuous-time autocorrelation parameter.
+        See [2]_.
+    seed : int or None
+        Random seed to use for stochastic variability.
+    use_seed : bool
+        Whether or not to use the random seed.
+    forcing_4co2 : float
+        effective radiative forcing from a quadrupling of atmospheric
+        CO2 concentrations above pre-industrial.
+    timestep : float
+        Time interval of the model (yr)
+    timebounds : np.ndarray
+        Vector representing the time snapshots to calculate temperature on.
+    """
     n_configs = ocean_heat_capacity.shape[0]
     n_layers = ocean_heat_capacity.shape[1]
     n_timebounds = len(timebounds)
@@ -447,8 +493,26 @@ def multi_ebm(
 
 
 def step_temperature(state_old, eb_matrix_d, forcing_vector_d, stochastic_d, forcing):
-    """TODO: docstring"""
+    """Advance parallel energy balance models forward one timestep.
 
+    Parameters
+    ----------
+    state_old : np.ndarray
+        stacked arrays of forcing and temperature of layers in previous timestep
+    eb_matrix_d : np.ndarray
+        stacked discretised energy balance matrices
+    forcing_vector_d : np.ndarray
+        stacked discretised forcing vectors
+    _stochastic_d : np.ndarray
+        stacked matrices of stochastic internal variability
+    forcing: np.ndarray
+        stacked vectors of [effective] radiative forcing
+
+    Returns
+    -------
+    state_new : np.ndarray
+        stacked arrays of forcing and temperature of layers in this timestep
+    """
     state_new = (
         (eb_matrix_d[0, ...] @ state_old[0, ..., None])[..., 0]
         + forcing_vector_d[0, ...] * forcing[0, ..., 0, None]
@@ -464,7 +528,31 @@ def calculate_toa_imbalance_postrun(
     ocean_heat_transfer,
     deep_ocean_efficacy,
 ):
-    """TODO: docstring"""
+    """Calculate top of atmosphere energy imbalance.
+
+    The calculation is performed after the scenario has been run to avoid
+    looping, since no dynamic state changes affect the calculation.
+
+    Parameters
+    ----------
+    state : np.ndarray
+        stacked arrays of forcing and temperature of layers across the run
+    forcing : np.ndarray
+        stacked arrays of [effective] radiative forcing across the run
+    ocean_heat_transfer : np.ndarray
+        Heat exchange coefficient between ocean layers (top first). The
+        first element of this array is akin to the climate feedback
+        parameter, with the convention that stabilising feedbacks are
+        positive (opposite to most climate sensitivity literature).
+        W m-2 K-1
+    deep_ocean_efficacy : np.ndarray
+        efficacy of deepest ocean layer.
+
+    Returns
+    -------
+    toa_imbalance : np.ndarray
+        Top of atmsophere energy imbalance.
+    """
     toa_imbalance = (
         forcing
         - ocean_heat_transfer[..., 0] * state[..., 1]

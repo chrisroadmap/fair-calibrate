@@ -1,6 +1,4 @@
-"""
-Tempting to call these constants, but they are not
-"""
+"""Parameters (not constants) that define Earth properties."""
 
 molecular_weight_air = 28.97  # g/mol
 earth_radius = 6371000  # m
