@@ -3,6 +3,7 @@ Module for a generic linear emissions to forcing calculation.
 """
 
 import numpy as np
+
 from ..constants import SPECIES_AXIS
 
 

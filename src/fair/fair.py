@@ -4,20 +4,17 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 from scipy.interpolate import interp1d
 from tqdm.auto import tqdm
-import xarray as xr
 
-from .constants import TIME_AXIS, SPECIES_AXIS, GASBOX_AXIS
+from .constants import GASBOX_AXIS, SPECIES_AXIS, TIME_AXIS
 from .earth_params import earth_radius, mass_atmosphere, seconds_per_year
-from .energy_balance_model import (
-    step_temperature,
-    calculate_toa_imbalance_postrun,
-    multi_ebm,
-)
+from .energy_balance_model import (calculate_toa_imbalance_postrun, multi_ebm,
+                                   step_temperature)
+from .forcing.aerosol.erfaci import leach2021aci, smith2021, stevens2015
 from .forcing.aerosol.erfari import calculate_erfari_forcing
-from .forcing.aerosol.erfaci import stevens2015, smith2021, leach2021aci
-from .forcing.ghg import myhre1998, etminan2016, meinshausen2020, leach2021ghg
+from .forcing.ghg import etminan2016, leach2021ghg, meinshausen2020, myhre1998
 from .forcing.minor import calculate_linear_forcing
 from .forcing.ozone import thornhill2021
 from .gas_cycle import calculate_alpha
@@ -26,15 +23,11 @@ from .gas_cycle.eesc import calculate_eesc
 from .gas_cycle.forward import step_concentration
 from .gas_cycle.inverse import unstep_concentration
 from .interface import fill
-from .structure.species import species_types, valid_input_modes, multiple_allowed
-from .structure.units import (
-    prefix_convert,
-    compound_convert,
-    time_convert,
-    mixing_ratio_convert,
-    desired_emissions_units,
-    desired_concentration_units,
-)
+from .structure.species import (multiple_allowed, species_types,
+                                valid_input_modes)
+from .structure.units import (compound_convert, desired_concentration_units,
+                              desired_emissions_units, mixing_ratio_convert,
+                              prefix_convert, time_convert)
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 DEFAULT_SPECIES_CONFIG_FILE = os.path.join(

@@ -1,18 +1,8 @@
+import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as pl
-
-from fair21 import (
-    SpeciesID,
-    SpeciesConfig,
-    Category,
-    Config,
-    Species,
-    RunMode,
-    Scenario,
-    ClimateResponse,
-    FAIR,
-)
+from fair21 import (FAIR, Category, ClimateResponse, Config, RunMode, Scenario,
+                    Species, SpeciesConfig, SpeciesID)
 from fair21.defaults import species_config_from_default
 
 species_ids = {

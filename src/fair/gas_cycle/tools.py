@@ -4,6 +4,7 @@ Tools for the FaIR gas cycle.
 
 import numpy as np
 
+
 # This is now somewhat redundant
 def lifetime_to_iirf_0(lifetime, iirf_horizon=100):
     """Converts greenhouse gas lifetime to time-integrated airborne fraction.

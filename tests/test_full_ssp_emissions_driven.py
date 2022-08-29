@@ -1,18 +1,9 @@
 # this will eventally be split up and become the testing Module
+import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as pl
-
-from fair21 import (
-    SpeciesID,
-    Category,
-    Config,
-    Species,
-    RunMode,
-    Scenario,
-    ClimateResponse,
-    FAIR,
-)
+from fair21 import (FAIR, Category, ClimateResponse, Config, RunMode, Scenario,
+                    Species, SpeciesID)
 from fair21.defaults import species_config_from_default
 
 # top level

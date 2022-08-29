@@ -3,6 +3,7 @@ Alternative methane lifetime definition that is based on multiple species.
 """
 
 import numpy as np
+
 from ..constants import SPECIES_AXIS
 
 # import warnings

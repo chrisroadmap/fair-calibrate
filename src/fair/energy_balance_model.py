@@ -4,8 +4,8 @@ import scipy.stats
 import xarray as xr
 
 from .constants import DOUBLING_TIME_1PCT
-from .exceptions import IncompatibleConfigError
 from .earth_params import earth_radius, seconds_per_year
+from .exceptions import IncompatibleConfigError
 
 
 class EnergyBalanceModel:
