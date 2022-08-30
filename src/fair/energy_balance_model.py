@@ -12,6 +12,7 @@ from .earth_params import earth_radius, seconds_per_year
 
 class EnergyBalanceModel:
     """Energy balance model that converts forcing to temperature.
+
     The energy balance model is converted to an impulse-response formulation
     (hence the IR part of FaIR) to allow efficient evaluation. The benefits of
     this are increased as once derived, the "layers" of the energy balance
@@ -52,6 +53,7 @@ class EnergyBalanceModel:
         n_timesteps=1,
     ):
         """Initialise the EnergyBalanceModel.
+
         Parameters
         ----------
         ocean_heat_capacity : `np.ndarray`
@@ -120,6 +122,7 @@ class EnergyBalanceModel:
 
     def _eb_matrix(self):
         """Define the matrix of differential equations.
+
         Returns
         -------
         eb_matrix_eigenvalues : `np.ndarray`
@@ -264,6 +267,7 @@ class EnergyBalanceModel:
 
     def emergent_parameters(self, forcing_2co2_4co2_ratio=0.5):
         """Calculate emergent parameters from the energy balance parameters.
+
         Parameters
         ----------
         forcing_2co2_4co2_ratio : float
@@ -294,6 +298,7 @@ class EnergyBalanceModel:
 
     def add_forcing(self, forcing, timestep):
         """Add a forcing time series to EnergyBalanceModel.
+
         Parameters
         ----------
         forcing : np.ndarray
@@ -364,9 +369,11 @@ def multi_ebm(
     timebounds,
 ):
     """Create several instances of the EnergyBalanceModel.
+
     This allows efficient parallel implementation in FaIR.
     We have to use a for loop in this function as is does not look like the linear
     algebra functions in scipy are naturally parallel.
+
     Parameters
     ----------
     configs : list
@@ -457,6 +464,7 @@ def multi_ebm(
 
 def step_temperature(state_old, eb_matrix_d, forcing_vector_d, stochastic_d, forcing):
     """Advance parallel energy balance models forward one timestep.
+
     Parameters
     ----------
     state_old : np.ndarray
@@ -469,6 +477,7 @@ def step_temperature(state_old, eb_matrix_d, forcing_vector_d, stochastic_d, for
         stacked matrices of stochastic internal variability
     forcing: np.ndarray
         stacked vectors of [effective] radiative forcing
+
     Returns
     -------
     state_new : np.ndarray
@@ -492,6 +501,7 @@ def calculate_toa_imbalance_postrun(
     """Calculate top of atmosphere energy imbalance.
     The calculation is performed after the scenario has been run to avoid
     looping, since no dynamic state changes affect the calculation.
+
     Parameters
     ----------
     state : np.ndarray
@@ -506,6 +516,7 @@ def calculate_toa_imbalance_postrun(
         W m-2 K-1
     deep_ocean_efficacy : np.ndarray
         efficacy of deepest ocean layer.
+        
     Returns
     -------
     toa_imbalance : np.ndarray
