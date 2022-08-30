@@ -261,7 +261,7 @@ def meinshausen2020(
         + b1 * (co2[where_central] - co2_base[where_central])
     )
     alpha_p[where_low] = d1
-    alpha_p[where_high] = d1 - b1 ** 2 / (4 * a1)
+    alpha_p[where_high] = d1 - b1**2 / (4 * a1)
     alpha_n2o = c1 * np.sqrt(n2o)
     erf_out[..., co2_indices] = (
         (alpha_p + alpha_n2o)

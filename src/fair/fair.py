@@ -1983,7 +1983,7 @@ class FAIR:
         # 18. Ocean heat content change
         ocean_heat_content_change_array = (
             np.cumsum(toa_imbalance_array * self.timestep, axis=TIME_AXIS)
-            * earth_radius ** 2
+            * earth_radius**2
             * 4
             * np.pi
             * seconds_per_year
