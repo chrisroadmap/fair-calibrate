@@ -2,6 +2,7 @@
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
+
 from fair21 import (
     FAIR,
     Category,
