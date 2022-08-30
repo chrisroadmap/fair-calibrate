@@ -499,6 +499,7 @@ def calculate_toa_imbalance_postrun(
     deep_ocean_efficacy,
 ):
     """Calculate top of atmosphere energy imbalance.
+    
     The calculation is performed after the scenario has been run to avoid
     looping, since no dynamic state changes affect the calculation.
 
