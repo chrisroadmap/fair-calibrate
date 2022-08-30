@@ -155,16 +155,8 @@ time_convert = {
         "day": 1 / (seconds_per_year / 3600 / 24),
         "s": 1 / seconds_per_year,
     },
-    "day": {
-        "yr": seconds_per_year / 3600 / 24,
-        "day": 1,
-        "s": 3600 * 24,
-    },
-    "s": {
-        "yr": seconds_per_year,
-        "day": 1 / 3600 / 24,
-        "s": 1,
-    },
+    "day": {"yr": seconds_per_year / 3600 / 24, "day": 1, "s": 3600 * 24,},
+    "s": {"yr": seconds_per_year, "day": 1 / 3600 / 24, "s": 1,},
 }
 
 
@@ -196,19 +188,7 @@ prefix_convert = {
 }
 
 mixing_ratio_convert = {
-    "ppm": {
-        "ppm": 1,
-        "ppb": 1000,
-        "ppt": 1e6,
-    },
-    "ppb": {
-        "ppm": 0.001,
-        "ppb": 1,
-        "ppt": 1000,
-    },
-    "ppt": {
-        "ppm": 1e-6,
-        "ppb": 0.001,
-        "ppt": 1,
-    },
+    "ppm": {"ppm": 1, "ppb": 1000, "ppt": 1e6,},
+    "ppb": {"ppm": 0.001, "ppb": 1, "ppt": 1000,},
+    "ppt": {"ppm": 1e-6, "ppb": 0.001, "ppt": 1,},
 }

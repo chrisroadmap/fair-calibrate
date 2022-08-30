@@ -226,7 +226,7 @@ class EnergyBalanceModel:
         if self.stochastic_run:
             eb_matrix = self._eb_matrix()
             q_mat = np.zeros((self.n_matrix, self.n_matrix))
-            q_mat[0, 0] = self.sigma_eta**2
+            q_mat[0, 0] = self.sigma_eta ** 2
             q_mat[1, 1] = (self.sigma_xi / self.ocean_heat_capacity[0]) ** 2
             ## use Van Loan (1978) to compute the matrix exponential
             h_mat = np.zeros((self.n_matrix * 2, self.n_matrix * 2))
@@ -348,7 +348,7 @@ class EnergyBalanceModel:
         self.ocean_heat_content_change = np.cumsum(
             self.toa_imbalance
             * self.timestep
-            * earth_radius**2
+            * earth_radius ** 2
             * 4
             * np.pi
             * seconds_per_year
@@ -523,10 +523,7 @@ def step_temperature(state_old, eb_matrix_d, forcing_vector_d, stochastic_d, for
 
 
 def calculate_toa_imbalance_postrun(
-    state,
-    forcing,
-    ocean_heat_transfer,
-    deep_ocean_efficacy,
+    state, forcing, ocean_heat_transfer, deep_ocean_efficacy,
 ):
     """Calculate top of atmosphere energy imbalance.
 

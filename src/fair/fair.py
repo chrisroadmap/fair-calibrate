@@ -12,8 +12,11 @@ from tqdm.auto import tqdm
 
 from .constants import GASBOX_AXIS, SPECIES_AXIS, TIME_AXIS
 from .earth_params import earth_radius, mass_atmosphere, seconds_per_year
-from .energy_balance_model import (calculate_toa_imbalance_postrun, multi_ebm,
-                                   step_temperature)
+from .energy_balance_model import (
+    calculate_toa_imbalance_postrun,
+    multi_ebm,
+    step_temperature,
+)
 from .forcing.aerosol.erfaci import leach2021aci, smith2021, stevens2015
 from .forcing.aerosol.erfari import calculate_erfari_forcing
 from .forcing.ghg import etminan2016, leach2021ghg, meinshausen2020, myhre1998
@@ -25,11 +28,15 @@ from .gas_cycle.eesc import calculate_eesc
 from .gas_cycle.forward import step_concentration
 from .gas_cycle.inverse import unstep_concentration
 from .interface import fill
-from .structure.species import (multiple_allowed, species_types,
-                                valid_input_modes)
-from .structure.units import (compound_convert, desired_concentration_units,
-                              desired_emissions_units, mixing_ratio_convert,
-                              prefix_convert, time_convert)
+from .structure.species import multiple_allowed, species_types, valid_input_modes
+from .structure.units import (
+    compound_convert,
+    desired_concentration_units,
+    desired_emissions_units,
+    mixing_ratio_convert,
+    prefix_convert,
+    time_convert,
+)
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 DEFAULT_SPECIES_CONFIG_FILE = os.path.join(
@@ -62,6 +69,7 @@ class FAIR:
         air temperature and atmospheric concentration response to carbon dioxide
         emissions. Atmospheric Chemistry and Physics, 17, 7213-7228.
     """
+
     def __init__(
         self,
         n_gasboxes=4,
@@ -1918,7 +1926,7 @@ class FAIR:
         # 18. Ocean heat content change
         ocean_heat_content_change_array = (
             np.cumsum(toa_imbalance_array * self.timestep, axis=TIME_AXIS)
-            * earth_radius**2
+            * earth_radius ** 2
             * 4
             * np.pi
             * seconds_per_year

@@ -171,12 +171,7 @@ def smith2021(
 
 
 def stevens2015(
-    emissions,
-    baseline_emissions,
-    forcing_scaling,
-    scale,
-    shape_sulfur,
-    sulfur_index,
+    emissions, baseline_emissions, forcing_scaling, scale, shape_sulfur, sulfur_index,
 ):
     """Calculate effective radiative forcing from aerosol-cloud interactions.
 
