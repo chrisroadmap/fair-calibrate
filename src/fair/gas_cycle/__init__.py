@@ -1,6 +1,4 @@
-"""
-Module containing gas cycle functions
-"""
+"""Module containing gas cycle functions."""
 
 import warnings
 
@@ -60,7 +58,6 @@ def calculate_alpha(
     alpha : float
         scaling factor for lifetimes
     """
-
     iirf = (
         iirf_0
         + iirf_uptake * (cumulative_emissions - airborne_emissions)

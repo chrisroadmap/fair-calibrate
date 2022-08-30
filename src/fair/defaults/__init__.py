@@ -1,3 +1,1 @@
-"""
-Module for defaults
-"""
+"""Module for defaults."""

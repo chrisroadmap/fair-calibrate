@@ -1,3 +1,5 @@
+"""Tools for getting data into and out of FaIR."""
+
 import os
 
 import pandas as pd
@@ -78,10 +80,10 @@ _default_ghg_and_slcfs = [
 
 
 def read_properties(filename=DEFAULT_PROPERTIES_FILE, species=None):
-    """Gets a properties file.
+    """Get a properties file.
 
-    Inputs
-    ------
+    Parameters
+    ----------
     filename : str, optional
         path to a csv file. Default is an AR6 WG1-like config for FaIR
         covering all of the species considered in CMIP6.
@@ -97,7 +99,6 @@ def read_properties(filename=DEFAULT_PROPERTIES_FILE, species=None):
     properties : dict
         species properties that control the FaIR run
     """
-
     df = pd.read_csv(filename, index_col=0)
 
     if species is None:

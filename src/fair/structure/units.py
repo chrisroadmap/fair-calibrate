@@ -1,3 +1,5 @@
+"""Define species units and conversions."""
+
 # These are the emissions units that FaIR expects. One can specify emissions in
 # a different unit; in the rcmip files they will get converted automatically.
 # You are not required to use these species names, but sticking to these will

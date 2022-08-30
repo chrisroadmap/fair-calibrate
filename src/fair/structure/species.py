@@ -1,3 +1,5 @@
+"""Define the types of beasts in FaIR, how they roar, and whether they are friendly."""
+
 species_types = [
     "co2 ffi",
     "co2 afolu",

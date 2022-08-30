@@ -1,3 +1,5 @@
+"""Module for calculating forcing from aerosol-radiation interactions."""
+
 import numpy as np
 
 from ...constants import SPECIES_AXIS
@@ -13,8 +15,7 @@ def calculate_erfari_forcing(
     emissions_indices,
     concentration_indices,
 ):
-    """
-    Calculate effective radiative forcing from aerosol-radiation interactions.
+    """Calculate effective radiative forcing from aerosol-radiation interactions.
 
     Inputs
     ------
@@ -43,7 +44,6 @@ def calculate_erfari_forcing(
     effective_radiative_forcing : ndarray
         effective radiative forcing (W/m2) from aerosol-radiation interactions
     """
-
     erf_out = np.ones_like(emissions) * np.nan
 
     # emissions-driven forcers

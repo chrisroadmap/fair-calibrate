@@ -1,6 +1,4 @@
-"""
-Module for ozone forcing
-"""
+"""Module for ozone forcing."""
 
 import numpy as np
 
@@ -14,13 +12,10 @@ def thornhill2021(
     baseline_concentration,
     forcing_scaling,
     ozone_radiative_efficiency,
-    # temperature,
-    # temperature_feedback,
     slcf_indices,
     ghg_indices,
 ):
-
-    """Determines ozone effective radiative forcing.
+    """Determine ozone effective radiative forcing.
 
     Calculates total ozone forcing from precursor emissions and
     concentrations based on AerChemMIP and CMIP6 Historical behaviour in
@@ -30,42 +25,25 @@ def thornhill2021(
 
     Parameters
     ----------
-    emissions : ndarry
+    emissions : ndarray
         emissions in timestep
     concentration: ndarray
         concentrations in timestep
-    pre_industrial_emissions : ndarray
-        pre-industrial emissions
-    pre_industrial_concentration : ndarray
-        pre-industrial concentrations
-    fractional_release : ndarray
-        fractional release describing the proportion of available ODS that
-        actually contributes to ozone depletion.
-    cl_atoms : ndarray
-        Chlorine atoms in each species
-    br_atoms : ndarray
-        Bromine atoms in each species
+    baseline_emissions : ndarray
+        reference, possibly pre-industrial, emissions
+    baseline_concentration : ndarray
+        reference, possibly pre-industrial, concentrations
     forcing_scaling : ndarray
         scaling of the calculated radiative forcing (e.g. for conversion to
         effective radiative forcing and forcing uncertainty).
-    radiative_efficiency : ndarray
+    ozone_radiative_efficiency : ndarray
         the radiative efficiency at which ozone precursor emissions or
         concentrations are converted to ozone radiative forcing. The unit is
         W m-2 (<native emissions or concentration unit>)-1, where the
         emissions unit is usually Mt/yr for short-lived forcers, ppb for CH4
         and N2O concentrations, and ppt for halogenated species. Note this is
-        not the same radiative efficiency that is used in the ghg forcing.
-    species_index_mapping : ndarray
-        provides a mapping of which gas corresponds to which array index along
-        the SPECIES_AXIS.
-    temperature : ndarray or float
-        global mean surface temperature anomaly used to calculate the feedback.
-        In the forward model this will be one timestep behind; a future TODO
-        could be to iterate this.
-    temperature_feedback : float
-        temperature feedback on ozone forcing (W m-2 K-1)
-    br_cl_ratio : float, default=45
-        how much more effective bromine is as an ozone depletor than chlorine.
+        not the same radiative efficiency that is used in converting GHG concentrations
+        to forcing.
     slcf_indices : list of int
         provides a mapping of which aerosol species corresponds to which emitted
         species index along the SPECIES_AXIS.
@@ -75,8 +53,8 @@ def thornhill2021(
 
     Returns
     -------
-    erf_ozone : dict
-        ozone forcing due to each component, and in total.
+    _erf_out : ndarray
+        ozone forcing
 
     References
     ----------
@@ -100,9 +78,7 @@ def thornhill2021(
         Cain, M., Walsh, T., Wu, B., Tsutsui, J., Allen, M.R. (2021). FaIRv2.0.0:
         a generalized impulse response model for climate uncertainty and future
         scenario exploration, Geoscientific Model Development, 14, 3007–3036.
-
     """
-
     array_shape = emissions.shape
     n_timesteps, n_scenarios, n_configs, n_species = array_shape
 
@@ -128,13 +104,7 @@ def thornhill2021(
         axis=SPECIES_AXIS,
     )
 
-    # Temperature feedback
-    # print(temperature_feedback.shape)
-    # print(temperature.shape)
-    # print(_erf.shape)
-    # print(np.sum(_erf[:, :, :, :3], axis=SPECIES_AXIS, keepdims=True).shape)
-    # W m-2 K-1 * K = W m-2
-    # _erf[:, :, :, 2:3] = (temperature_feedback * temperature)
-    # print(_erf[0,0,0,:])
+    # Temperature feedback has been moved later in the code
+
     erf_out = np.sum(_erf, axis=SPECIES_AXIS, keepdims=True)
     return erf_out

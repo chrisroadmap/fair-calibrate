@@ -1,3 +1,5 @@
+"""Module for forcing from aerosol-cloud interactions."""
+
 import numpy as np
 
 from ...constants import SPECIES_AXIS
@@ -43,7 +45,7 @@ def leach2021aci(
 
     Returns
     -------
-    effective_radiative_forcing : ndarray
+    erf_out : ndarray
         effective radiative forcing (W/m2) from aerosol-cloud interactions
 
     References
@@ -53,7 +55,6 @@ def leach2021aci(
         a generalized impulse response model for climate uncertainty and future
         scenario exploration, Geoscientific Model Development, 14, 3007–3036.
     """
-
     # this allows us to run single forced
     array_shape = emissions.shape
     n_timesteps, n_scenarios, n_configs, n_species = array_shape
@@ -92,10 +93,10 @@ def smith2021(
     bc_index,
     oc_index,
 ):
-    """Calculate effective radiative forcing from aerosol-cloud interactions.
+    r"""Calculate effective radiative forcing from aerosol-cloud interactions.
 
     This uses the relationship to calculate ERFaci described in Smith et al.
-    (2021).
+    (2021) [1]_ and is related to the "ghan2" relationship in FaIR1.6 [2]_.
 
     Inputs
     ------
@@ -131,8 +132,8 @@ def smith2021(
     retain the singleton dimension in order to preserve clarity of
     calculation and speed.
 
-    The Smith et al. (2018) [1]_ relationship as formulated more explicitly in
-    Smith et al. (2021) [2]_ is
+    The Smith et al. (2018) [2]_ relationship as formulated more explicitly in
+    Smith et al. (2021) [1]_ is
 
     :math: F_{aci} = -\beta \log \left \frac{E_{SO2}}{s_{SO2}} + \frac{E_{BC+OC}}{s_{BC+OC}} + 1 \right
 
@@ -140,18 +141,17 @@ def smith2021(
 
     References
     ----------
-    .. [1] Smith, C. J., Forster, P. M.,  Allen, M., Leach, N., Millar, R. J.,
-        Passerello, G. A., and Regayre, L. A. (2018). FAIR v1.3: a simple
-        emissions-based impulse response and carbon cycle model, Geosci. Model
-        Dev., 11, 2273–2297
-
-    .. [2] Smith, C. J., Harris, G. R., Palmer, M. D., Bellouin, N., Collins,
+    .. [1] Smith, C. J., Harris, G. R., Palmer, M. D., Bellouin, N., Collins,
         W., Myhre, G., Schulz, M., Golaz, J.-C., Ringer, M., Storelvmo, T.,
         Forster, P. M. (2021). Energy budget constraints on the time history of
         aerosol forcing and climate sensitivity. Journal of Geophysical
         Research: Atmospheres, 126, e2020JD033622.
-    """
 
+    .. [2] Smith, C. J., Forster, P. M.,  Allen, M., Leach, N., Millar, R. J.,
+        Passerello, G. A., and Regayre, L. A. (2018). FAIR v1.3: a simple
+        emissions-based impulse response and carbon cycle model, Geosci. Model
+        Dev., 11, 2273–2297
+    """
     sulfur = emissions[..., sulfur_index]
     sulfur_base = baseline_emissions[..., sulfur_index]
     bc = emissions[..., bc_index]
@@ -173,9 +173,9 @@ def smith2021(
 def stevens2015(
     emissions, baseline_emissions, forcing_scaling, scale, shape_sulfur, sulfur_index,
 ):
-    """Calculate effective radiative forcing from aerosol-cloud interactions.
+    r"""Calculate effective radiative forcing from aerosol-cloud interactions.
 
-    This uses the relationship to calculate ERFaci described in Stevens (2015).
+    This uses the relationship to calculate ERFaci described in Stevens (2015) [1]_.
 
     Inputs
     ------
@@ -200,7 +200,6 @@ def stevens2015(
 
     Notes
     -----
-
     The Stevens (2015) [1]_ relationship is the second term of their eq. (1):
 
     :math: F_{aci} = -\beta \log \left \frac{E_{SO2}}{s_{SO2}} + 1 \right
@@ -210,7 +209,6 @@ def stevens2015(
     .. [1] Stevens, B. (2015). Rethinking the Lower Bound on Aerosol Radiative
         Forcing, Journal of Climate, 28(12), 4794-4819.
     """
-
     sulfur = emissions[..., sulfur_index]
     sulfur_base = baseline_emissions[..., sulfur_index]
 

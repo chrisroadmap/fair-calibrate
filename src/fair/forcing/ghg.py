@@ -1,3 +1,5 @@
+"""Module for greenhouse gas forcing."""
+
 import numpy as np
 
 from ..constants import SPECIES_AXIS
@@ -92,7 +94,6 @@ def etminan2016(
         significant revision of the methane radiative forcing, Geophysical
         Research Letters, 43, 12,614–12,623.
     """
-
     erf_out = np.ones_like(concentration) * np.nan
 
     # easier to deal with smaller arrays
@@ -240,7 +241,6 @@ def meinshausen2020(
         significant revision of the methane radiative forcing, Geophysical
         Research Letters, 43, 12,614–12,623.
     """
-
     erf_out = np.ones_like(concentration) * np.nan
 
     # easier to deal with smaller arrays
@@ -360,7 +360,6 @@ def myhre1998(
         estimates or radiative forcing due to well mixed greenhouse gases.
         Geophysical Research Letters, 25 (14), 2715-2718.
     """
-
     def ch4_n2o_overlap(ch4, n2o, alpha_ch4_n2o, a1, exp1, a2, exp2):
         return alpha_ch4_n2o * np.log(
             1 + a1 * (ch4 * n2o) ** exp1 + a2 * ch4 * (ch4 * n2o) ** exp2
@@ -482,7 +481,6 @@ def leach2021ghg(
         significant revision of the methane radiative forcing, Geophysical
         Research Letters, 43, 12,614–12,623.
     """
-
     erf_out = np.ones_like(concentration) * np.nan
 
     # easier to deal with smaller arrays

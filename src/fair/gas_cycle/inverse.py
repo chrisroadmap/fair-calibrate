@@ -1,6 +1,4 @@
-"""
-Module for inverting concentrations.
-"""
+"""Module for deriving emissions from concentration."""
 
 import numpy as np
 
@@ -20,7 +18,7 @@ def unstep_concentration(
     timestep,
 ):
     """
-    Calculates emissions from concentrations of any greenhouse gas.
+    Calculate emissions from concentrations of any greenhouse gas.
 
     Parameters
     ----------
@@ -77,7 +75,6 @@ def unstep_concentration(
         airborne emissions (concentrations above pre-industrial control level)
         at the end of the timestep.
     """
-
     decay_rate = timestep / (alpha_lifetime * lifetime)  # [1]
     decay_factor = np.exp(-decay_rate)  # [1]
 

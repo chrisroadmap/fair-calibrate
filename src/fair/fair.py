@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 from tqdm.auto import tqdm
 
 from .constants import GASBOX_AXIS, SPECIES_AXIS, TIME_AXIS
-from .earth_params import earth_radius, mass_atmosphere, seconds_per_year
+from .earth_params import earth_radius, mass_atmosphere, molecular_weight_air, seconds_per_year
 from .energy_balance_model import (
     calculate_toa_imbalance_postrun,
     multi_ebm,
@@ -222,18 +222,8 @@ class FAIR:
         species : list
             names of species to include in FaIR
         properties : dict
-            mapping of each specie to particular run properties. This is a 
+            mapping of each specie to particular run properties. This is a
             nested dict, which must contain the five required entries.
-
-        Example
-        -------
-        species = ['CO2', 'CFC-12']
-        properties = {
-            "CO2": {
-                "type": "co2",
-
-            }
-        }
 
         Raises
         ------
@@ -582,6 +572,14 @@ class FAIR:
         )
 
     def fill_species_configs(self, filename=DEFAULT_SPECIES_CONFIG_FILE):
+        """Fill the species_configs with values from a CSV file.
+
+        Parameters
+        ----------
+        filename : str, optional
+            Path of the CSV file to read the species configs from. If omitted, the
+            default configs file will be read.
+        """
         df = pd.read_csv(filename, index_col=0)
         for specie in self.species:
             fill(
@@ -735,6 +733,26 @@ class FAIR:
 
     # greenhouse gas convenience functions
     def calculate_iirf0(self, iirf_horizon=100):
+        r"""Convert greenhouse gas lifetime to time-integrated airborne fraction.
+
+        iirf_0 is the 100-year time-integrated airborne fraction to a pulse
+        emission. We know that the gas's atmospheric airborne fraction $a(t)$ for a
+        gas with lifetime $\tau$ after time $t$ is therefore
+
+        $a(t) = \exp(-t/tau)$
+
+        and integrating this for 100 years after a pulse emissions gives us:
+
+        $r_0(t) = \int_0^{100} \exp(-t/\tau) dt = \tau (1 - \exp (-100 / \tau))$.
+
+        100 years is the default time horizon in FaIR but this can be set to any
+        value.
+
+        Parameters
+        ----------
+        iirf_horizon : float, optional, default=100
+            time horizon for time-integrated airborne fraction (yr).
+        """
         gasbox_axis = self.species_configs["partition_fraction"].get_axis_num("gasbox")
         self.species_configs["iirf_0"] = np.sum(
             self.species_configs["unperturbed_lifetime"]
@@ -744,6 +762,7 @@ class FAIR:
         )
 
     def calculate_g(self, iirf_horizon=100):
+        """Calculate lifetime scaling parameters."""
         gasbox_axis = self.species_configs["partition_fraction"].get_axis_num("gasbox")
         self.species_configs["g1"] = np.sum(
             self.species_configs["partition_fraction"]
@@ -772,8 +791,9 @@ class FAIR:
         )
 
     def calculate_concentration_per_emission(
-        self, mass_atmosphere=5.1352e18, molecular_weight_air=28.97
+        self, mass_atmosphere=mass_atmosphere, molecular_weight_air=molecular_weight_air
     ):
+        """Calculate change in atmospheric concentration for each unit emission."""
         self.species_configs["concentration_per_emission"] = 1 / (
             mass_atmosphere
             / 1e18
@@ -782,6 +802,7 @@ class FAIR:
         )
 
     def fill_from_rcmip(self):
+        """Fill emissions, concentrations and/or forcing from RCMIP scenarios."""
         # lookup converting FaIR default names to RCMIP names
         species_to_rcmip = {specie: specie.replace("-", "") for specie in self.species}
         species_to_rcmip["CO2 FFI"] = "CO2|MAGICC Fossil and Industrial"
@@ -1362,6 +1383,15 @@ class FAIR:
         )
 
     def run(self, progress=True, suppress_warnings=True):
+        """Run the FaIR model.
+
+        Parameters
+        ----------
+        progress : bool, optional, default=True
+            Display progress bar.
+        suppress_warnings : bool, optional, default=True
+            Hide warnings relating to covariance in energy balance matrix.
+        """
         self._check_properties()
         self._make_indices()
         if self._routine_flags["temperature"]:

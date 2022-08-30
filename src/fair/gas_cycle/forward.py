@@ -1,6 +1,4 @@
-"""
-Module for the forward (emissions to concentration) model.
-"""
+"""Module for the forward (emissions to concentration) model."""
 
 import warnings
 
@@ -21,8 +19,7 @@ def step_concentration(
     partition_fraction,
     timestep,
 ):
-    """
-    Calculates concentrations from emissions of any greenhouse gas.
+    """Calculate concentrations from emissions of any greenhouse gas.
 
     Parameters
     ----------
@@ -76,7 +73,6 @@ def step_concentration(
         airborne emissions (concentrations above pre-industrial control level)
         at the end of the timestep.
     """
-
     decay_rate = timestep / (alpha_lifetime * lifetime)
     decay_factor = np.exp(-decay_rate)
 

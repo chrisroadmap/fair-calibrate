@@ -1,3 +1,5 @@
+"""Module for calculaing equivalent effective stratospheric chlorine."""
+
 import numpy as np
 
 from ..constants import SPECIES_AXIS
@@ -40,8 +42,11 @@ def calculate_eesc(
     -------
     eesc_out : ndarray
         equivalent effective stratospheric chlorine
-    """
 
+    Notes
+    -----
+    At present, CFC-11 must be provided in the scenario, with species type cfc-11.
+    """
     # EESC is in terms of CFC11-eq
     cfc11_fr = fractional_release[:, :, :, cfc_11_index]
     eesc_out = np.nansum(
