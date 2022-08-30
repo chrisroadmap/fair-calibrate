@@ -2,9 +2,9 @@ name: Continuous integration
 
 on:
   push:
-    branches: [ "repo-cleanup" ]
+    branches: [ "main", "repo-cleanup" ]
   pull_request:
-    branches: [ "repo-cleanup" ]
+    branches: [ "main", "repo-cleanup" ]
 
 # template mostly borrowed from openscm-runner
 # https://github.com/openscm/openscm-runner
