@@ -4,8 +4,9 @@ data/netcdf-scm/*.zip
 data/rcmip/
 data/parameter_sets/
 data/forcing/*.nc
-data/ar6_ensemble_batches/
+data/ar6_ensemble_batches/*
 data/edgar-4.3.2/
+!data/ar6_ensemble_batches/final_ebm3.csv
 
 # OS files
 .DS_Store
