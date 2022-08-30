@@ -138,7 +138,7 @@ for iscen, scenario in enumerate(scenarios_to_include):
     list_of_species.append(Species(species_ids['solar'], forcing=solar_forcing))
     list_of_species.append(Species(species_ids['volcanic'], forcing=volcanic_forcing))
 
-df = pd.read_csv("data/calibration/4xCO2_cummins.csv")
+df = pd.read_csv("data/calibration/4xCO2_cummins_ebm3.csv")
 models = df['model'].unique()
 
 params = {}

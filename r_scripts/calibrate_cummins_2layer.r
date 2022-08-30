@@ -1,7 +1,7 @@
 # Goes through each of the models in turn and tunes the parameters of the
-# Cummins three layer model.
+# Cummins two layer model.
 #
-# It will produce an output csv table of Cummins three layer parameters, which
+# It will produce an output csv table of Cummins two layer parameters, which
 # we will then put in impulse-response form for FaIR.
 #
 # References:
@@ -19,18 +19,18 @@ library(EBM)
 input_data = read.csv("../data/cmip6-hbf/4xCO2.csv")
 
 # Initial guess for parameter values
-inits3 <- list(
+inits2 <- list(
 	gamma = 2,
-	C = c(5, 20, 100),
-	kappa = c(1, 2, 1),
-	epsilon = 1,
+	C = c(7.5, 75),
+	kappa = c(1, 0.8),
+	epsilon = 1.2,
 	sigma_eta = 0.5,
 	sigma_xi = 0.5,
-	F_4xCO2 = 5
+	F_4xCO2 = 8
 )
 
 # prepare empty output dataframe
-output <- data.frame(matrix(ncol = 15, nrow = 0))
+output <- data.frame(matrix(ncol = 13, nrow = 0))
 
 # grab models
 models = unique(input_data$climate_model)
@@ -71,7 +71,7 @@ for (model in models) {
 				{
 					check <- capture.output(
 						result <- FitKalman(
-							inits3,
+							inits2,
 							T1 = tas,
 							N = rndt,
 							alpha = 1e-05 * 10^attempt,
@@ -96,7 +96,7 @@ for (model in models) {
 			attempt <- attempt + 1
 		}
 		if (!success) {
-			row_out <- c(model, run, FALSE, NA, NA, NA, NA, NA, NA, NA, NA,
+			row_out <- c(model, run, FALSE, NA, NA, NA, NA, NA, NA,
 			NA, NA, NA, NA)
 
 			output <- rbind(output, row_out)
@@ -114,10 +114,8 @@ for (model in models) {
 			result$gamma,
 			result$C[1],
 			result$C[2],
-			result$C[3],
 			result$kappa[1],
 			result$kappa[2],
-			result$kappa[3],
 			result$epsilon,
 			result$sigma_eta,
 			result$sigma_xi,
@@ -129,8 +127,8 @@ for (model in models) {
 }
 
 # rename columns away from random defaults
-names = c("model", "run", "conv", "nit", "gamma", "C1", "C2", "C3", "kappa1",
-	"kappa2", "kappa3", "epsilon", "sigma_eta", "sigma_xi", "F_4xCO2")
+names = c("model", "run", "conv", "nit", "gamma", "C1", "C2", "kappa1",
+	"kappa2", "epsilon", "sigma_eta", "sigma_xi", "F_4xCO2")
 colnames(output) <- names
 
 # save output
@@ -138,6 +136,6 @@ ifelse(!dir.exists(file.path("..", "data", "calibration")),
 	dir.create(file.path("..", "data", "calibration")), FALSE)
 write.csv(
 	output,
-	file.path("..", "data", "calibration", "4xCO2_cummins_ebm3.csv"),
+	file.path("..", "data", "calibration", "4xCO2_cummins_ebm2.csv"),
 	row.names=FALSE
 )

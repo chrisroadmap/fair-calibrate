@@ -55,6 +55,7 @@ To reproduce:
 
 1. The `010_concatenate-hege-data-4xCO2.ipynb` notebook is run first.
 2. Then, `r_scripts/calibrate_cummins_3layer.r` is run.
+3. Then, `r_scripts/calibrate_cummins_2layer.r` is run.
 3. Finally, the remaining notebooks are run in numerical order.
 
 ### the R scripts
