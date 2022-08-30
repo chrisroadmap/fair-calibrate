@@ -1,7 +1,5 @@
 """Convenience functions for filling FaIR `xarray` instances."""
 
-import numpy as np
-
 
 def fill(var, data, **kwargs):
     """Fill a FaIR variable instance.
@@ -30,16 +28,10 @@ def fill(var, data, **kwargs):
     for kwarg in kwargs:
         if kwarg not in var.coords:
             raise ValueError(
-                f"{kwarg} is not a coordinate of {var.name}. Valid coordinates are {var.coords._names}"
+                f"{kwarg} is not a coordinate of {var.name}. Valid coordinates are "
+                f"{var.coords._names}"
             )
 
-    #    # are arrays broadcastable? this check isn't strictly needed as will fail loudly but is nicer than the default exception
-    #    data_array = np.atleast_1d(np.asarray(data))
-    #    var_shape = var.shape
-    #    data_shape = data_array.shape
-    #    if not all((m == n) or (m == 1) or (n == 1) for m, n in zip(var_shape[::-1], data_shape[::-1])):
-    #        # this check thanks to https://stackoverflow.com/questions/47243451/checking-if-two-arrays-are-broadcastable-in-python
-    #        raise ValueError(f"trying to fill data of shape {data_shape} to variable of shape {var_shape}")
     var.loc[kwargs] = data
 
 

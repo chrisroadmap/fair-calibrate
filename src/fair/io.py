@@ -3,9 +3,6 @@
 import os
 
 import pandas as pd
-import pkg_resources
-
-from .structure.units import desired_concentration_units, desired_emissions_units
 
 # todo:
 # use pooch for RCMIP data

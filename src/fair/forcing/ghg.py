@@ -2,8 +2,6 @@
 
 import numpy as np
 
-from ..constants import SPECIES_AXIS
-
 
 def etminan2016(
     concentration,

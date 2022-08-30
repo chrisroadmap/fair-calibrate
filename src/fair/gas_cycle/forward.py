@@ -1,7 +1,5 @@
 """Module for the forward (emissions to concentration) model."""
 
-import warnings
-
 import numpy as np
 
 from ..constants import GASBOX_AXIS

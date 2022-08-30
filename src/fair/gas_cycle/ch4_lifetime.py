@@ -39,7 +39,7 @@ def calculate_alpha_ch4(
         Which species indices to use emissions from.
     concentration_indices : np.ndarray of bool
         Which species indices to use concentration from.
-        
+
     Returns
     -------
     alpha_ch4 : np.ndarray

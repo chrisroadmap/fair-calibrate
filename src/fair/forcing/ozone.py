@@ -82,7 +82,8 @@ def thornhill2021(
     array_shape = emissions.shape
     n_timesteps, n_scenarios, n_configs, n_species = array_shape
 
-    # revisit this if we ever want to dump out intermediate calculations like the feedback strength.
+    # revisit this if we ever want to dump out intermediate calculations like the
+    # feedback strength.
     _erf = np.ones((n_timesteps, n_scenarios, n_configs, 2)) * np.nan
 
     # GHGs, with a concentration-given ozone radiative_efficiency, including EESC

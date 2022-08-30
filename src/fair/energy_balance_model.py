@@ -111,11 +111,13 @@ class EnergyBalanceModel:
         self.n_temperature_boxes = len(self.ocean_heat_capacity)
         if len(self.ocean_heat_transfer) != self.n_temperature_boxes:
             raise ValueError(
-                "ocean_heat_capacity and ocean_heat_transfer must be arrays of the same shape."
+                "ocean_heat_capacity and ocean_heat_transfer must be arrays of the "
+                "same shape."
             )
         if self.n_temperature_boxes < 2:
             raise ValueError(
-                "At least two ocean layers must be specified in the energy balance model."
+                "At least two ocean layers must be specified in the energy balance "
+                "model."
             )
         self.temperature = np.zeros((1, self.n_temperature_boxes + 1))
         self.n_timesteps = n_timesteps
@@ -188,7 +190,8 @@ class EnergyBalanceModel:
                 / self.ocean_heat_capacity[row],
             ]
 
-        # Prepend eb_matrix with stochastic terms if this is a stochastic run: Cummins et al. (2020) eqs. 13 and 14
+        # Prepend eb_matrix with stochastic terms if this is a stochastic run:
+        # Cummins et al. (2020) eqs. 13 and 14
         eb_matrix = np.insert(eb_matrix, 0, np.zeros(n_box), axis=0)
         prepend_col = np.zeros(n_box + 1)
         prepend_col[0] = -self.gamma_autocorrelation
@@ -228,7 +231,7 @@ class EnergyBalanceModel:
             q_mat = np.zeros((self.n_matrix, self.n_matrix))
             q_mat[0, 0] = self.sigma_eta ** 2
             q_mat[1, 1] = (self.sigma_xi / self.ocean_heat_capacity[0]) ** 2
-            ## use Van Loan (1978) to compute the matrix exponential
+            # use Van Loan (1978) to compute the matrix exponential
             h_mat = np.zeros((self.n_matrix * 2, self.n_matrix * 2))
             h_mat[: self.n_matrix, : self.n_matrix] = -eb_matrix
             h_mat[: self.n_matrix, self.n_matrix :] = q_mat
@@ -354,35 +357,6 @@ class EnergyBalanceModel:
             * seconds_per_year
         )
 
-    def step_temperature(self, temperature_boxes_old, forcing):
-        """Step the temperature calculation forward one timestep.
-
-        Unlike the `run` method, this increments a single timestep, and should
-        prevent inverting a matrix each time.
-
-        Parameters
-        ----------
-        temperature_boxes_old : ndarray
-            array of temperature boxes
-        forcing : float
-            effective radiative forcing in the timestep
-
-        Returns
-        -------
-        temperature_boxes_new : ndarray
-            array of temperature boxes
-        """
-        # forcing_vector and eb_matrix should both be determininstic if not running stochastically
-        # and we probably can't make this quick if we were
-        # actually we probably can...
-        temperature_new = (
-            self.eb_matrix_d @ temperature_old + self.forcing_vector_d * forcing
-        )
-
-        # think we'd be better with step_temperature here
-        # OHC now needs to be after the fact
-        # self.ocean_heat_content_change = np.cumsum(self.toa_imbalance * np.concatenate(([0], np.diff(self.time)))) * EARTH_RADIUS**2 * 4 * np.pi * SECONDS_PER_YEAR
-
 
 def multi_ebm(
     configs,
@@ -399,10 +373,12 @@ def multi_ebm(
     timestep,
     timebounds,
 ):
-    """Create several instances of the EnergyBalanceModel for efficient implementation in FaIR.
+    """Create several instances of the EnergyBalanceModel.
 
-    We have to use a for loop at is does not look like the linear algebra functions in scipy are naturally
-    parallel.
+    This allows efficient parallel implementation in FaIR.
+
+    We have to use a for loop in this function as is does not look like the linear
+    algebra functions in scipy are naturally parallel.
 
     Parameters
     ----------

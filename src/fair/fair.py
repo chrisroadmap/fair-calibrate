@@ -10,8 +10,13 @@ import xarray as xr
 from scipy.interpolate import interp1d
 from tqdm.auto import tqdm
 
-from .constants import GASBOX_AXIS, SPECIES_AXIS, TIME_AXIS
-from .earth_params import earth_radius, mass_atmosphere, molecular_weight_air, seconds_per_year
+from .constants import SPECIES_AXIS, TIME_AXIS
+from .earth_params import (
+    earth_radius,
+    mass_atmosphere,
+    molecular_weight_air,
+    seconds_per_year
+)
 from .energy_balance_model import (
     calculate_toa_imbalance_postrun,
     multi_ebm,
@@ -138,7 +143,8 @@ class FAIR:
             self._aci_method = value.lower()
         else:
             raise ValueError(
-                f"aci_method should be one of [smith2021, stevens2015, leach2021]; you provided {value.lower()}."
+                f"aci_method should be one of [smith2021, stevens2015, leach2021]; you "
+                f"provided {value.lower()}."
             )
 
     @property
@@ -152,7 +158,8 @@ class FAIR:
             self._ch4_method = value.lower()
         else:
             raise ValueError(
-                f"ch4_method should be thornhill2021 or leach2021; you provided {value.lower()}."
+                f"ch4_method should be thornhill2021 or leach2021; you provided "
+                f"{value.lower()}."
             )
 
     @property
@@ -171,7 +178,8 @@ class FAIR:
             self._ghg_method = value.lower()
         else:
             raise ValueError(
-                f"ghg_method should be one of [leach2021, meinshausen2020, etminan2016, myhre1998]; you provided {value.lower()}."
+                f"ghg_method should be one of [leach2021, meinshausen2020, "
+                f"etminan2016, myhre1998]; you provided {value.lower()}."
             )
 
     def define_time(self, start, end, step):
@@ -251,7 +259,8 @@ class FAIR:
             # everything a valid species type?
             if properties[specie]["type"] not in species_types:
                 raise ValueError(
-                    f"{properties[specie]['type']} is not a valid species type. Valid types are: {[t for t in species_types]}"
+                    f"{properties[specie]['type']} is not a valid species type. Valid "
+                    f"types are: {[t for t in species_types]}"
                 )
 
             # input_modes valid?
@@ -260,7 +269,9 @@ class FAIR:
                 not in valid_input_modes[properties[specie]["type"]]
             ):
                 raise ValueError(
-                    f"{properties[specie]['input_mode']} is not a valid input mode for {properties[specie]['type']}. Valid input modes are: {[m for m in valid_input_modes[properties[specie]['type']]]}"
+                    f"{properties[specie]['input_mode']} is not a valid input mode for "
+                    f"{properties[specie]['type']}. Valid input modes are: "
+                    f"{[m for m in valid_input_modes[properties[specie]['type']]]}"
                 )
 
         # on the way in, we don't mind if properties is over-specified, but
@@ -274,7 +285,8 @@ class FAIR:
             n_repeats = sum(self.properties_df["type"] == specie_type)
             if n_repeats > 1 and not multiple_allowed[specie_type]:
                 raise ValueError(
-                    f"{specie_type} is defined {n_repeats} times in the problem, but must be unique."
+                    f"{specie_type} is defined {n_repeats} times in the problem, but "
+                    f"must be unique."
                 )
 
     def allocate(self):
@@ -289,7 +301,8 @@ class FAIR:
         for attr, method in required_attributes_and_uncalled_method.items():
             if not hasattr(self, attr):
                 raise AttributeError(
-                    f"'FAIR' object has no attribute '{attr}'. Did you forget to call '{method}'?"
+                    f"'FAIR' object has no attribute '{attr}'. Did you forget to call "
+                    f"'{method}'?"
                 )
 
         # driver/output variables
@@ -511,7 +524,8 @@ class FAIR:
                     ["config", "specie"],
                     np.ones((self._n_configs, self._n_species)) * np.nan,
                 ),
-                # general parameters relating emissions, concentration or forcing of one species to forcing of another
+                # general parameters relating emissions, concentration or forcing of one
+                # species to forcing of another.
                 # these are all linear factors
                 "greenhouse_gas_radiative_efficiency": (
                     ["config", "specie"],
@@ -881,7 +895,9 @@ class FAIR:
                     # throw error if data missing
                     if emis_in.shape[0] == 0:
                         raise ValueError(
-                            f"I can't find a value for scenario={scenario}, variable name ending with {specie_rcmip_name} in the RCMIP emissions database."
+                            f"I can't find a value for scenario={scenario}, variable "
+                            f"name ending with {specie_rcmip_name} in the RCMIP "
+                            f"emissions database."
                         )
 
                     # RCMIP are "annual averages"; for emissions this is basically
@@ -947,7 +963,9 @@ class FAIR:
                     # throw error if data missing
                     if conc_in.shape[0] == 0:
                         raise ValueError(
-                            f"I can't find a value for scenario={scenario}, variable name ending with {specie_rcmip_name} in the RCMIP concentration database."
+                            f"I can't find a value for scenario={scenario}, variable "
+                            f"name ending with {specie_rcmip_name} in the RCMIP "
+                            f"concentration database."
                         )
 
                     # interpolate: this time to timebounds
@@ -1003,7 +1021,9 @@ class FAIR:
                     # throw error if data missing
                     if forc_in.shape[0] == 0:
                         raise ValueError(
-                            f"I can't find a value for scenario={scenario}, variable name ending with {specie_rcmip_name} in the RCMIP radiative forcing database."
+                            f"I can't find a value for scenario={scenario}, variable "
+                            f"name ending with {specie_rcmip_name} in the RCMIP "
+                            f"radiative forcing database."
                         )
 
                     # interpolate: this time to timebounds
@@ -1042,7 +1062,8 @@ class FAIR:
             for var in ["sigma_eta", "sigma_xi", "seed"]:
                 if np.isnan(self.climate_configs[var]).sum() > 0:
                     raise ValueError(
-                        f"There are NaN values in climate_configs['{var}'], which is not allowed for FAIR.climate_configs['stochastic_run']=True"
+                        f"There are NaN values in climate_configs['{var}'], which is "
+                        f"not allowed for FAIR.climate_configs['stochastic_run']=True"
                     )
 
         self.ebms = multi_ebm(
@@ -1064,7 +1085,8 @@ class FAIR:
     def _check_properties(self):
         def _raise_if_nan(specie, input_mode):
             raise ValueError(
-                f"{specie} contains NaN values in its {input_mode} array, which you are trying to drive the simulation with."
+                f"{specie} contains NaN values in its {input_mode} array, which you "
+                f"are trying to drive the simulation with."
             )
 
         self._routine_flags = {
@@ -1101,7 +1123,8 @@ class FAIR:
             n_nan = np.isnan(self.temperature.loc[dict(layer=0)]).sum()
             if n_nan > 0:
                 raise ValueError(
-                    "You are running with prescribed temperatures, but the FAIR.temperature xarray contains NaN values in the surface layer."
+                    "You are running with prescribed temperatures, but the "
+                    "FAIR.temperature xarray contains NaN values in the surface layer."
                 )
 
         # special dependency cases
@@ -1120,7 +1143,8 @@ class FAIR:
                 ]
             ):
                 raise ValueError(
-                    "co2 in calculated mode requires co2 ffi and co2 afolu in emissions mode."
+                    "co2 in calculated mode requires co2 ffi and co2 afolu in "
+                    "emissions mode."
                 )
 
         if "land use" in list(
@@ -1134,7 +1158,8 @@ class FAIR:
                 ]
             ):
                 raise ValueError(
-                    "`land use` in `calculated` mode requires `co2 afolu` in `emissions` mode."
+                    "land use in calculated mode requires co2 afolu in emissions "
+                    "mode."
                 )
 
         if "aci" in list(
@@ -1148,7 +1173,8 @@ class FAIR:
                 ]
             ):
                 raise ValueError(
-                    "aci in 'calculated' mode requires sulfur in 'emissions' mode for aci_method = stevens2015."
+                    "aci in 'calculated' mode requires sulfur in 'emissions' mode for "
+                    "aci_method = stevens2015."
                 )
             elif (
                 self.aci_method == "smith2021"
@@ -1166,7 +1192,8 @@ class FAIR:
                 )
             ):
                 raise ValueError(
-                    "aci in 'calculated' mode requires sulfur, black carbon and organic carbon in 'emissions' mode for aci_method = smith2021."
+                    "aci in 'calculated' mode requires sulfur, black carbon and "
+                    "organic carbon in 'emissions' mode for aci_method = smith2021."
                 )
 
         if "eesc" not in list(
@@ -1197,7 +1224,10 @@ class FAIR:
         ):
             if self.ch4_method == "thornhill2021":
                 raise ValueError(
-                    "For ch4_method = thornhill2021, EESC needs to be input as concentrations, or to be calculated from emissions of halogenated species which requires at least cfc-11 to be provided in emissions or concentration driven mode."
+                    "For ch4_method = thornhill2021, EESC needs to be input as "
+                    "concentrations, or to be calculated from emissions of "
+                    "halogenated species which requires at least cfc-11 to be "
+                    "provided in emissions or concentration driven mode."
                 )
 
         co2_to_forcing = False
@@ -1248,12 +1278,15 @@ class FAIR:
         if self.ghg_method in ["meinshausen2020", "etminan2016"]:
             if 0 < co2_to_forcing + ch4_to_forcing + n2o_to_forcing < 3:
                 raise ValueError(
-                    "For ghg_method in meinshausen2020, etminan2016, either all of co2, ch4 and n2o must be provided in a form that can be converted to concentrations, or none"
+                    "For ghg_method in meinshausen2020, etminan2016, either all of "
+                    "co2, ch4 and n2o must be provided in a form that can be "
+                    "converted to concentrations, or none"
                 )
         elif self.ghg_method == "myhre1998":
             if 0 < ch4_to_forcing + n2o_to_forcing < 2:
                 raise ValueError(
-                    "for ghg_method=myhre1998, either both of ch4 and n2o must be provided, or neither."
+                    "for ghg_method=myhre1998, either both of ch4 and n2o must be "
+                    "provided, or neither."
                 )
 
         for flag in [
@@ -1491,7 +1524,6 @@ class FAIR:
         iirf_airborne_array = self.species_configs["iirf_airborne"].data
         iirf_temperature_array = self.species_configs["iirf_temperature"].data
         iirf_uptake_array = self.species_configs["iirf_uptake"].data
-        iirf_temperature = self.species_configs["iirf_temperature"].data
         land_use_cumulative_emissions_to_forcing_array = self.species_configs[
             "land_use_cumulative_emissions_to_forcing"
         ].data
@@ -1510,7 +1542,9 @@ class FAIR:
             forcing_vector_d_array = self.ebms["forcing_vector_d"].data
             stochastic_d_array = self.ebms["stochastic_d"].data
 
-        # forcing should be initialised so this should not be nan. We could check, or allow silent fail as some species don't take forcings and would correctly be nan.
+        # forcing should be initialised so this should not be nan. We could check, or
+        # allow silent fail as some species don't take forcings and would correctly be
+        # nan.
         forcing_sum_array[0:1, ...] = np.nansum(
             forcing_array[0:1, ...], axis=SPECIES_AXIS
         )
@@ -1563,7 +1597,8 @@ class FAIR:
                     self.iirf_max,
                 )
 
-                # 2. multi-species methane lifetime if desired; update GHG concentration for CH4
+                # 2. multi-species methane lifetime if desired; update GHG concentration
+                # for CH4
                 # needs previous timebound but this is no different to the generic
                 if self.ch4_method == "thornhill2021":
                     alpha_lifetime_array[
@@ -1861,8 +1896,6 @@ class FAIR:
                     baseline_concentration_array[None, None, ...],
                     forcing_scale_array[None, None, ..., self._ozone_indices],
                     ozone_radiative_efficiency_array[None, None, ...],
-                    # cummins_state_array[i_timepoint:i_timepoint+1, ..., 1:2],
-                    # forcing_temperature_feedback_array[None, None, :, self._ozone_indices],
                     self._aerosol_chemistry_from_emissions_indices,
                     self._aerosol_chemistry_from_concentration_indices,
                 )
@@ -1962,7 +1995,8 @@ class FAIR:
             * seconds_per_year
         )
 
-        # 19. calculate airborne fraction - we have NaNs and zeros we know about, and we don't mind
+        # 19. calculate airborne fraction - we have NaNs and zeros we know about, and we
+        # don't mind
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             airborne_fraction_array = (

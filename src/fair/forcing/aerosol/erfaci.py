@@ -135,7 +135,8 @@ def smith2021(
     The Smith et al. (2018) [2]_ relationship as formulated more explicitly in
     Smith et al. (2021) [1]_ is
 
-    :math: F_{aci} = -\beta \log \left \frac{E_{SO2}}{s_{SO2}} + \frac{E_{BC+OC}}{s_{BC+OC}} + 1 \right
+    :math: F_{aci} = -\beta \log \left \frac{E_{SO2}}{s_{SO2}} +
+        \frac{E_{BC+OC}}{s_{BC+OC}} + 1 \right
 
     (note there is a typo in Smith et al. 2021).
 
