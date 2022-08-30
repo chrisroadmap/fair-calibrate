@@ -1,0 +1,19 @@
+name: fair2.1-calibrate
+channels:
+  - chrisroadmap
+  - conda-forge
+  - defaults
+dependencies:
+  - climateforcing
+  - ipywidgets
+  - jupyter
+  - matplotlib
+  - nbstripout
+  - netCDF4
+  - numpy
+  - openpyxl
+  - pandas
+  - scipy
+  - tqdm
+  - xarray
+  - xlrd

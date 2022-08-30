@@ -1,5 +1,5 @@
 # fair2.1-calibrate
-FaIR version 2.1
+FaIR version 2.1, calibration to CMIP and constraining to AR6
 
 What's new compared to v2.0 and v1.6:
 
@@ -9,13 +9,14 @@ What's new compared to v2.0 and v1.6:
 - inclusion of stochastic temperatures and forcing, introduced from Cummins et al. (2020)
 - Adding back some of the emissions-driven relationships from FaIR v1.6 (land use change, ozone)
 - changing the interface to a object oriented design
-- an AR6-consistent constrained calibration (work in progress)
+- an AR6-consistent constrained calibration
+- everything very, very parallel
 
 ## installation
 
 ### requirements
 - `anaconda` for `python3`
-- `python` 3.7+ (enforced by `dataclass`)
+- `python` 3.6+
 - for the Cummins calibration, a reasonably modern version of `R` (4.1.1 used here)
 
 ### python and jupyter notebooks
@@ -23,6 +24,9 @@ What's new compared to v2.0 and v1.6:
 conda env create -f environment.yml
 conda activate fair2.1-calibrate
 nbstripout --install
+
+# the last step is then to install this local version of fair itself
+pip install -e .
 ```
 
 If you get module import errors running any of the notebooks, it's likely that your local environment is not up to date:
@@ -36,9 +40,6 @@ git pull
 # update environment
 conda activate fair2.1-calibrate
 conda env update -f environment.yml --prune
-
-# the last step is to install fair itself
-pip install -e .
 ```
 
 TODO: put all of this into a config/make file.
@@ -68,6 +69,8 @@ source("calibrate_cummins_3layer.r")
 ```
 
 ## acknowledgements and contributions
+
+Should I ever write a calibration paper, these people should be on it.
 
 1. Nick Leach and Stuart Jenkins for the original FaIR v2.0, which hopefully isn't too mangled or complicated by this attempt.
 2. Hege-Beate Fredriksen for crunching the CMIP6 4xCO2 data from many more models
