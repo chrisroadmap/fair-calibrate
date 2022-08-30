@@ -6,10 +6,7 @@ from ..constants import SPECIES_AXIS
 
 
 def calculate_linear_forcing(
-    driver,
-    baseline_driver,
-    forcing_scaling,
-    radiative_efficiency,
+    driver, baseline_driver, forcing_scaling, radiative_efficiency,
 ):
     """
     Calculate effective radiative forcing from a linear relationship.

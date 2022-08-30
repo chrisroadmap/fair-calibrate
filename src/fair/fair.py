@@ -15,7 +15,7 @@ from .earth_params import (
     earth_radius,
     mass_atmosphere,
     molecular_weight_air,
-    seconds_per_year
+    seconds_per_year,
 )
 from .energy_balance_model import (
     calculate_toa_imbalance_postrun,
