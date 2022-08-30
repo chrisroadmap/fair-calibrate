@@ -4,16 +4,6 @@ import os
 
 import pandas as pd
 
-# todo:
-# use pooch for RCMIP data
-
-# read_fair1
-# read_scen
-# read_rcmip
-# read_scmdata
-# write_configs
-# write_output
-
 HERE = os.path.dirname(os.path.realpath(__file__))
 DEFAULT_PROPERTIES_FILE = os.path.join(
     HERE, "defaults", "data", "ar6", "species_configs_properties.csv"

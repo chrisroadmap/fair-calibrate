@@ -48,10 +48,6 @@ DEFAULT_SPECIES_CONFIG_FILE = os.path.join(
     HERE, "defaults", "data", "ar6", "species_configs_properties.csv"
 )
 
-# TODO:
-# the smith2021 and meinshausen2020 imports can be put inside if statements
-# lower in the code, which will allow for alternative treatments.
-
 
 class FAIR:
     """FaIR simple climate model [1]_, [2]_, [3]_.
@@ -841,7 +837,6 @@ class FAIR:
             if specie not in self.species:
                 del species_to_rcmip[specie]
 
-        # todo: pooch from rcmip.org and make part of self-contained package
         df_emis = pd.read_csv(
             os.path.join(
                 HERE,
@@ -1885,7 +1880,6 @@ class FAIR:
                 )
 
             # 9. ozone emissions & concentrations to forcing
-            # TODO argument ordering
             if self._routine_flags["ozone"]:
                 forcing_array[
                     i_timepoint + 1 : i_timepoint + 2, ..., self._ozone_indices
