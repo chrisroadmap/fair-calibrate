@@ -516,7 +516,7 @@ def calculate_toa_imbalance_postrun(
         W m-2 K-1
     deep_ocean_efficacy : np.ndarray
         efficacy of deepest ocean layer.
-        
+
     Returns
     -------
     toa_imbalance : np.ndarray
