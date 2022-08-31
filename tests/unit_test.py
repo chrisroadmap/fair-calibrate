@@ -97,4 +97,7 @@ def test_ebm_run():
     temperature = np.loadtxt(
         os.path.join(HERE, "test_data", "ebm3_cams-csm1-0_temperature.txt")
     )
-    np.testing.assert_allclose(EBM_CAMS_STOCHASTIC.temperature, temperature)
+    # implement a fairly generous absolute tolerance on the temperature differences
+    # because the scipy linalg routines seem to change with each version, and if they
+    # are out by less than one microkelvin I am sure we can accept this.
+    np.testing.assert_allclose(EBM_CAMS_STOCHASTIC.temperature, temperature, atol=1e-6)
