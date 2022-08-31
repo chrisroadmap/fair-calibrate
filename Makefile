@@ -22,8 +22,8 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 .PHONY: test
-test: $(VENV_DIR)  ## run all the tests
-	$(VENV_DIR)/bin/pytest tests -r a
+test: $(VENV_DIR)  ## run all the tests and produce a coverage report
+	$(VENV_DIR)/bin/pytest tests -r a --cov=fair
 
 .PHONY: checks
 checks: $(VENV_DIR)  ## run all the checks

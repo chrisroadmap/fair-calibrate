@@ -1,0 +1,8 @@
+[run]
+branch = True
+source = fair
+omit = *_version.py
+
+[report]
+#fail_under = 97
+ignore_errors = True
