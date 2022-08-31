@@ -2009,3 +2009,37 @@ class FAIR:
         self.ocean_heat_content_change.data = ocean_heat_content_change_array
         self.toa_imbalance.data = toa_imbalance_array
         self.stochastic_forcing.data = cummins_state_array[..., 0]
+
+
+    def to_netcdf(self, filename):
+        """Write out FaIR scenario data to a netCDF file.
+
+        Parameters
+        ----------
+        filename : str
+            file path of the file to write.
+        """
+        ds = xr.Dataset(
+            data_vars = dict(
+                emissions = (["timepoint", "scenario", "config", "specie"], self.emissions.data),
+                concentration=(["timebound", "scenario", "config", "specie"], self.concentration.data),
+                forcing=(["timebound", "scenario", "config", "specie"], self.forcing.data),
+                forcing_sum=(["timebound", "scenario", "config"], self.forcing_sum.data),
+                temperature=(["timebound", "scenario", "config", "layer"], self.temperature.data),
+                airborne_emissions=(["timebound", "scenario", "config", "specie"], self.airborne_emissions.data),
+                airborne_fraction=(["timebound", "scenario", "config", "specie"], self.airborne_fraction.data),
+                cumulative_emissions=(["timebound", "scenario", "config", "specie"], self.cumulative_emissions.data),
+                ocean_heat_content_change=(["timebound", "scenario", "config"], self.ocean_heat_content_change.data),
+                stochastic_forcing=(["timebound", "scenario", "config"], self.stochastic_forcing.data),
+                toa_imbalance=(["timebound", "scenario", "config"], self.toa_imbalance.data),
+            ),
+            coords = dict(
+                timepoint = self.timepoints,
+                timebound = self.timebounds,
+                scenario = self.scenarios,
+                config = self.configs,
+                specie = self.species,
+                layer = self.layers,
+            ),
+        )
+        ds.to_netcdf(filename)
