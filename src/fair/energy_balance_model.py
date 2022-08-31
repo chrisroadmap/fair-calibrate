@@ -2,6 +2,7 @@
 
 import numpy as np
 import scipy.linalg
+import scipy.sparse.linalg
 import scipy.stats
 import xarray as xr
 
@@ -17,7 +18,6 @@ class EnergyBalanceModel:
     this are increased as once derived, the "layers" of the energy balance
     model do not communicate with each other. The model description can be
     found in references [1]_, [2]_, [3]_ and [4]_.
-
     References
     ----------
     .. [1] Leach, N. J., Jenkins, S., Nicholls, Z., Smith, C. J., Lynch, J.,
@@ -25,15 +25,12 @@ class EnergyBalanceModel:
         FaIRv2.0.0: a generalized impulse response model for climate uncertainty
         and future scenario exploration. Geoscientific Model Development, 14,
         3007–3036
-
     .. [2] Cummins, D. P., Stephenson, D. B., & Stott, P. A. (2020). Optimal
         Estimation of Stochastic Energy Balance Model Parameters, Journal of
         Climate, 33(18), 7909-7926.
-
     .. [3] Tsutsui (2017): Quantification of temperature response to CO2 forcing
         in atmosphere–ocean general circulation models. Climatic Change, 140,
         287–305
-
     .. [4] Geoffroy, O., Saint-Martin, D., Bellon, G., Voldoire, A., Olivié,
         D. J. L., & Tytéca, S. (2013). Transient Climate Response in a Two-
         Layer Energy-Balance Model. Part II: Representation of the Efficacy
@@ -86,7 +83,6 @@ class EnergyBalanceModel:
             Random seed to use for stochastic variability.
         timestep : float
             Time interval of the model (yr)
-
         References
         ----------
         .. [1] Geoffroy, O., Saint-Martin, D., Bellon, G., Voldoire, A., Olivié,
@@ -94,7 +90,6 @@ class EnergyBalanceModel:
             Layer Energy-Balance Model. Part II: Representation of the Efficacy
             of Deep-Ocean Heat Uptake and Validation for CMIP5 AOGCMs, Journal
             of Climate, 26(6), 1859-1876
-
         .. [2] Cummins, D. P., Stephenson, D. B., & Stott, P. A. (2020). Optimal
             Estimation of Stochastic Energy Balance Model Parameters, Journal of
             Climate, 33(18), 7909-7926.
@@ -236,7 +231,7 @@ class EnergyBalanceModel:
             h_mat[: self.n_matrix, : self.n_matrix] = -eb_matrix
             h_mat[: self.n_matrix, self.n_matrix :] = q_mat
             h_mat[self.n_matrix :, self.n_matrix :] = eb_matrix.T
-            g_mat = scipy.linalg.expm(h_mat)
+            g_mat = scipy.sparse.linalg.expm(h_mat)
             q_mat_d = (
                 g_mat[self.n_matrix :, self.n_matrix :].T
                 @ g_mat[: self.n_matrix, self.n_matrix :]
@@ -376,7 +371,6 @@ def multi_ebm(
     """Create several instances of the EnergyBalanceModel.
 
     This allows efficient parallel implementation in FaIR.
-
     We have to use a for loop in this function as is does not look like the linear
     algebra functions in scipy are naturally parallel.
 
