@@ -50,29 +50,7 @@ def test_ssp_emissions_cmip6_ebm3_calibrations():
     fill(f.species_configs["baseline_emissions"], 19.01978312, specie="CH4")
     fill(f.species_configs["baseline_emissions"], 0.08602230754, specie="N2O")
 
-    df_volcanic = pd.read_csv(
-        os.path.join(
-            HERE, "..", "data", "forcing", "volcanic_ERF_monthly_-950001-201912.csv"
-        ),
-        index_col="year",
-    )
-    df_volcanic[1750:].head()
-
     f.fill_from_rcmip()
-
-    # overwrite volcanic
-    volcanic_forcing = np.zeros(351)
-    volcanic_forcing[:271] = (
-        df_volcanic[1749:]
-        .groupby(np.ceil(df_volcanic[1749:].index) // 1)
-        .mean()
-        .squeeze()
-        .values
-    )
-    fill(
-        f.forcing, volcanic_forcing[:, None, None], specie="Volcanic"
-    )  # sometimes need to expand the array
-
     initialise(f.concentration, f.species_configs["baseline_concentration"])
     initialise(f.forcing, 0)
     initialise(f.temperature, 0)

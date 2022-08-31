@@ -17,6 +17,10 @@ Thumbs.db
 # temporary backup files
 *.swp
 
+# coverage reports and intermediate files
+.coverage.*
+.coverage
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
