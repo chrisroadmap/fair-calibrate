@@ -12,12 +12,12 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 # using climate-assessment as a template here
 REQUIREMENTS_INSTALL = [
     "netCDF4",
-     "numpy",
-     "pandas",
-     "pooch",
-     "scipy",
-     "tqdm",
-     "xarray"
+    "numpy",
+    "pandas",
+    "pooch",
+    "scipy",
+    "tqdm",
+    "xarray",
 ]
 REQUIREMENTS_NOTEBOOKS = ["notebook", "ipywidgets"]
 REQUIREMENTS_TESTS = [
