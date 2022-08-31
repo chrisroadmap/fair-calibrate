@@ -2,19 +2,16 @@
 
 import os
 
-import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 from fair import FAIR
-from fair.earth_params import seconds_per_year
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
 
 def test_ssp_emissions_cmip6_ebm3_calibrations():
-
     f = FAIR(ch4_method="thornhill2021")
     f.define_time(1750, 2100, 1)
 
