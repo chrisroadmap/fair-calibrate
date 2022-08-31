@@ -23,7 +23,7 @@ help:
 
 .PHONY: test
 test: $(VENV_DIR)  ## run all the tests and produce a coverage report
-	$(VENV_DIR)/bin/pytest tests -r a --cov=fair
+	$(VENV_DIR)/bin/pytest tests -r a --cov=fair --cov-report term-missing:skip-covered
 
 .PHONY: checks
 checks: $(VENV_DIR)  ## run all the checks
