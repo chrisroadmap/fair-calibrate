@@ -21,8 +21,6 @@ def fill(var, data, **kwargs):
     ------
     ValueError :
         if a `kwarg` provided doesn't correspond to a dimension name in `var`
-    ValueError :
-        if `data` cannot be broadcast to `var`
     """
     # does variable exist?
     for kwarg in kwargs:
