@@ -6,6 +6,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import pooch
 import xarray as xr
 from scipy.interpolate import interp1d
 from tqdm.auto import tqdm
@@ -837,36 +838,30 @@ class FAIR:
             if specie not in self.species:
                 del species_to_rcmip[specie]
 
-        df_emis = pd.read_csv(
-            os.path.join(
-                HERE,
-                "..",
-                "..",
-                "data",
-                "rcmip",
-                "rcmip-emissions-annual-means-v5-1-0.csv",
-            )
+        rcmip_emissions_file = pooch.retrieve(
+            url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
+            known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
         )
-        df_conc = pd.read_csv(
-            os.path.join(
-                HERE,
-                "..",
-                "..",
-                "data",
-                "rcmip",
-                "rcmip-concentrations-annual-means-v5-1-0.csv",
-            )
+
+        rcmip_concentration_file = pooch.retrieve(
+            url=(
+                "doi:10.5281/zenodo.4589756/"
+                "rcmip-concentrations-annual-means-v5-1-0.csv"
+            ),
+            known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
         )
-        df_forc = pd.read_csv(
-            os.path.join(
-                HERE,
-                "..",
-                "..",
-                "data",
-                "rcmip",
-                "rcmip-radiative-forcing-annual-means-v5-1-0.csv",
-            )
+
+        rcmip_forcing_file = pooch.retrieve(
+            url=(
+                "doi:10.5281/zenodo.4589756/"
+                "rcmip-radiative-forcing-annual-means-v5-1-0.csv"
+            ),
+            known_hash="md5:87ef6cd4e12ae0b331f516ea7f82ccba",
         )
+
+        df_emis = pd.read_csv(rcmip_emissions_file)
+        df_conc = pd.read_csv(rcmip_concentration_file)
+        df_forc = pd.read_csv(rcmip_forcing_file)
 
         for scenario in self.scenarios:
             for specie, specie_rcmip_name in species_to_rcmip.items():
@@ -2009,3 +2004,69 @@ class FAIR:
         self.ocean_heat_content_change.data = ocean_heat_content_change_array
         self.toa_imbalance.data = toa_imbalance_array
         self.stochastic_forcing.data = cummins_state_array[..., 0]
+
+    def to_netcdf(self, filename):
+        """Write out FaIR scenario data to a netCDF file.
+
+        Parameters
+        ----------
+        filename : str
+            file path of the file to write.
+        """
+        ds = xr.Dataset(
+            data_vars=dict(
+                emissions=(
+                    ["timepoint", "scenario", "config", "specie"],
+                    self.emissions.data,
+                ),
+                concentration=(
+                    ["timebound", "scenario", "config", "specie"],
+                    self.concentration.data,
+                ),
+                forcing=(
+                    ["timebound", "scenario", "config", "specie"],
+                    self.forcing.data,
+                ),
+                forcing_sum=(
+                    ["timebound", "scenario", "config"],
+                    self.forcing_sum.data,
+                ),
+                temperature=(
+                    ["timebound", "scenario", "config", "layer"],
+                    self.temperature.data,
+                ),
+                airborne_emissions=(
+                    ["timebound", "scenario", "config", "specie"],
+                    self.airborne_emissions.data,
+                ),
+                airborne_fraction=(
+                    ["timebound", "scenario", "config", "specie"],
+                    self.airborne_fraction.data,
+                ),
+                cumulative_emissions=(
+                    ["timebound", "scenario", "config", "specie"],
+                    self.cumulative_emissions.data,
+                ),
+                ocean_heat_content_change=(
+                    ["timebound", "scenario", "config"],
+                    self.ocean_heat_content_change.data,
+                ),
+                stochastic_forcing=(
+                    ["timebound", "scenario", "config"],
+                    self.stochastic_forcing.data,
+                ),
+                toa_imbalance=(
+                    ["timebound", "scenario", "config"],
+                    self.toa_imbalance.data,
+                ),
+            ),
+            coords=dict(
+                timepoint=self.timepoints,
+                timebound=self.timebounds,
+                scenario=self.scenarios,
+                config=self.configs,
+                specie=self.species,
+                layer=self.layers,
+            ),
+        )
+        ds.to_netcdf(filename)

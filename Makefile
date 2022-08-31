@@ -22,13 +22,13 @@ help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 .PHONY: test
-test: $(VENV_DIR)  ## run all the tests
-	$(VENV_DIR)/bin/pytest tests -r a
+test: $(VENV_DIR)  ## run all the tests and produce a coverage report
+	$(VENV_DIR)/bin/pytest tests -r a --cov=fair
 
 .PHONY: checks
 checks: $(VENV_DIR)  ## run all the checks
-	@echo "=== bandit ==="; $(VENV_DIR)/bin/bandit -c .bandit.yml -r src/fair21 || echo "--- bandit failed ---" >&2; \
-		echo "\n\n=== black ==="; $(VENV_DIR)/bin/black --check src tests setup.py --exclude fair21/_version.py || echo "--- black failed ---" >&2; \
+	@echo "=== bandit ==="; $(VENV_DIR)/bin/bandit -c .bandit.yml -r src/fair || echo "--- bandit failed ---" >&2; \
+		echo "\n\n=== black ==="; $(VENV_DIR)/bin/black --check src tests setup.py --exclude fair/_version.py || echo "--- black failed ---" >&2; \
 		echo "\n\n=== isort ==="; $(VENV_DIR)/bin/isort --check-only --quiet src tests setup.py || echo "--- isort failed ---" >&2; \
 		echo "\n\n=== flake8 ==="; $(VENV_DIR)/bin/flake8 src tests setup.py || echo "--- flake8 failed ---" >&2; \
 		echo
