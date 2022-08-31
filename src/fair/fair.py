@@ -844,12 +844,18 @@ class FAIR:
         )
 
         rcmip_concentration_file = pooch.retrieve(
-            url="doi:10.5281/zenodo.4589756/rcmip-concentrations-annual-means-v5-1-0.csv",
+            url=(
+                "doi:10.5281/zenodo.4589756/"
+                "rcmip-concentrations-annual-means-v5-1-0.csv"
+            ),
             known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
         )
 
         rcmip_forcing_file = pooch.retrieve(
-            url="doi:10.5281/zenodo.4589756/rcmip-radiative-forcing-annual-means-v5-1-0.csv",
+            url=(
+                "doi:10.5281/zenodo.4589756/"
+                "rcmip-radiative-forcing-annual-means-v5-1-0.csv"
+            ),
             known_hash="md5:87ef6cd4e12ae0b331f516ea7f82ccba",
         )
 
