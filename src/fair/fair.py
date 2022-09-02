@@ -1903,7 +1903,7 @@ class FAIR:
                     i_timepoint + 1 : i_timepoint + 2, ..., self._contrails_indices
                 ] = calculate_linear_forcing(
                     emissions_array[i_timepoint : i_timepoint + 1, ...],
-                    baseline_emissions_array[None, None, ...],
+                    0,
                     forcing_scale_array[None, None, ..., self._contrails_indices],
                     contrails_radiative_efficiency_array[None, None, ...],
                 )
@@ -1925,7 +1925,7 @@ class FAIR:
                     i_timepoint + 1 : i_timepoint + 2, ..., self._h2ostrat_indices
                 ] = calculate_linear_forcing(
                     forcing_array[i_timepoint + 1 : i_timepoint + 2, ...],
-                    forcing_array[0:1, ...],
+                    0,
                     forcing_scale_array[None, None, ..., self._h2ostrat_indices],
                     h2o_stratospheric_factor_array[None, None, ...],
                 )
@@ -1936,7 +1936,7 @@ class FAIR:
                     i_timepoint + 1 : i_timepoint + 2, ..., self._landuse_indices
                 ] = calculate_linear_forcing(
                     cumulative_emissions_array[i_timepoint : i_timepoint + 1, ...],
-                    cumulative_emissions_array[0:1, ...],
+                    0,
                     forcing_scale_array[None, None, ..., self._landuse_indices],
                     land_use_cumulative_emissions_to_forcing_array[None, None, ...],
                 )
