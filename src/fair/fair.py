@@ -423,6 +423,16 @@ class FAIR:
             coords=(self.timebounds, self.scenarios, self.configs),
             dims=("timebounds", "scenario", "config"),
         )
+        # This is about the only exception to the dimension ordering structure;
+        # but testing shows that 5D arrays are too memory consuming and we only
+        # want the partitions on the first and last timestep to use in restarts.
+        self.gas_partitions = xr.DataArray(
+            np.zeros(
+                (self._n_scenarios, self._n_configs, self._n_species, self._n_gasboxes)
+            ),
+            coords=(self.scenarios, self.configs, self.species, self.gasboxes),
+            dims=("scenario", "config", "specie", "gasbox"),
+        )
 
         # climate configs
         self.climate_configs = xr.Dataset(
@@ -1501,9 +1511,7 @@ class FAIR:
         fractional_release_array = self.species_configs["fractional_release"].data
         g0_array = self.species_configs["g0"].data
         g1_array = self.species_configs["g1"].data
-        gas_partitions_array = np.zeros(
-            (self._n_scenarios, self._n_configs, self._n_species, self._n_gasboxes)
-        )
+        gas_partitions_array = self.gas_partitions.data
         greenhouse_gas_radiative_efficiency_array = self.species_configs[
             "greenhouse_gas_radiative_efficiency"
         ].data
@@ -2001,6 +2009,7 @@ class FAIR:
         self.cumulative_emissions.data = cumulative_emissions_array
         self.airborne_emissions.data = airborne_emissions_array
         self.airborne_fraction.data = airborne_fraction_array
+        self.gas_partitions.data = gas_partitions_array
         self.ocean_heat_content_change.data = ocean_heat_content_change_array
         self.toa_imbalance.data = toa_imbalance_array
         self.stochastic_forcing.data = cummins_state_array[..., 0]
