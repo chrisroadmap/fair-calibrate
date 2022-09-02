@@ -427,9 +427,11 @@ class FAIR:
         # but testing shows that 5D arrays are too memory consuming and we only
         # want the partitions on the first and last timestep to use in restarts.
         self.gas_partitions = xr.DataArray(
-            np.zeros((self._n_scenarios, self._n_configs, self._n_species, self._n_gasboxes)),
-            coords = (self.scenarios, self.configs, self.species, self.gasboxes),
-            dims = ('scenario', 'config', 'specie', 'gasbox')
+            np.zeros(
+                (self._n_scenarios, self._n_configs, self._n_species, self._n_gasboxes)
+            ),
+            coords=(self.scenarios, self.configs, self.species, self.gasboxes),
+            dims=("scenario", "config", "specie", "gasbox"),
         )
 
         # climate configs
