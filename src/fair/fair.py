@@ -427,11 +427,9 @@ class FAIR:
         # but testing shows that 5D arrays are too memory consuming and we only
         # want the partitions on the first and last timestep to use in restarts.
         self.gas_partitions = xr.DataArray(
-            np.zeros(
-                (self._n_scenarios, self._n_configs, self._n_species, self._n_gasboxes)
-            ),
-            coords=(self.scenarios, self.configs, self.species, self.gasboxes),
-            dims=("scenario", "config", "specie", "gasbox"),
+            np.zeros((self._n_scenarios, self._n_configs, self._n_species, self._n_gasboxes)),
+            coords = (self.scenarios, self.configs, self.species, self.gasboxes),
+            dims = ('scenario', 'config', 'specie', 'gasbox')
         )
 
         # climate configs
@@ -1936,7 +1934,7 @@ class FAIR:
                     i_timepoint + 1 : i_timepoint + 2, ..., self._landuse_indices
                 ] = calculate_linear_forcing(
                     cumulative_emissions_array[i_timepoint : i_timepoint + 1, ...],
-                    cumulative_emissions_array[0:1, ...],
+                    0,
                     forcing_scale_array[None, None, ..., self._landuse_indices],
                     land_use_cumulative_emissions_to_forcing_array[None, None, ...],
                 )
