@@ -1901,7 +1901,7 @@ class FAIR:
                     i_timepoint + 1 : i_timepoint + 2, ..., self._contrails_indices
                 ] = calculate_linear_forcing(
                     emissions_array[i_timepoint : i_timepoint + 1, ...],
-                    baseline_emissions_array[None, None, ...],
+                    0,
                     forcing_scale_array[None, None, ..., self._contrails_indices],
                     contrails_radiative_efficiency_array[None, None, ...],
                 )
