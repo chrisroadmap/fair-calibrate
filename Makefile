@@ -23,7 +23,7 @@ help:
 
 .PHONY: test
 test: $(VENV_DIR)  ## run all the tests and produce a coverage report
-	$(VENV_DIR)/bin/pytest tests -r a --cov=fair
+	$(VENV_DIR)/bin/pytest tests -r a --cov=fair --cov-report term-missing:skip-covered
 
 .PHONY: checks
 checks: $(VENV_DIR)  ## run all the checks
@@ -40,20 +40,10 @@ format:  ## re-format files
 
 .PHONY: black
 black: $(VENV_DIR)  ## use black to autoformat code
-	@status=$$(git status --porcelain); \
-	if test ${FORCE} ||test "x$${status}" = x; then \
-		$(VENV_DIR)/bin/black --target-version py37 $(FILES_TO_FORMAT_PYTHON); \
-	else \
-		echo Not trying any formatting, working directory is dirty... >&2; \
-	fi;
+	$(VENV_DIR)/bin/black --target-version py37 $(FILES_TO_FORMAT_PYTHON)
 
 isort: $(VENV_DIR)  ## format the code
-	@status=$$(git status --porcelain src tests); \
-	if test ${FORCE} || test "x$${status}" = x; then \
-		$(VENV_DIR)/bin/isort $(FILES_TO_FORMAT_PYTHON); \
-	else \
-		echo Not trying any formatting. Working directory is dirty ... >&2; \
-	fi;
+	$(VENV_DIR)/bin/isort $(FILES_TO_FORMAT_PYTHON)
 
 virtual-environment: $(VENV_DIR)  ## update venv, create a new venv if it doesn't exist
 $(VENV_DIR): setup.py
