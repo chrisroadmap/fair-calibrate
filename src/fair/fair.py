@@ -11,7 +11,7 @@ import xarray as xr
 from scipy.interpolate import interp1d
 from tqdm.auto import tqdm
 
-from .constants import SPECIES_AXIS, TIME_AXIS
+from .constants import PARTITION_GASBOX_AXIS, SPECIES_AXIS, TIME_AXIS
 from .earth_params import (
     earth_radius,
     mass_atmosphere,
@@ -774,17 +774,15 @@ class FAIR:
         iirf_horizon : float, optional, default=100
             time horizon for time-integrated airborne fraction (yr).
         """
-        gasbox_axis = self.species_configs["partition_fraction"].get_axis_num("gasbox")
         self.species_configs["iirf_0"] = np.sum(
             self.species_configs["unperturbed_lifetime"]
             * (1 - np.exp(-iirf_horizon / self.species_configs["unperturbed_lifetime"]))
             * self.species_configs["partition_fraction"],
-            gasbox_axis,
+            PARTITION_GASBOX_AXIS,
         )
 
     def calculate_g(self, iirf_horizon=100):
         """Calculate lifetime scaling parameters."""
-        gasbox_axis = self.species_configs["partition_fraction"].get_axis_num("gasbox")
         self.species_configs["g1"] = np.sum(
             self.species_configs["partition_fraction"]
             * self.species_configs["unperturbed_lifetime"]
@@ -793,7 +791,7 @@ class FAIR:
                 - (1 + iirf_horizon / self.species_configs["unperturbed_lifetime"])
                 * np.exp(-iirf_horizon / self.species_configs["unperturbed_lifetime"])
             ),
-            axis=gasbox_axis,
+            axis=PARTITION_GASBOX_AXIS,
         )
         self.species_configs["g0"] = np.exp(
             -1
@@ -806,7 +804,7 @@ class FAIR:
                         -iirf_horizon / self.species_configs["unperturbed_lifetime"]
                     )
                 ),
-                axis=gasbox_axis,
+                axis=PARTITION_GASBOX_AXIS,
             )
             / self.species_configs["g1"]
         )

@@ -9,3 +9,5 @@ SCENARIO_AXIS = 1
 CONFIG_AXIS = 2
 SPECIES_AXIS = 3
 GASBOX_AXIS = 4
+
+PARTITION_GASBOX_AXIS = 2  # reduced dimensionality arrays for iirf0 and g

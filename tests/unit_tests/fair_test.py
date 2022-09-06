@@ -122,3 +122,48 @@ def test_ghg_routines():
         ftest.run(progress=False)
         forcing_out = ftest.forcing.squeeze()
         np.testing.assert_allclose(forcing_out[1, ...], results)
+
+
+def test_calculate_iirf0():
+    ftest = minimal_ghg_run()
+    ftest.calculate_iirf0()
+    np.testing.assert_allclose(
+        ftest.species_configs["iirf_0"],
+        np.array([[52.35538747, 8.2499551, 65.44969575]]),
+    )
+
+
+def test_calculate_g():
+    ftest = minimal_ghg_run()
+    ftest.calculate_g()
+    np.testing.assert_allclose(
+        ftest.species_configs["g0"],
+        np.array([[0.01017829, 0.36785517, 0.07675559]]),
+        rtol=1e-6,
+    )
+    np.testing.assert_allclose(
+        ftest.species_configs["g1"],
+        np.array([[11.41262243, 8.24941081, 25.49528818]]),
+        rtol=1e-6,
+    )
+
+
+def test_fill_from_rcmip_del_statement():
+    ftest = minimal_ghg_run()
+    ftest.fill_from_rcmip()
+
+
+def test_fill_from_rcmip_species_not_recognised():
+    ftest = FAIR()
+    species = ["Carbon dioxide"]
+    scenarios = ["ssp119"]
+    properties = {
+        "Carbon dioxide": {
+            "input_mode": "emissions",
+            "type": "co2",
+        }
+    }
+    ftest.define_scenarios(scenarios)
+    ftest.define_species(species, properties)
+    with pytest.raises(ValueError):
+        ftest.fill_from_rcmip()
