@@ -154,16 +154,44 @@ def test_fill_from_rcmip_del_statement():
 
 
 def test_fill_from_rcmip_species_not_recognised():
-    ftest = FAIR()
     species = ["Carbon dioxide"]
     scenarios = ["ssp119"]
-    properties = {
-        "Carbon dioxide": {
-            "input_mode": "emissions",
-            "type": "co2",
+    ftest = FAIR()
+    for input_mode in ["emissions", "concentration", "forcing"]:
+        properties = {
+            "Carbon dioxide": {
+                "input_mode": input_mode,
+                "type": "co2",
+            }
         }
-    }
-    ftest.define_scenarios(scenarios)
-    ftest.define_species(species, properties)
+        ftest.define_scenarios(scenarios)
+        ftest.define_species(species, properties)
+        with pytest.raises(ValueError):
+            ftest.fill_from_rcmip()
+
+
+def test_climate_configs_nan_raises_error():
+    ftest = minimal_ghg_run()
+    ftest.climate_configs["ocean_heat_capacity"][0, :] = np.array([np.nan] * 3)
     with pytest.raises(ValueError):
-        ftest.fill_from_rcmip()
+        ftest.run()
+
+
+def test_stochastic_run_nan_raises_error():
+    ftest = minimal_ghg_run()
+    ftest.climate_configs["sigma_eta"][0] = np.nan
+    with pytest.raises(ValueError):
+        ftest.run()
+
+
+def test_deterministic_run():
+    ftest = minimal_ghg_run()
+    ftest.climate_configs["stochastic_run"][0] = False
+    ftest.run()
+
+
+def test_raise_if_nan():
+    ftest = minimal_ghg_run()
+    ftest.concentration[0, 0, 0, :] = [np.nan] * 3
+    with pytest.raises(ValueError):
+        ftest.run()
