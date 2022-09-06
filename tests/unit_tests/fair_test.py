@@ -217,6 +217,6 @@ def test_raise_if_nan():
 
 def test_prescribed_temperature_raise_if_nan():
     ftest = minimal_ghg_run()
-    ftest.temperature_prescribed=True
+    ftest.temperature_prescribed = True
     with pytest.raises(ValueError):
         ftest.run()
