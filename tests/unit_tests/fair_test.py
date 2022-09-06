@@ -195,3 +195,28 @@ def test_raise_if_nan():
     ftest.concentration[0, 0, 0, :] = [np.nan] * 3
     with pytest.raises(ValueError):
         ftest.run()
+    ftest = minimal_ghg_run()
+    species = ["CO2", "CH4", "N2O"]
+    species, properties = read_properties(species=species)
+    for specie in species:
+        properties[specie]["input_mode"] = "emissions"
+    ftest.define_species(species, properties)
+    ftest.emissions[0, 0, 0, :] = [np.nan] * 3
+    with pytest.raises(ValueError):
+        ftest.run()
+    ftest = minimal_ghg_run()
+    species = ["CO2", "CH4", "N2O"]
+    species, properties = read_properties(species=species)
+    for specie in species:
+        properties[specie]["input_mode"] = "forcing"
+    ftest.define_species(species, properties)
+    ftest.emissions[0, 0, 0, :] = [np.nan] * 3
+    with pytest.raises(ValueError):
+        ftest.run()
+
+
+def test_prescribed_temperature_raise_if_nan():
+    ftest = minimal_ghg_run()
+    ftest.temperature_prescribed=True
+    with pytest.raises(ValueError):
+        ftest.run()
