@@ -47,8 +47,8 @@ def minimal_ghg_run():
 
 
 def test_aci_method():
-    f.aci_method = "SMITH2021"
-    assert f.aci_method == "smith2021"
+    f.aci_method = "SMITH2022"
+    assert f.aci_method == "smith2022"
 
 
 def test_invalid_aci_method():
