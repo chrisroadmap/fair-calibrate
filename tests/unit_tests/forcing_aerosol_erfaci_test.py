@@ -23,7 +23,7 @@ def test_aerosol_erfaci_leach2021aci():
 def test_aerosol_erfaci_smith2021():
     erfaci = smith2021(
         emissions=np.array([[[[100, 10, 35]]]]),
-        baseline_emissions=np.array([[[[2, 2, 10]]]]),
+        reference_emissions=np.array([[[[2, 2, 10]]]]),
         forcing_scaling=np.ones((1, 1, 1, 3)),
         scale=0.741,
         shape_sulfur=39.5,

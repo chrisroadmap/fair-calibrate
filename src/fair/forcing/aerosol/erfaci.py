@@ -84,7 +84,7 @@ def leach2021aci(
 
 def smith2021(
     emissions,
-    baseline_emissions,
+    reference_emissions,
     forcing_scaling,
     scale,
     shape_sulfur,
@@ -102,7 +102,7 @@ def smith2021(
     ------
     emissions : ndarray
         input emissions
-    baseline_emissions : ndarray
+    reference_emissions : ndarray
         pre-industrial emissions
     forcing_scaling : ndarray
         scaling of the calculated radiative forcing (e.g. for conversion to
@@ -154,20 +154,20 @@ def smith2021(
         Dev., 11, 2273–2297
     """
     sulfur = emissions[..., sulfur_index]
-    sulfur_base = baseline_emissions[..., sulfur_index]
+    sulfur_base = reference_emissions[..., sulfur_index]
     bc = emissions[..., bc_index]
-    bc_base = baseline_emissions[..., bc_index]
+    bc_base = reference_emissions[..., bc_index]
     oc = emissions[..., oc_index]
-    oc_base = baseline_emissions[..., oc_index]
+    oc_base = reference_emissions[..., oc_index]
 
     radiative_effect = -scale * np.log(
         1 + sulfur / shape_sulfur + (bc + oc) / shape_bcoc
     )
-    baseline_radiative_effect = -scale * np.log(
+    reference_radiative_effect = -scale * np.log(
         1 + sulfur_base / shape_sulfur + (bc_base + oc_base) / shape_bcoc
     )
 
-    erf_out = (radiative_effect - baseline_radiative_effect) * forcing_scaling
+    erf_out = (radiative_effect - reference_radiative_effect) * forcing_scaling
     return erf_out
 
 
