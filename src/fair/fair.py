@@ -531,6 +531,10 @@ class FAIR:
                     ["config", "specie"],
                     np.ones((self._n_configs, self._n_species)) * np.nan,
                 ),
+                "forcing_reference_emissions": (
+                    ["config", "specie"],
+                    np.ones((self._n_configs, self._n_species)) * np.nan,
+                ),
                 # general parameters relating emissions, concentration or forcing of one
                 # species to forcing of another.
                 # these are all linear factors
@@ -654,6 +658,11 @@ class FAIR:
             fill(
                 self.species_configs["forcing_reference_concentration"],
                 df.loc[specie].forcing_reference_concentration,
+                specie=specie,
+            )
+            fill(
+                self.species_configs["forcing_reference_emissions"],
+                df.loc[specie].forcing_reference_emissions,
                 specie=specie,
             )
             fill(self.species_configs["iirf_0"], df.loc[specie].iirf_0, specie=specie)
@@ -1504,6 +1513,9 @@ class FAIR:
         forcing_reference_concentration_array = self.species_configs[
             "forcing_reference_concentration"
         ].data
+        forcing_reference_emissions_array = self.species_configs[
+            "forcing_reference_emissions"
+        ].data
         forcing_sum_array = self.forcing_sum.data
         forcing_temperature_feedback_array = self.species_configs[
             "forcing_temperature_feedback"
@@ -1551,11 +1563,12 @@ class FAIR:
         cummins_state_array[0, ..., 0] = forcing_sum_array[0, ...]
         cummins_state_array[..., 1:] = self.temperature.data
 
-        # to save calculating this every timestep, we'll pre-determine
-        # the forcing to use as the baseline value if we are using the
-        # Meinshausen regime.
+        # non-linear forcing relationships need an offset. To save calculating
+        # them every timestep, we'll pre-determine the forcing to use as the
+        # baseline values.
+        # GHGs forcing under Meinshausen2020
         if self._routine_flags["ghg"] and self.ghg_method == "meinshausen2020":
-            meinshausen_baseline = meinshausen2020(
+            ghg_forcing_offset = meinshausen2020(
                 baseline_concentration_array[None, None, ...],
                 forcing_reference_concentration_array[None, None, ...],
                 forcing_scale_array[None, None, ...],
@@ -1565,6 +1578,22 @@ class FAIR:
                 self._n2o_indices,
                 self._minor_ghg_indices,
             )
+
+        # Aerosol indrect forcing under Smith2021
+        if self._routine_flags["aci"] and self._aci_method == "smith2021":
+            aci_forcing_offset = smith2021(
+                baseline_emissions_array[None, None, ...],
+                forcing_reference_emissions_array[None, None, ...],
+                forcing_scale_array[None, None, ..., self._aci_indices],
+                erfaci_scale_array[None, None, :, None],
+                erfaci_shape_sulfur_array[None, None, :, None],
+                erfaci_shape_bcoc_array[None, None, :, None],
+                self._sulfur_indices,
+                self._bc_indices,
+                self._oc_indices,
+            )
+
+        # Do we also need to check Leach2021 and ozone forcing?
 
         # it's all been leading up to this : FaIR MAIN LOOP
         for i_timepoint in tqdm(
@@ -1770,7 +1799,7 @@ class FAIR:
                         forcing_array[
                             i_timepoint + 1 : i_timepoint + 2, ..., self._ghg_indices
                         ]
-                        - meinshausen_baseline[..., self._ghg_indices]
+                        - ghg_forcing_offset[..., self._ghg_indices]
                     )
                 elif self.ghg_method == "etminan2016":
                     forcing_array[
@@ -1850,6 +1879,14 @@ class FAIR:
                         self._sulfur_indices,
                         self._bc_indices,
                         self._oc_indices,
+                    )
+                    forcing_array[
+                        i_timepoint + 1 : i_timepoint + 2, ..., self._aci_indices
+                    ] = (
+                        forcing_array[
+                            i_timepoint + 1 : i_timepoint + 2, ..., self._aci_indices
+                        ]
+                        - aci_forcing_offset
                     )
                 elif self.aci_method == "leach2021":
                     forcing_array[
