@@ -82,92 +82,47 @@ def leach2021aci(
     return erf_out
 
 
-def smith2021(
+def smith2022(
     emissions,
-    reference_emissions,
+    baseline_emissions,
     forcing_scaling,
     scale,
-    shape_sulfur,
-    shape_bcoc,
-    sulfur_index,
-    bc_index,
-    oc_index,
+    shape,
 ):
     r"""Calculate effective radiative forcing from aerosol-cloud interactions.
 
-    This uses the relationship to calculate ERFaci described in Smith et al.
-    (2021) [1]_ and is related to the "ghan2" relationship in FaIR1.6 [2]_.
+    This uses the relationship to calculate ERFaci as follows
+
+    F = \sum_{i} \beta_i \log \left( 1 + \frac{E_i}{n_i} \right)
+
+    where
+        $A_i$ is the emissions of a specie
+        $\beta_i$ is the scale factor
+        $n_i$ is a shape factor that describes how logarithmic the relationship is.
 
     Inputs
     ------
     emissions : ndarray
         input emissions
-    reference_emissions : ndarray
-        pre-industrial emissions
+    baseline_emissions : ndarray
+        baseline emissions
     forcing_scaling : ndarray
         scaling of the calculated radiative forcing (e.g. for conversion to
         effective radiative forcing and forcing uncertainty).
     scale : ndarray
-        scaling factor to apply to the logarithm
-    shape_sulfur : ndarray
-        scale factor for sulfur emissions
-    shape_bcoc : ndarray
-        scale factor for BC+OC emissions
-    sulfur_index : int or None
-        array index along SPECIES_AXIS corresponding to SO2 emissions.
-    bc_index : int or None
-        array index along SPECIES_AXIS corresponding to BC emissions.
-    oc_index : int or None
-        array index along SPECIES_AXIS corresponding to OC emissions.
+        per-species scaling factor to apply to the logarithm
+    shape : ndarray
+        per-species shape factor for the logarithm
 
     Returns
     -------
     effective_radiative_forcing : ndarray
         effective radiative forcing (W/m2) from aerosol-cloud interactions
-
-    Notes
-    -----
-    Where array input is taken, the arrays always have the dimensions of
-    (time, scenario, config, species, gas_box). Dimensionality can be 1, but we
-    retain the singleton dimension in order to preserve clarity of
-    calculation and speed.
-
-    The Smith et al. (2018) [2]_ relationship as formulated more explicitly in
-    Smith et al. (2021) [1]_ is
-
-    :math: F_{aci} = -\beta \log \left \frac{E_{SO2}}{s_{SO2}} +
-        \frac{E_{BC+OC}}{s_{BC+OC}} + 1 \right
-
-    (note there is a typo in Smith et al. 2021).
-
-    References
-    ----------
-    .. [1] Smith, C. J., Harris, G. R., Palmer, M. D., Bellouin, N., Collins,
-        W., Myhre, G., Schulz, M., Golaz, J.-C., Ringer, M., Storelvmo, T.,
-        Forster, P. M. (2021). Energy budget constraints on the time history of
-        aerosol forcing and climate sensitivity. Journal of Geophysical
-        Research: Atmospheres, 126, e2020JD033622.
-
-    .. [2] Smith, C. J., Forster, P. M.,  Allen, M., Leach, N., Millar, R. J.,
-        Passerello, G. A., and Regayre, L. A. (2018). FAIR v1.3: a simple
-        emissions-based impulse response and carbon cycle model, Geosci. Model
-        Dev., 11, 2273–2297
     """
-    sulfur = emissions[..., sulfur_index]
-    sulfur_base = reference_emissions[..., sulfur_index]
-    bc = emissions[..., bc_index]
-    bc_base = reference_emissions[..., bc_index]
-    oc = emissions[..., oc_index]
-    oc_base = reference_emissions[..., oc_index]
+    radiative_effect = np.nansum(scale*np.log(1 + emissions/shape), axis=SPECIES_AXIS)
+    baseline_radiative_effect = np.nansum(scale*np.log(1 + baseline_emissions/shape), axis=SPECIES_AXIS)
 
-    radiative_effect = -scale * np.log(
-        1 + sulfur / shape_sulfur + (bc + oc) / shape_bcoc
-    )
-    reference_radiative_effect = -scale * np.log(
-        1 + sulfur_base / shape_sulfur + (bc_base + oc_base) / shape_bcoc
-    )
-
-    erf_out = (radiative_effect - reference_radiative_effect) * forcing_scaling
+    erf_out = (radiative_effect - baseline_radiative_effect) * forcing_scaling
     return erf_out
 
 
