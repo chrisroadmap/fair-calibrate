@@ -119,8 +119,12 @@ def smith2022(
     effective_radiative_forcing : ndarray
         effective radiative forcing (W/m2) from aerosol-cloud interactions
     """
-    radiative_effect = np.nansum(scale*np.log(1 + emissions/shape), axis=SPECIES_AXIS)
-    baseline_radiative_effect = np.nansum(scale*np.log(1 + baseline_emissions/shape), axis=SPECIES_AXIS)
+    radiative_effect = np.nansum(
+        scale * np.log(1 + emissions / shape), axis=SPECIES_AXIS
+    )
+    baseline_radiative_effect = np.nansum(
+        scale * np.log(1 + baseline_emissions / shape), axis=SPECIES_AXIS
+    )
 
     erf_out = (radiative_effect - baseline_radiative_effect) * forcing_scaling
     return erf_out

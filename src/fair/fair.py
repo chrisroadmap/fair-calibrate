@@ -566,8 +566,14 @@ class FAIR:
                     np.zeros((self._n_configs, self._n_species)),
                 ),
                 # specific parameters for aerosol-cloud interactions
-                "aci_scale": (["config", "specie"], np.zeros((self._n_configs, self._n_species))),
-                "aci_shape": (["config", "specie"], np.ones((self._n_configs, self._n_species))),
+                "aci_scale": (
+                    ["config", "specie"],
+                    np.zeros((self._n_configs, self._n_species)),
+                ),
+                "aci_shape": (
+                    ["config", "specie"],
+                    np.ones((self._n_configs, self._n_species)),
+                ),
                 # specific parameters for ozone-depleting GHGs
                 "cl_atoms": ("specie", np.zeros(self._n_species)),
                 "br_atoms": ("specie", np.zeros(self._n_species)),
@@ -1175,7 +1181,6 @@ class FAIR:
                     "aci in 'calculated' mode requires sulfur in 'emissions' mode for "
                     "aci_method = stevens2015."
                 )
-
 
         if "eesc" not in list(
             self.properties_df.loc[self.properties_df["input_mode"] == "concentration"][
