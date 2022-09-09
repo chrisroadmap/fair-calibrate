@@ -23,7 +23,7 @@ from .energy_balance_model import (
     multi_ebm,
     step_temperature,
 )
-from .forcing.aerosol.erfaci import leach2021aci, smith2022, stevens2015
+from .forcing.aerosol.erfaci import logsum
 from .forcing.aerosol.erfari import calculate_erfari_forcing
 from .forcing.ghg import etminan2016, leach2021ghg, meinshausen2020, myhre1998
 from .forcing.minor import calculate_linear_forcing
@@ -78,7 +78,7 @@ class FAIR:
         n_layers=3,
         iirf_max=100,
         br_cl_ods_potential=45,
-        aci_method="smith2022",
+        aci_method="logsum",
         ghg_method="meinshausen2020",
         ch4_method="leach2021",
         temperature_prescribed=False,
@@ -97,10 +97,9 @@ class FAIR:
         br_cl_ods_potential : float, default=45
             factor describing the ratio of efficiency that each bromine atom
             has as an ozone depleting substance relative to each chlorine atom.
-        aci_method : str, default="smith2022"
+        aci_method : str, default="logsum"
             method to use for calculating forcing from aerosol-cloud
-            interactions. Valid methods are smith2022, leach2021 and
-            stevens2015.
+            interactions. Valid methods are logsum.
         ghg_method : str, default="meinshausen2020"
             method to use for calculating greenhouse gas forcing from CO2, CH4
             and N2O. Valid methods are leach2021, meinshausen2020,
@@ -135,12 +134,11 @@ class FAIR:
 
     @aci_method.setter
     def aci_method(self, value):
-        if value.lower() in ["smith2022", "stevens2015", "leach2021"]:
+        if value.lower() in ["logsum"]:
             self._aci_method = value.lower()
         else:
             raise ValueError(
-                f"aci_method should be one of [smith2022, stevens2015, leach2021]; you "
-                f"provided {value.lower()}."
+                f"aci_method should be logsum; you " f"provided {value.lower()}."
             )
 
     @property
@@ -530,10 +528,6 @@ class FAIR:
                     ["config", "specie"],
                     np.ones((self._n_configs, self._n_species)) * np.nan,
                 ),
-                "forcing_reference_emissions": (
-                    ["config", "specie"],
-                    np.ones((self._n_configs, self._n_species)) * np.nan,
-                ),
                 # general parameters relating emissions, concentration or forcing of one
                 # species to forcing of another.
                 # these are all linear factors
@@ -567,12 +561,12 @@ class FAIR:
                 ),
                 # specific parameters for aerosol-cloud interactions
                 "aci_scale": (
-                    ["config", "specie"],
-                    np.zeros((self._n_configs, self._n_species)),
+                    ["config"],
+                    np.ones((self._n_configs)) * np.nan,
                 ),
                 "aci_shape": (
                     ["config", "specie"],
-                    np.ones((self._n_configs, self._n_species)),
+                    np.zeros((self._n_configs, self._n_species)),
                 ),
                 # specific parameters for ozone-depleting GHGs
                 "cl_atoms": ("specie", np.zeros(self._n_species)),
@@ -662,11 +656,6 @@ class FAIR:
                 df.loc[specie].forcing_reference_concentration,
                 specie=specie,
             )
-            fill(
-                self.species_configs["forcing_reference_emissions"],
-                df.loc[specie].forcing_reference_emissions,
-                specie=specie,
-            )
             fill(self.species_configs["iirf_0"], df.loc[specie].iirf_0, specie=specie)
             fill(
                 self.species_configs["iirf_airborne"],
@@ -742,15 +731,14 @@ class FAIR:
                 specie=specie,
             )
             fill(
-                self.species_configs["aci_scale"],
-                df.loc[specie].aci_scale,
-                specie=specie,
-            )
-            fill(
                 self.species_configs["aci_shape"],
                 df.loc[specie].aci_shape,
                 specie=specie,
             )
+        fill(
+            self.species_configs["aci_scale"],
+            df.loc[df["type"] == "aci"].aci_scale,
+        )
         fill(
             self.species_configs["lifetime_temperature_sensitivity"],
             df.loc[df["type"] == "ch4"].lifetime_temperature_sensitivity,
@@ -1167,21 +1155,6 @@ class FAIR:
                     "mode."
                 )
 
-        if "aci" in list(
-            self.properties_df.loc[self.properties_df["input_mode"] == "calculated"][
-                "type"
-            ]
-        ):
-            if self.aci_method == "stevens2015" and "sulfur" not in list(
-                self.properties_df.loc[self.properties_df["input_mode"] == "emissions"][
-                    "type"
-                ]
-            ):
-                raise ValueError(
-                    "aci in 'calculated' mode requires sulfur in 'emissions' mode for "
-                    "aci_method = stevens2015."
-                )
-
         if "eesc" not in list(
             self.properties_df.loc[self.properties_df["input_mode"] == "concentration"][
                 "type"
@@ -1489,9 +1462,6 @@ class FAIR:
         forcing_reference_concentration_array = self.species_configs[
             "forcing_reference_concentration"
         ].data
-        forcing_reference_emissions_array = self.species_configs[
-            "forcing_reference_emissions"
-        ].data
         forcing_sum_array = self.forcing_sum.data
         forcing_temperature_feedback_array = self.species_configs[
             "forcing_temperature_feedback"
@@ -1543,7 +1513,21 @@ class FAIR:
         # them every timestep, we'll pre-determine the forcing to use as the
         # baseline values.
         # GHGs forcing under Meinshausen2020
+        # This check, and others, need to come earlier.
         if self._routine_flags["ghg"] and self.ghg_method == "meinshausen2020":
+            if (
+                np.sum(
+                    np.isnan(
+                        forcing_reference_concentration_array[:, self._ghg_indices]
+                    )
+                )
+                > 0
+            ):
+                raise ValueError(
+                    "There are NaNs in "
+                    "FAIR.species_configs['forcing_reference_concentration'] which "
+                    "means that I can't calculate greenhouse gas forcing."
+                )
             ghg_forcing_offset = meinshausen2020(
                 baseline_concentration_array[None, None, ...],
                 forcing_reference_concentration_array[None, None, ...],
@@ -1816,52 +1800,20 @@ class FAIR:
                 )
 
             # 7. aerosol indirect forcing
-            # Smith2022 is a generalisation of Stevens2015; the latter is now
-            # redundant.
             if self._routine_flags["aci"]:
-                if self.aci_method == "stevens2015":
-                    forcing_array[
-                        i_timepoint + 1 : i_timepoint + 2, ..., self._aci_indices
-                    ] = stevens2015(
-                        emissions_array[i_timepoint : i_timepoint + 1, ...],
-                        baseline_emissions_array[None, None, ...],
-                        forcing_scale_array[None, None, ..., self._aci_indices],
-                        erfaci_scale_array[None, None, :, None],
-                        erfaci_shape_sulfur_array[None, None, :, None],
-                        self._sulfur_indices,
-                    )
-                elif self.aci_method == "smith2022":
-                    forcing_array[
-                        i_timepoint + 1 : i_timepoint + 2, ..., self._aci_indices
-                    ] = smith2022(
-                        emissions_array[i_timepoint : i_timepoint + 1, ...],
-                        baseline_emissions_array[None, None, ...],
-                        forcing_scale_array[None, None, ..., self._aci_indices],
-                        erfaci_scale_array[None, None, ...],
-                        erfaci_shape_array[None, None, ...],
-                    )
-                    forcing_array[
-                        i_timepoint + 1 : i_timepoint + 2, ..., self._aci_indices
-                    ] = (
-                        forcing_array[
-                            i_timepoint + 1 : i_timepoint + 2, ..., self._aci_indices
-                        ]
-                        - aci_forcing_offset
-                    )
-                elif self.aci_method == "leach2021":
-                    forcing_array[
-                        i_timepoint + 1 : i_timepoint + 2, ..., self._aci_indices
-                    ] = leach2021aci(
-                        emissions_array[i_timepoint : i_timepoint + 1, ...],
-                        baseline_emissions_array[None, None, ...],
-                        forcing_scale_array[None, None, ..., self._aci_indices],
-                        erfaci_scale_array[None, None, :, None],
-                        erfaci_shape_sulfur_array[None, None, :, None],
-                        erfaci_shape_bcoc_array[None, None, :, None],
-                        self._sulfur_indices,
-                        self._bc_indices,
-                        self._oc_indices,
-                    )
+                forcing_array[
+                    i_timepoint + 1 : i_timepoint + 2, ..., self._aci_indices
+                ] = logsum(
+                    emissions_array[i_timepoint : i_timepoint + 1, ...],
+                    concentration_array[i_timepoint + 1 : i_timepoint + 2, ...],
+                    baseline_emissions_array[None, None, ...],
+                    baseline_concentration_array[None, None, ...],
+                    forcing_scale_array[None, None, ..., self._aci_indices],
+                    erfaci_scale_array[None, None, :],
+                    erfaci_shape_array[None, None, ...],
+                    self._aerosol_chemistry_from_emissions_indices,
+                    self._aerosol_chemistry_from_concentration_indices,
+                )
 
             # 8. calculate EESC this timestep for ozone forcing (and use it for
             # methane lifetime in the following timestep)
