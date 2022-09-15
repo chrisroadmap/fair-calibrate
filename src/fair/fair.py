@@ -893,14 +893,18 @@ class FAIR:
                             f"emissions database."
                         )
 
+                    # avoid NaNs from outside the interpolation range being mixed into
+                    # the results
+                    notnan = np.nonzero(~np.isnan(emis_in))
+
                     # RCMIP are "annual averages"; for emissions this is basically
                     # the emissions over the year, for concentrations and forcing
                     # it would be midyear values. In every case, we can assume
                     # midyear values and interpolate to our time grid.
                     rcmip_index = np.arange(1750.5, 2501.5)
                     interpolator = interp1d(
-                        rcmip_index,
-                        emis_in,
+                        rcmip_index[notnan],
+                        emis_in[notnan],
                         fill_value="extrapolate",
                         bounds_error=False,
                     )
@@ -961,11 +965,15 @@ class FAIR:
                             f"concentration database."
                         )
 
+                    # avoid NaNs from outside the interpolation range being mixed into
+                    # the results
+                    notnan = np.nonzero(~np.isnan(conc_in))
+
                     # interpolate: this time to timebounds
                     rcmip_index = np.arange(1700.5, 2501.5)
                     interpolator = interp1d(
-                        rcmip_index,
-                        conc_in,
+                        rcmip_index[notnan],
+                        conc_in[notnan],
                         fill_value="extrapolate",
                         bounds_error=False,
                     )
@@ -1019,11 +1027,15 @@ class FAIR:
                             f"radiative forcing database."
                         )
 
+                    # avoid NaNs from outside the interpolation range being mixed into
+                    # the results
+                    notnan = np.nonzero(~np.isnan(forc_in))
+
                     # interpolate: this time to timebounds
                     rcmip_index = np.arange(1750.5, 2501.5)
                     interpolator = interp1d(
-                        rcmip_index,
-                        forc_in,
+                        rcmip_index[notnan],
+                        forc_in[notnan],
                         fill_value="extrapolate",
                         bounds_error=False,
                     )

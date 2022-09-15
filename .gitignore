@@ -5,6 +5,7 @@ data/rcmip/
 data/parameter_sets/
 data/forcing/*.nc
 data/ar6_ensemble_batches/*
+data/ar6_ensemble_batches_rcp/*
 data/edgar-4.3.2/
 
 # OS files
