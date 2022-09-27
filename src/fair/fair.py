@@ -1896,7 +1896,7 @@ class FAIR:
                 forcing_array[
                     i_timepoint + 1 : i_timepoint + 2, ..., self._landuse_indices
                 ] = calculate_linear_forcing(
-                    cumulative_emissions_array[i_timepoint : i_timepoint + 1, ...],
+                    cumulative_emissions_array[i_timepoint + 1 : i_timepoint + 2, ...],
                     0,
                     forcing_scale_array[None, None, ..., self._landuse_indices],
                     land_use_cumulative_emissions_to_forcing_array[None, None, ...],
