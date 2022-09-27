@@ -103,12 +103,12 @@ def test_ssp_emissions_cmip6_ebm3_calibrations():
 
     # These lines write expected test results. If the model is changed, and we mean it,
     # uncomment to make new test results.
-    f.temperature[-1,...,0].to_netcdf(os.path.join(HERE, "test_data",
-    "cmip6_ssp_emissions_run_temperature_2100.nc"))
-    f.concentration[-1,...,2].to_netcdf(os.path.join(HERE, "test_data",
-    "cmip6_ssp_emissions_run_co2_concentration_2100.nc"))
-    f.forcing_sum[-1,...].to_netcdf(os.path.join(HERE, "test_data",
-    "cmip6_ssp_emissions_run_forcing_sum_2100.nc"))
+    # f.temperature[-1,...,0].to_netcdf(os.path.join(HERE, "test_data",
+    # "cmip6_ssp_emissions_run_temperature_2100.nc"))
+    # f.concentration[-1,...,2].to_netcdf(os.path.join(HERE, "test_data",
+    # "cmip6_ssp_emissions_run_co2_concentration_2100.nc"))
+    # f.forcing_sum[-1,...].to_netcdf(os.path.join(HERE, "test_data",
+    # "cmip6_ssp_emissions_run_forcing_sum_2100.nc"))
 
     expected_temperature = xr.open_dataarray(
         os.path.join(HERE, "test_data", "cmip6_ssp_emissions_run_temperature_2100.nc")
