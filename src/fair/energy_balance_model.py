@@ -255,14 +255,14 @@ class EnergyBalanceModel:
         eb_matrix_eigenvalues, eb_matrix_eigenvectors = scipy.linalg.eig(
             eb_matrix[1:, 1:]
         )
-        self.timescales = -1 / (np.real(eb_matrix_eigenvalues))
+        self.timescales = -self.timestep / (np.real(eb_matrix_eigenvalues))
         self.response_coefficients = (
             self.timescales
             * (
                 eb_matrix_eigenvectors[0, :]
                 * scipy.linalg.inv(eb_matrix_eigenvectors)[:, 0]
             )
-            / self.ocean_heat_capacity[0]
+            / (self.ocean_heat_capacity[0] * self.timestep)
         )
 
     def emergent_parameters(self, forcing_2co2_4co2_ratio=0.5):
