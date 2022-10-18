@@ -9,6 +9,7 @@ data/ar6_ensemble_batches/*
 data/ar6_ensemble_batches_rcp/*
 data/edgar-4.3.2/
 data/output/*.nc
+data/ceds/CEDS_v2021-04-21_emissions/
 
 # OS files
 .DS_Store
