@@ -20,8 +20,6 @@ def calculate_eesc(
     ----------
     concentration : ndarray
         concentrations in timestep
-    baseline_concentration : ndarray
-        baseline, perhaps pre-industrial concentrations
     fractional_release : ndarray
         fractional release describing the proportion of available ODS that
         actually contributes to ozone depletion.
