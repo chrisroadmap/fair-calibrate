@@ -1,4 +1,5 @@
 # large data input and output files
+data/ceds/
 data/netcdf-scm/cmip_data/
 data/netcdf-scm/*.zip
 data/rcmip/
@@ -7,6 +8,7 @@ data/forcing/*.nc
 data/ar6_ensemble_batches/*
 data/ar6_ensemble_batches_rcp/*
 data/edgar-4.3.2/
+data/output/*.nc
 
 # OS files
 .DS_Store

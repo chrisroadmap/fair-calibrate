@@ -7,7 +7,6 @@ from ..constants import SPECIES_AXIS
 
 def calculate_eesc(
     concentration,
-    baseline_concentration,
     fractional_release,
     cl_atoms,
     br_atoms,
@@ -52,12 +51,12 @@ def calculate_eesc(
     eesc_out = np.nansum(
         (
             cl_atoms
-            * (concentration - baseline_concentration)
+            * concentration
             * fractional_release
             / cfc11_fr
             + br_cl_ratio
             * br_atoms
-            * (concentration - baseline_concentration)
+            * concentration
             * fractional_release
             / cfc11_fr
         )
