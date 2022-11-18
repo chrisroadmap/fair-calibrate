@@ -7,7 +7,6 @@ from ..constants import SPECIES_AXIS
 
 def calculate_eesc(
     concentration,
-    baseline_concentration,
     fractional_release,
     cl_atoms,
     br_atoms,
@@ -21,8 +20,6 @@ def calculate_eesc(
     ----------
     concentration : ndarray
         concentrations in timestep
-    baseline_concentration : ndarray
-        baseline, perhaps pre-industrial concentrations
     fractional_release : ndarray
         fractional release describing the proportion of available ODS that
         actually contributes to ozone depletion.
@@ -51,15 +48,8 @@ def calculate_eesc(
     cfc11_fr = fractional_release[:, :, :, cfc_11_index]
     eesc_out = np.nansum(
         (
-            cl_atoms
-            * (concentration - baseline_concentration)
-            * fractional_release
-            / cfc11_fr
-            + br_cl_ratio
-            * br_atoms
-            * (concentration - baseline_concentration)
-            * fractional_release
-            / cfc11_fr
+            cl_atoms * concentration * fractional_release / cfc11_fr
+            + br_cl_ratio * br_atoms * concentration * fractional_release / cfc11_fr
         )
         * cfc11_fr,
         axis=SPECIES_AXIS,

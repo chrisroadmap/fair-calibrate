@@ -1834,7 +1834,6 @@ class FAIR:
                     i_timepoint + 1 : i_timepoint + 2, ..., self._eesc_indices
                 ] = calculate_eesc(
                     concentration_array[i_timepoint + 1 : i_timepoint + 2, ...],
-                    baseline_concentration_array[None, ...],
                     fractional_release_array[None, None, ...],
                     cl_atoms_array[None, None, ...],
                     br_atoms_array[None, None, ...],
