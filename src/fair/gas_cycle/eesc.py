@@ -48,15 +48,8 @@ def calculate_eesc(
     cfc11_fr = fractional_release[:, :, :, cfc_11_index]
     eesc_out = np.nansum(
         (
-            cl_atoms
-            * concentration
-            * fractional_release
-            / cfc11_fr
-            + br_cl_ratio
-            * br_atoms
-            * concentration
-            * fractional_release
-            / cfc11_fr
+            cl_atoms * concentration * fractional_release / cfc11_fr
+            + br_cl_ratio * br_atoms * concentration * fractional_release / cfc11_fr
         )
         * cfc11_fr,
         axis=SPECIES_AXIS,
