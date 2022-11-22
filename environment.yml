@@ -6,6 +6,7 @@ channels:
 dependencies:
   - climateforcing
   - ffmpeg
+  - h5py
   - ipywidgets
   - jupyter
   - matplotlib
