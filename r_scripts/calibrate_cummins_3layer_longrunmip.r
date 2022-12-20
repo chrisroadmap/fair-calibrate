@@ -21,7 +21,7 @@ cal_v = paste("v", Sys.getenv("CALIBRATION_VERSION"), sep="")
 fair_v = paste("fair-", Sys.getenv("FAIR_VERSION"), sep="")
 
 # Get the precalculated 4xCO2 N and T data
-input_data = read.csv(file.path("..", "output", fair_v, cal_v, "calibrations", "4xCO2_cmip6.csv"))
+input_data = read.csv(file.path("..", "output", fair_v, cal_v, "calibrations", "4xCO2_longrunmip.csv"))
 
 # Initial guess for parameter values
 inits3 <- list(
@@ -52,15 +52,15 @@ for (model in models) {
 	for (run in runs) {
 		rndt <- input_data[
 			(input_data$climate_model == model) &
-			(input_data$variable == "rndt") &
-			(input_data$member_id == run), 10:159
+			(input_data$variable == "rtmt") &
+			(input_data$member_id == run), 10:ncol(input_data)
 		]
 		rndt <- unname(rndt)
 
 		tas <- input_data[
 			(input_data$climate_model == model) &
 			(input_data$variable ==  "tas") &
-			(input_data$member_id == run), 10:159
+			(input_data$member_id == run), 10:ncol(input_data)
 		]
 		tas <- unname(tas)
 
@@ -140,7 +140,7 @@ colnames(output) <- names
 
 # save output
 write.csv(
-	output,
-	file.path("..", "output", fair_v, cal_v, "calibrations", "4xCO2_cummins_ebm3_cmip6.csv"),
-	row.names=FALSE
+    output,
+    file.path("..", "output", fair_v, cal_v, "calibrations", "4xCO2_cummins_ebm3_longrunmip.csv"),
+    row.names=FALSE
 )
