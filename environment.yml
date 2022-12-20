@@ -13,6 +13,7 @@ dependencies:
   - openpyxl
   - pandas
   - pooch
+  - python-dotenv
   - scipy
   - tqdm
   - xarray
