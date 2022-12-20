@@ -54,6 +54,24 @@ source("calibrate_cummins_2layer.r")
 source("calibrate_cummins_3layer_longrunmip.r")
 ```
 
+## Calibrations:
+
+### v1.0
+- 1.5 million prior ensemble
+- **Carbon cycle** uses the parameters from Leach et al. 2021 calibrated for FaIR 2.0.0 using 11 C4MIP models.
+- **Aerosol cloud interactions** depend on SO2, BC and OC, using calibrations from Smith et al. 2021 (developed for AR6) using 11 RFMIP and AerChemMIP models.
+- **Aerosol radiation interactions** use prior values from AR6 Ch6, with a factor of two uncertainty for each species. ....
+- ...
+
+## Constraining contexts
+
+### AR6
+- Emissions and concentrations from RCMIP (i.e. based on CMIP6)
+- Temperature from AR6 WG1 (1850-2020, mean of 4 datasets), constrained using ssp245 projections beyond 2014.
+- Ocean heat content from AR6 WG1 (1971-2018), linear.
+- two step constraining procedure used: first RMSE of less than 0.16K, then 6-variable distribution fitting.
+- 1001-member posterior (deliberately chosen).
+
 ## acknowledgements and contributions
 
 Should I ever write a calibration paper, these people should be on it.
