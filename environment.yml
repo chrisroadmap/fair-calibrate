@@ -1,10 +1,8 @@
-name: fair2.1-calibrate
+name: fair-calibrate
 channels:
-  - chrisroadmap
   - conda-forge
   - defaults
 dependencies:
-  - climateforcing
   - ffmpeg
   - ipywidgets
   - jupyter
@@ -19,3 +17,6 @@ dependencies:
   - tqdm
   - xarray
   - xlrd
+  - pip
+  - pip:
+    - fair==2.1.0
