@@ -10,6 +10,9 @@ data/ar6_ensemble_batches_rcp/*
 data/edgar-4.3.2/
 data/output/*.nc
 
+# produced priors (needs direct Zenodo upload)
+output/*/*/priors/*
+
 # OS files
 .DS_Store
 Thumbs.db
