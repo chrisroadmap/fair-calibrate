@@ -1,16 +1,5 @@
-# fair2.1-calibrate
-FaIR version 2.1, calibration to CMIP and constraining to AR6
-
-What's new compared to v2.0 and v1.6:
-
-- Re-calibration of FaIR v2.0 three-layer model to updated Cummins 4xCO2 relationships, including many more CMIP6 models as provided by Hege-Beate Fredriksen
-- inclusion of top of atmosphere energy imbalance and ocean heat content change as diagnostic outputs
-- following from above, an energy balance representation of the three-layer model, that can also be run in standalone mode
-- inclusion of stochastic temperatures and forcing, introduced from Cummins et al. (2020)
-- Adding back some of the emissions-driven relationships from FaIR v1.6 (land use change, ozone)
-- changing the interface to a object oriented design
-- an AR6-consistent constrained calibration
-- everything very, very parallel
+# fair-calibrate
+Multiple strategies to calibrate the FaIR model.
 
 ## installation
 
@@ -22,16 +11,13 @@ What's new compared to v2.0 and v1.6:
 ### python and jupyter notebooks
 ```
 conda env create -f environment.yml
-conda activate fair2.1-calibrate
+conda activate fair-calibrate
 nbstripout --install
-
-# the last step is then to install this local version of fair itself
-pip install -e .
 ```
 
 If you get module import errors running any of the notebooks, it's likely that your local environment is not up to date:
 ```
-cd fair2.1-calibrate  # path to wherever your local copy is
+cd fair-calibrate  # path to wherever your local copy is
 
 # get latest version
 git fetch
@@ -42,22 +28,20 @@ conda activate fair2.1-calibrate
 conda env update -f environment.yml --prune
 ```
 
-TODO: put all of this into a config/make file.
+## How to run
 
-## examples
+The `.env` file contains environment variables that should be changed in order to produce the calibration. These are FaIR version, calibration version, constraints context and number of samples.
 
-Once `fair` is installed, the notebooks in the `examples` directory give some very incomplete tutorials on how to run the model.
+The output will be produced in `output/fair-X.X.X/vY.Y.Y/context` where X is the FaIR version, Y is the calibration version and context is the set of constraints used (e.g. AR6, 2022 observations, etc.).
 
-## CMIP6 and AR6 calibrations
-
-The other notebooks directory is `cmip6-ar6-calibrations` which first calibrates the model to CMIP6 and then provides a constrained probablistic distribution that is in line with the IPCC's Sixth Assessment Report, Working Group 1. There are also some model testing notebooks here (mostly related to efficiency and parallelisation).
 
 To reproduce:
 
-1. The `010_concatenate-hege-data-4xCO2.ipynb` notebook is run first.
-2. Then, `r_scripts/calibrate_cummins_3layer.r` is run.
-3. Then, `r_scripts/calibrate_cummins_2layer.r` is run.
-3. Finally, the remaining notebooks are run in numerical order.
+1. Set the environment variables.
+2. Run the notebooks inside `notebooks/calibration`.
+3. Run the R scripts inside `r_scripts`.
+4. Run the notebooks inside `notebooks/sampling`.
+5. Run the notebooks inside `notebooks/constraining`.
 
 ### the R scripts
 
@@ -66,6 +50,8 @@ Open the R console and set the working directory to the `r_scripts` directory of
 ```
 source("setup.r")
 source("calibrate_cummins_3layer.r")
+source("calibrate_cummins_2layer.r")
+source("calibrate_cummins_3layer_longrunmip.r")
 ```
 
 ## acknowledgements and contributions
