@@ -74,6 +74,8 @@ source("calibrate_cummins_2layer.r")
 source("calibrate_cummins_3layer_longrunmip.r")
 ```
 
+Note: I get different results from the 3-layer model calibration between using pre-compiled R binary for for Mac compared to building the R binary from source on CentOS7; both using R-4.1.1. Since the Linux OS is well out of date (Leeds IT: get your act together... again) and the Mac-derived results look way more sensible, the Mac results are the ones that should be used. A future **TODO** would be to switch to ``py-bobyqa`` which is the optimizer used in the R code, and remove dependence on R.
+
 ## Documentation:
 
 It is critical that each calibration version and calibration set is well documented, as they may be used by others: often, differences in the responses in climate emulators are more a function of calibration than of model structural differences (we don't have a single good reference to prove this yet, but trust us).
