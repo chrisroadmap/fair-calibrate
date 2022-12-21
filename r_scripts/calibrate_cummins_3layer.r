@@ -31,27 +31,7 @@ inits3 <- list(
 	epsilon = 1,
 	sigma_eta = 0.5,
 	sigma_xi = 0.5,
-	F_4xCO2 = 8
-)
-
-lower3 <- list(
-    gamma = 0.5,
-    C = c(1, 4, 30),
-    kappa = c(0.4, 1, 0.2),
-    epsilon = 0.5,
-    sigma_eta = 0,
-    sigma_xi = 0,
-    F_4xCO2 = 5
-)
-
-upper3 <- list(
-    gamma = 6,
-    C = c(9, 30, 500),
-    kappa = c(2.5, 10, 1.5),
-    epsilon = 2.5,
-    sigma_eta = 3.5,
-    sigma_xi = 1,
-    F_4xCO2 = 11
+	F_4xCO2 = 5
 )
 
 # prepare empty output dataframe
@@ -97,8 +77,6 @@ for (model in models) {
 					check <- capture.output(
 						result <- FitKalman(
 							inits3,
-                            lower = lower3,
-                            upper = upper3,
 							T1 = tas,
 							N = rndt,
 							alpha = 1e-05 * 10^attempt,
