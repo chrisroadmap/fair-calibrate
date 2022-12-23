@@ -41,11 +41,14 @@ FAIR_VERSION=2.1.0
 CONSTRAINTS=ar6
 PRIOR_SAMPLES=1500000
 POSTERIOR_SAMPLES=1001
+CONSTRAINT_SET=AR6_updated
 ```
 
-The output will be produced in `output/fair-X.X.X/vY.Y.Y/` where X is the FaIR version and Y is the calibration version. Multiple constraint philosphies can be applied for the same set of calibrations; these are in the CONSTRAINTS is a named set of constraints used (e.g. AR6, 2022 observations, etc.).
+The output will be produced in `output/fair-X.X.X/vY.Y.Y/` where X is the FaIR version and Y is the calibration version. Multiple constraint philosphies can be applied for the same set of calibrations; these are in the posteriors/CONSTRAINTS subdirectory where CONSTRAINTS is a named set of constraints used (e.g. AR6, 2022 observations, etc.). The posteriors are the only data output that will be committed to Git, but the intention is that the full workflow will be on Zenodo.
 
 ### To run the workflow
+
+actually this isn't quite right - the R scripts come between notebooks 2 and 3 in the calibration I think. TODO: make an automated workflow.
 
 1. Create the `.env` file.
 2. Run the notebooks inside `notebooks/calibration`.
@@ -80,7 +83,7 @@ Note: I get different results from the 3-layer model calibration between using p
 
 It is critical that each calibration version and calibration set is well documented, as they may be used by others: often, differences in the responses in climate emulators are more a function of calibration than of model structural differences (we don't have a single good reference to prove this yet, but trust us).
 
-Maybe a TODO: move to READTHEDOCS.
+Maybe a TODO: move to READTHEDOCS or a wiki.
 
 ### Calibration versions
 
@@ -90,7 +93,7 @@ Maybe a TODO: move to READTHEDOCS.
 - **Methane lifetime** calibrated on 4 AerChemMIP experiments for 1850 and 2014 (Thornhill et al. 2021a, 2021b). Unlike other variables which are sampled around some prior uncertainty, only the best estimate historical calibration is used.
 - **Carbon cycle** uses the parameters from Leach et al. 2021 calibrated for FaIR 2.0.0 using 11 C4MIP models.
 - **Aerosol cloud interactions** depend on SO2, BC and OC, using calibrations from Smith et al. 2021a (developed for AR6) using 11 RFMIP and AerChemMIP models, with a prior of -2 to 0 W/m2.
-- **Aerosol radiation interactions** use prior values from AR6 Ch6, with a factor of two uncertainty for each species and a prior in the range of -ZZZZ to AAA.
+- **Aerosol radiation interactions** use prior values from AR6 Ch6, with a factor of two uncertainty for each species and a prior in the range of -0.6 to 0.0.
 - **Ozone** uses the same coefficeints as AR6 (Smith et al. 2021b).
 - **Effective radaitive forcing uncertainty** follows the distributions in AR6.
 
@@ -101,20 +104,10 @@ Thornhill et al. 2021b: https://doi.org/10.5194/acp-21-1105-2021
 
 ### Constraint sets:
 
-#### AR6
+#### AR6_updated
 - 1001-member posterior (deliberately chosen).
 - Emissions and concentrations from RCMIP (i.e. based on CMIP6)
 - Temperature from AR6 WG1 (1850-2020, mean of 4 datasets), constrained using ssp245 projections beyond 2014.
 - Ocean heat content from AR6 WG1 (1971-2018), linear.
 - two step constraining procedure used: first RMSE of less than 0.16K, then 6-variable distribution fitting.
-
-## acknowledgements and contributions
-
-Should I ever write a calibration paper, these people should be on it.
-
-1. Nick Leach and Stuart Jenkins for the original FaIR v2.0, which hopefully isn't too mangled or complicated by this attempt.
-2. Hege-Beate Fredriksen for crunching the CMIP6 4xCO2 data from many more models
-3. Donald Cummins for the three-layer model tuning algorithm.
-4. Bill Collins for assistance with chemistry emulations and correspondence to AerChemMIP results.
-5. Zeb Nicholls for advice on constraining to assessed ranges (e.g. AR6)
-6. Haozhe He for the longrunmip data - if it gets used.
+- Aerosol ERF, ERFari and ERFaci as in AR6 WG1
