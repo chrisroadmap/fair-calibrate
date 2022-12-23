@@ -15,8 +15,13 @@
 # Use Donald Cummins' package
 library(EBM)
 
+# Get environment variable describing calibration version
+readRenviron("../.env")
+cal_v = paste("v", Sys.getenv("CALIBRATION_VERSION"), sep="")
+fair_v = paste("fair-", Sys.getenv("FAIR_VERSION"), sep="")
+
 # Get the precalculated 4xCO2 N and T data
-input_data = read.csv("../data/cmip6-hbf/4xCO2.csv")
+input_data = read.csv(file.path("..", "output", fair_v, cal_v, "calibrations", "4xCO2_cmip6.csv"))
 
 # Initial guess for parameter values
 inits2 <- list(
@@ -132,10 +137,8 @@ names = c("model", "run", "conv", "nit", "gamma", "C1", "C2", "kappa1",
 colnames(output) <- names
 
 # save output
-ifelse(!dir.exists(file.path("..", "data", "calibration")),
-	dir.create(file.path("..", "data", "calibration")), FALSE)
 write.csv(
-	output,
-	file.path("..", "data", "calibration", "4xCO2_cummins_ebm2.csv"),
-	row.names=FALSE
+    output,
+    file.path("..", "output", fair_v, cal_v, "calibrations","4xCO2_cummins_ebm2_cmip6.csv"),
+    row.names=FALSE
 )
