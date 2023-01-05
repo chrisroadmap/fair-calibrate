@@ -98,9 +98,9 @@ Maybe a TODO: move to READTHEDOCS or a wiki.
 - **Effective radaitive forcing uncertainty** follows the distributions in AR6.
 
 Smith et al. 2021a: https://doi.org/10.1029/2020JD033622 |
-Smith et al. 2021b: https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_FGD_Chapter07_SM.pdf | 
+Smith et al. 2021b: https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_FGD_Chapter07_SM.pdf |
 Thornhill et al. 2021a: https://doi.org/10.5194/acp-21-853-2021 |
-Thornhill et al. 2021b: https://doi.org/10.5194/acp-21-1105-2021 
+Thornhill et al. 2021b: https://doi.org/10.5194/acp-21-1105-2021
 
 ### Constraint sets:
 
@@ -111,3 +111,6 @@ Thornhill et al. 2021b: https://doi.org/10.5194/acp-21-1105-2021
 - Ocean heat content from AR6 WG1 (1971-2018), linear.
 - two step constraining procedure used: first RMSE of less than 0.16K, then 6-variable distribution fitting.
 - Aerosol ERF, ERFari and ERFaci as in AR6 WG1
+
+#### AR6_updated_no_aviation
+- As `AR6_updated`, but with historical and future forcing from aviation set to zero. The historical is recalibrated to switch aviation off.
