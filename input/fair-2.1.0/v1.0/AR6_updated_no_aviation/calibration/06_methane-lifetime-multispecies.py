@@ -36,6 +36,9 @@ from fair import FAIR
 from fair.interface import fill, initialise
 
 from fair import __version__
+from dotenv import load_dotenv
+
+load_dotenv()
 
 print("Calibrating methane lifetime...")
 
