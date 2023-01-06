@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Aerosol calibration
+"""Aerosol-radiation calibration."""
 #
 # Use the AR6 per-species ERFari calibrations, from Chapter 6 Fig. 6.12. This includes contibutions from CH4, N2O and HCs.
 #
 # The uncertainty is uniform for each specie, a factor of two. This needs to be documented in paper.
-
-# In[ ]:
-
 
 import os
 import pooch
@@ -19,21 +16,15 @@ import json
 import scipy.stats
 from tqdm import tqdm
 
-from dotenv import load_dotenv
 from fair import __version__
+from dotenv import load_dotenv
 
-
-# Get environment variables
 load_dotenv()
 
 cal_v = os.getenv('CALIBRATION_VERSION')
 fair_v = os.getenv('FAIR_VERSION')
 constraint_set = os.getenv('CONSTRAINT_SET')
 samples = int(os.getenv("PRIOR_SAMPLES"))
-
-
-# In[ ]:
-
 
 rcmip_emissions_file = pooch.retrieve(
     url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
@@ -51,17 +42,9 @@ rcmip_concentration_file = pooch.retrieve(
 df_emis = pd.read_csv(rcmip_emissions_file)
 df_conc = pd.read_csv(rcmip_concentration_file)
 
-
-# In[ ]:
-
-
 emitted_species = [
     'Sulfur', 'BC', 'OC', 'NH3', 'NOx', 'VOC', 'CO',
 ]
-
-
-# In[ ]:
-
 
 concentration_species = [
     'CH4', 'N2O',
@@ -72,19 +55,12 @@ concentration_species = [
 ]
 
 
-# In[ ]:
-
-
 hc_species = [
     'CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115',
     'HCFC-22', 'HCFC-141b', 'HCFC-142b',
     'CCl4', 'CHCl3', 'CH2Cl2', 'CH3Cl', 'CH3CCl3', 'CH3Br',
     'Halon-1211', 'Halon-1301', 'Halon-2402'
 ]
-
-
-# In[ ]:
-
 
 species_out = {}
 for ispec, species in enumerate(emitted_species):
@@ -103,21 +79,7 @@ for ispec, species in enumerate(concentration_species):
     ].interpolate(axis=1).values.squeeze()
     species_out[species] = conc_in
 
-
-# In[ ]:
-
-
 species_df = pd.DataFrame(species_out, index=range(1750,2101))
-species_df
-
-
-# In[ ]:
-
-
-species_df.loc[2019,'CFC-11':]
-
-
-# In[ ]:
 
 
 def calculate_eesc(
@@ -135,10 +97,6 @@ def calculate_eesc(
         br_cl_ratio * br_atoms * (concentration) * fractional_release / fractional_release_cfc11
     ) * fractional_release_cfc11
     return eesc_out
-
-
-# In[ ]:
-
 
 fractional_release = {
     'CFC-11':0.47,
@@ -201,9 +159,6 @@ br_atoms = {
 }
 
 
-# In[ ]:
-
-
 hc_eesc = {}
 total_eesc_2019 = 0
 total_eesc_1750 = 0
@@ -226,15 +181,7 @@ for species in hc_species:
     )
     total_eesc_1750 = total_eesc_1750 + hc_eesc[species]
 
-
-# In[ ]:
-
-
 total_eesc_2019, total_eesc_1750, -0.00808/(total_eesc_2019-total_eesc_1750)
-
-
-# In[ ]:
-
 
 erfari_emitted = pd.Series({
     'Sulfur': -0.234228,
@@ -248,68 +195,17 @@ erfari_emitted = pd.Series({
     'N2O': -0.00209,
     'Equivalent effective stratospheric chlorine': -0.00808,
 })
-erfari_emitted
-
-
-# In[ ]:
-
 
 # erfari radiative efficiency per Mt or ppb or ppt
 re = erfari_emitted / (species_df.loc[2019, :] - species_df.loc[1750, :])
-
-
-# In[ ]:
-
-
 re.dropna(inplace=True)
-
-
-# In[ ]:
-
 
 re['Equivalent effective stratospheric chlorine'] = erfari_emitted['Equivalent effective stratospheric chlorine']/(total_eesc_2019-total_eesc_1750)
 
-
-# In[ ]:
-
-
-re
-
-
-# In[ ]:
-
-
 scalings = scipy.stats.uniform.rvs(np.minimum(re*2, 0), np.maximum(re*2, 0)-np.minimum(re*2, 0), size=(samples, 10), random_state=3729329)
-
-
-# In[ ]:
-
-
-re.index
-
-
-# In[ ]:
-
 
 df = pd.DataFrame(scalings, columns=re.index)
 
-
-# In[ ]:
-
-
-df
-
-
-# In[ ]:
-
-
 os.makedirs(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/', exist_ok=True)
 
-
-# In[ ]:
-
-
 df.to_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/aerosol_radiation.csv', index=False)
-
-
-# In[ ]:

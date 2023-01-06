@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # AR6 calibration of FaIR 2.1
+"""AR6 calibration of FaIR 2.1"""
 #
 # - use logsum aerosol indirect forcing relationship.
 # - aerosol direct is from AR6.
@@ -14,9 +14,7 @@
 #
 # We have to do this slightly differently to the examples so far. 1.5 million ensemble members is going to take up too much memory, so we run in batches of 1000, initialising a new FaIR instance for each batch, and saving the output as we go.
 
-# ## Basic imports
-
-# In[ ]:
+print("Running the priors (could take a while)...")
 
 
 import os
@@ -33,16 +31,16 @@ import multiprocessing
 from fair import FAIR
 from fair.forcing.ghg import meinshausen2020
 
-from dotenv import load_dotenv
 from fair import __version__
 
 from parallel import run_fair
 from utils import _parallel_process
 
 import warnings # remove in v2.1.1
+from dotenv import load_dotenv
 
-# Get environment variables
 load_dotenv()
+
 
 cal_v = os.getenv('CALIBRATION_VERSION')
 fair_v = os.getenv('FAIR_VERSION')
@@ -52,13 +50,11 @@ batch_size = int(os.getenv("BATCH_SIZE"))
 WORKERS = int(os.getenv("WORKERS"))
 
 # number of processors
-WORKERS = min(multiprocessing.cpu_count(), WORKERS) 
+WORKERS = min(multiprocessing.cpu_count(), WORKERS)
 
 assert fair_v == __version__
 
 if __name__ == "__main__":
-    # ## Set up problem
-
     erf_2co2 = meinshausen2020(
         np.array([554.30, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),
         np.array([277.15, 731.41, 273.87]) * np.ones((1, 1, 1, 3)),

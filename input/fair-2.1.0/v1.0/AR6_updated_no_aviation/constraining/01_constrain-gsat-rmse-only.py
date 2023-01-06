@@ -16,6 +16,9 @@ from tqdm.auto import tqdm
 
 from fair.energy_balance_model import EnergyBalanceModel
 from fair import __version__
+from dotenv import load_dotenv
+
+load_dotenv()
 
 print("Doing RMSE constraint...")
 

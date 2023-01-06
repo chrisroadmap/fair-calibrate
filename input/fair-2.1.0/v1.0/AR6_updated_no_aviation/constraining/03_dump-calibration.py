@@ -9,6 +9,9 @@ import pandas as pd
 import matplotlib.pyplot as pl
 
 from fair import __version__
+from dotenv import load_dotenv
+
+load_dotenv()
 
 print("Dumping output...")
 

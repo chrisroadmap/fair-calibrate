@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Check and run carbon cycle calibrations
+"""Check and run carbon cycle calibrations."""
 #
 # Carbon cycle tunings for 11 C4MIP models are from FaIR 2.0 paper (Leach et al. 2021), calibrated on CMIP6 1pct runs. Let's see if they give reasonable concentrations in emissions-driven mode.
-
-# In[ ]:
-
 
 import os
 import numpy as np
@@ -19,30 +16,24 @@ from fair import FAIR
 from fair.interface import fill, initialise
 from fair.structure.units import compound_convert
 
-from dotenv import load_dotenv
 from fair import __version__
+from dotenv import load_dotenv
 
-
-# Get environment variables
 load_dotenv()
 
 cal_v = os.getenv('CALIBRATION_VERSION')
 fair_v = os.getenv('FAIR_VERSION')
 constraint_set = os.getenv('CONSTRAINT_SET')
 samples = int(os.getenv("PRIOR_SAMPLES"))
+plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
 
-
+print("Making carbon cycle calibrations...")
 
 compound_convert['CO2']['C']
 
 
 assert fair_v == __version__
 
-
-# In[ ]:
-
-
-# Source: Leach et al. 2021
 
 # NB: rU and rA are in GtC units, we need to convert to GtCO2
 data = np.array(
@@ -56,40 +47,12 @@ data = np.array(
 data[1,:] = data[1,:] * compound_convert['CO2']['C']
 data[3,:] = data[3,:] * compound_convert['CO2']['C']
 
-
-# In[ ]:
-
-
 models = [
     'ACCESS-ESM1-5', 'BCC-CSM2-MR', 'CESM2', 'CNRM-ESM2-1', 'CanESM5', 'GFDL-ESM4', 'IPSL-CM6A-LR', 'MIROC-ES2L',
     'MPI-ESM1-2-LR', 'NorESM2-LM', 'UKESM1-0-LL']
 
 
-# In[ ]:
-
-
 params = pd.DataFrame(data.T, columns=['r0','rU','rT','rA'], index=models)
-
-
-# In[ ]:
-
-
-params.mean()
-
-
-# In[ ]:
-
-
-params.corr()
-
-
-# In[ ]:
-
-
-pd.plotting.scatter_matrix(params);
-
-
-# In[ ]:
 
 
 kde = scipy.stats.gaussian_kde(params.T)
@@ -100,54 +63,16 @@ cc_sample = cc_sample[:,~mask]
 cc_sample_df=pd.DataFrame(
     data=cc_sample[:,:samples].T, columns=['r0','rU','rT','rA']
 )
-#geoff_sample_df.to_csv('../data_output/geoff_sample.csv', index=False)
 cc_sample_df
-
-
-# In[ ]:
-
-
-pl.hist(cc_sample_df['r0']);
-
-
-# In[ ]:
-
-
-pl.hist(cc_sample_df['rU']);
-
-
-# In[ ]:
-
-
-pl.hist(cc_sample_df['rT']);
-
-
-# In[ ]:
-
-
-pl.hist(cc_sample_df['rA']);
-
 
 # ## First thing we'll do is run 11 ESM simulations, CO2 only, default forcing etc.
 #
 # The CO2 concentrations and warming from these simulations will not be perfect because of the absence of other forcers. And the individual model values of CO2 ERF are not taken into account either.
 
-# In[ ]:
-
-
 f = FAIR()
-
-
-# In[ ]:
-
-
 f.define_time(1750, 2500, 1)
 f.define_scenarios(['ssp119', 'ssp245', 'ssp585'])
 f.define_configs(models)
-
-
-# In[ ]:
-
 
 species = ['CO2', 'CH4', 'N2O']
 
@@ -176,45 +101,18 @@ properties = {
 }
 
 f.define_species(species, properties)
-
-
-# In[ ]:
-
-
 f.allocate()
-
-
-# In[ ]:
-
-
 f.fill_species_configs()
-
-
-# In[ ]:
-
-
 f.fill_from_rcmip()
-
-
-# In[ ]:
-
 
 fill(f.concentration, 729.2, specie='CH4')
 fill(f.concentration, 270.1, specie='N2O')
-
-
-# In[ ]:
-
 
 for model in models:
     fill(f.species_configs['iirf_0'], params.loc[model, 'r0'], specie='CO2', config=model)
     fill(f.species_configs['iirf_uptake'], params.loc[model, 'rU'], specie='CO2', config=model)
     fill(f.species_configs['iirf_airborne'], params.loc[model, 'rA'], specie='CO2', config=model)
     fill(f.species_configs['iirf_temperature'], params.loc[model, 'rT'], specie='CO2', config=model)
-
-
-# In[ ]:
-
 
 df = pd.read_csv(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/4xCO2_cummins_ebm3_cmip6.csv")
 models_runs = {
@@ -241,132 +139,76 @@ for imod, model in enumerate(models_runs):
     fill(f.climate_configs['deep_ocean_efficacy'], df.loc[condition, 'epsilon'].values[0])
     fill(f.climate_configs['gamma_autocorrelation'], df.loc[condition, 'gamma'].values[0])
 
-
-# In[ ]:
-
-
 initialise(f.concentration, f.species_configs['baseline_concentration'])
 initialise(f.forcing, 0)
 initialise(f.temperature, 0)
 initialise(f.cumulative_emissions, 0)
 initialise(f.airborne_emissions, 0)
 
-
-# In[ ]:
-
-
 f.run()
 
 
-# In[ ]:
-
-
-f.temperature.shape
-
-
-# In[ ]:
-
-
-custom_cycler = (
-    cycler(color=['red','darkorange','yellow','yellowgreen','green','turquoise','teal','blue','blueviolet','purple','pink'])
-)
-
-
-# In[ ]:
-
-
-# these don't seem to agree with the esm-hist runs I did in another repo. v2 should be a recalibration.
-fig, ax = pl.subplots()
-ax.set_prop_cycle(custom_cycler)
-ax.plot(f.timebounds, f.concentration.loc[dict(specie='CO2', scenario='ssp585')], label=models);
-
-pl.legend()
-
-
-# In[ ]:
-
-
-fig, ax = pl.subplots()
-ax.set_prop_cycle(custom_cycler)
-ax.plot(f.timebounds, f.temperature.loc[dict(layer=0, scenario='ssp585')], label=models);
-pl.legend()
-
-
-# In[ ]:
-
-
-fig, ax = pl.subplots()
-ax.set_prop_cycle(custom_cycler)
-pl.plot(f.timebounds, f.airborne_fraction.loc[dict(specie='CO2', scenario='ssp585')], label=models);
-pl.legend()
-
-
-# In[ ]:
-
-
-fig, ax = pl.subplots()
-ax.set_prop_cycle(custom_cycler)
-ax.plot(f.timebounds, f.concentration.loc[dict(specie='CO2', scenario='ssp245')], label=models);
-
-pl.legend()
-
-
-# In[ ]:
-
-
-fig, ax = pl.subplots()
-ax.set_prop_cycle(custom_cycler)
-ax.plot(f.timebounds, f.temperature.loc[dict(layer=0, scenario='ssp245')], label=models);
-pl.legend()
-
-
-# In[ ]:
-
-
-fig, ax = pl.subplots()
-ax.set_prop_cycle(custom_cycler)
-pl.plot(f.timebounds, f.airborne_fraction.loc[dict(specie='CO2', scenario='ssp245')], label=models);
-pl.legend()
-
-
-# In[ ]:
-
-
-fig, ax = pl.subplots()
-ax.set_prop_cycle(custom_cycler)
-ax.plot(f.timebounds, f.concentration.loc[dict(specie='CO2', scenario='ssp119')], label=models);
-
-pl.legend()
-
-
-# In[ ]:
-
-
-fig, ax = pl.subplots()
-ax.set_prop_cycle(custom_cycler)
-ax.plot(f.timebounds, f.temperature.loc[dict(layer=0, scenario='ssp119')], label=models);
-pl.legend()
-
-
-# In[ ]:
-
-
-fig, ax = pl.subplots()
-ax.set_prop_cycle(custom_cycler)
-pl.plot(f.timebounds, f.airborne_fraction.loc[dict(specie='CO2', scenario='ssp119')], label=models);
-pl.legend()
-
-
-# In[ ]:
+# if plots:
+#     custom_cycler = (
+#         cycler(color=['red','darkorange','yellow','yellowgreen','green','turquoise','teal','blue','blueviolet','purple','pink'])
+#     )
+#
+#     # these don't seem to agree with the esm-hist runs I did in another repo. v2 should be a recalibration.
+#     fig, ax = pl.subplots()
+#     ax.set_prop_cycle(custom_cycler)
+#     ax.plot(f.timebounds, f.concentration.loc[dict(specie='CO2', scenario='ssp585')], label=models);
+#     pl.legend()
+#     pl.close()
+#
+#     fig, ax = pl.subplots()
+#     ax.set_prop_cycle(custom_cycler)
+#     ax.plot(f.timebounds, f.temperature.loc[dict(layer=0, scenario='ssp585')], label=models);
+#     pl.legend()
+#     pl.close()
+#
+#     fig, ax = pl.subplots()
+#     ax.set_prop_cycle(custom_cycler)
+#     pl.plot(f.timebounds, f.airborne_fraction.loc[dict(specie='CO2', scenario='ssp585')], label=models);
+#     pl.legend()
+#     pl.close()
+#
+#     fig, ax = pl.subplots()
+#     ax.set_prop_cycle(custom_cycler)
+#     ax.plot(f.timebounds, f.concentration.loc[dict(specie='CO2', scenario='ssp245')], label=models);
+#     pl.legend()
+#     pl.close()
+#
+#     fig, ax = pl.subplots()
+#     ax.set_prop_cycle(custom_cycler)
+#     ax.plot(f.timebounds, f.temperature.loc[dict(layer=0, scenario='ssp245')], label=models);
+#     pl.legend()
+#     pl.close()
+#
+#     fig, ax = pl.subplots()
+#     ax.set_prop_cycle(custom_cycler)
+#     pl.plot(f.timebounds, f.airborne_fraction.loc[dict(specie='CO2', scenario='ssp245')], label=models);
+#     pl.legend()
+#     pl.close()
+#
+#     fig, ax = pl.subplots()
+#     ax.set_prop_cycle(custom_cycler)
+#     ax.plot(f.timebounds, f.concentration.loc[dict(specie='CO2', scenario='ssp119')], label=models);
+#     pl.legend()
+#     pl.close()
+#
+#     fig, ax = pl.subplots()
+#     ax.set_prop_cycle(custom_cycler)
+#     ax.plot(f.timebounds, f.temperature.loc[dict(layer=0, scenario='ssp119')], label=models);
+#     pl.legend()
+#     pl.close()
+#
+#     fig, ax = pl.subplots()
+#     ax.set_prop_cycle(custom_cycler)
+#     pl.plot(f.timebounds, f.airborne_fraction.loc[dict(specie='CO2', scenario='ssp119')], label=models);
+#     pl.legend()
+#     pl.close()
 
 
 os.makedirs(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/', exist_ok=True)
 
-
-# In[ ]:
-
-
 cc_sample_df.to_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/carbon_cycle.csv', index=False)
-
-
-# In[ ]:

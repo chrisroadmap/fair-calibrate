@@ -19,6 +19,9 @@ from fair.earth_params import seconds_per_year, earth_radius
 from fair.forcing.ghg import meinshausen2020
 from fair.energy_balance_model import EnergyBalanceModel
 from fair import __version__
+from dotenv import load_dotenv
+
+load_dotenv()
 
 print("Converting EBM parameters to IRM parameters...")
 

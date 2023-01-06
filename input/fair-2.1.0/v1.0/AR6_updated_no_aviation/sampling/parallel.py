@@ -1,14 +1,18 @@
 # put imports outside: we don't have a lot of overhead here, and it looks nicer.
+import os
 from fair import FAIR
 import xarray as xr
 from fair.io import read_properties
 from fair.interface import fill, initialise
 import numpy as np
 import warnings
+from dotenv import load_dotenv
 
-fair_v = "2.1.0"
-cal_v = "1.0"
-constraint_set = "AR6_updated_no_aviation"
+load_dotenv()
+
+cal_v = os.getenv('CALIBRATION_VERSION')
+fair_v = os.getenv('FAIR_VERSION')
+constraint_set = os.getenv('CONSTRAINT_SET')
 
 def run_fair(cfg):
     scenarios = ['ssp245']

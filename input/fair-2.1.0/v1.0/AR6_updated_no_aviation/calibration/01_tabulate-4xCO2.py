@@ -8,6 +8,9 @@ import glob
 from pathlib import PurePath
 import os
 from fair import __version__
+from dotenv import load_dotenv
+
+load_dotenv()
 
 print("Making nice 4xCO2 data...")
 

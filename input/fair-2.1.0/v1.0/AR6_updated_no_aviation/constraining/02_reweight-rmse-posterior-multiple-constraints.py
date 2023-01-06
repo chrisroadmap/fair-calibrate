@@ -15,6 +15,9 @@ import scipy.optimize
 from tqdm.auto import tqdm
 
 from fair import __version__
+from dotenv import load_dotenv
+
+load_dotenv()
 
 cal_v = os.getenv('CALIBRATION_VERSION')
 fair_v = os.getenv('FAIR_VERSION')
