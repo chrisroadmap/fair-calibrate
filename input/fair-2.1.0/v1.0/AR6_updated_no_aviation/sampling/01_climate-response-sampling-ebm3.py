@@ -48,7 +48,7 @@ if plots:
 
 df = pd.read_csv(
     os.path.join(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/4xCO2_cummins_ebm3_cmip6.csv")
-
+)
 models = df['model'].unique()
 
 for model in models:

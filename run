@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # usage: ./run
 
-source activate fair-calibrate
+eval "$(conda shell.bash hook)"
+conda activate fair-calibrate
 
 # Don't forget to set your environment variables in .env
 if [ -f .env ]

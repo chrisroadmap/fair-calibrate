@@ -42,6 +42,6 @@ f.fill_from_rcmip()
 
 f.emissions
 
-os.makedirs(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/')
+os.makedirs(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/', exist_ok=True)
 
 f.emissions.to_netcdf(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/ssp_emissions_1750-2500.nc')
