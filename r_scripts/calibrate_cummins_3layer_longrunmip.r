@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 # Goes through each of the models in turn and tunes the parameters of the
 # Cummins three layer model.
 #

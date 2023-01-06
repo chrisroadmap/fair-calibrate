@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Apply posterior reweighting
-#
-# mention in paper: skew-normal distribution
+"""Apply posterior weighting"""
 
-# In[ ]:
+# mention in paper: skew-normal distribution
+# this is where Zeb earns his corn
 
 import os
 import numpy as np
@@ -15,68 +14,43 @@ import scipy.stats
 import scipy.optimize
 from tqdm.auto import tqdm
 
-from dotenv import load_dotenv
 from fair import __version__
-
-# Get environment variables
-load_dotenv()
 
 cal_v = os.getenv('CALIBRATION_VERSION')
 fair_v = os.getenv('FAIR_VERSION')
 constraint_set = os.getenv('CONSTRAINT_SET')
 samples = int(os.getenv("PRIOR_SAMPLES"))
 output_ensemble_size = int(os.getenv("POSTERIOR_SAMPLES"))
+plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
 
 assert fair_v == __version__
 
+print("Doing reweighting...")
 
-# In[ ]:
-
-
-# # pl.rcParams['figure.figsize'] = (11.4, 11.4)
-# pl.rcParams['font.size'] = 16
-# pl.rcParams['font.family'] = 'Arial'
-# pl.rcParams['ytick.direction'] = 'in'
-# pl.rcParams['ytick.minor.visible'] = True
-# pl.rcParams['ytick.major.right'] = True
-# pl.rcParams['ytick.right'] = True
-# pl.rcParams['xtick.direction'] = 'in'
-# pl.rcParams['xtick.minor.visible'] = True
-# pl.rcParams['xtick.major.top'] = True
-# pl.rcParams['xtick.top'] = True
-# pl.rcParams['axes.spines.top'] = True
-# pl.rcParams['axes.spines.bottom'] = True
-# pl.rcParams['figure.dpi'] = 150
-# pl.rcParams['lines.linewidth'] = 2
-
-
-# In[ ]:
-
+if plots:
+    pl.rcParams['font.size'] = 16
+    pl.rcParams['font.family'] = 'Arial'
+    pl.rcParams['ytick.direction'] = 'in'
+    pl.rcParams['ytick.minor.visible'] = True
+    pl.rcParams['ytick.major.right'] = True
+    pl.rcParams['ytick.right'] = True
+    pl.rcParams['xtick.direction'] = 'in'
+    pl.rcParams['xtick.minor.visible'] = True
+    pl.rcParams['xtick.major.top'] = True
+    pl.rcParams['xtick.top'] = True
+    pl.rcParams['axes.spines.top'] = True
+    pl.rcParams['axes.spines.bottom'] = True
+    pl.rcParams['figure.dpi'] = 150
+    pl.rcParams['lines.linewidth'] = 2
+    os.makedirs(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/', exist_ok=True)
 
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 
-
-# In[ ]:
-
-
 valid_temp = np.loadtxt(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/runids_rmse_pass.csv').astype(np.int64)
 
-
-# In[ ]:
-
-
 input_ensemble_size = len(valid_temp)
-input_ensemble_size
-
-
-# In[ ]:
-
 
 assert input_ensemble_size > output_ensemble_size
-
-
-# In[ ]:
-
 
 temp_in = np.load(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/temperature_1850-2101.npy')
 ohc_in = np.load(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/ocean_heat_content_2018_minus_1971.npy')
@@ -87,10 +61,6 @@ ecs_in = np.load(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}
 tcr_in = np.load(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/tcr.npy')
 faer_in = fari_in + faci_in
 
-
-# In[ ]:
-
-
 def opt(x, q05_desired, q50_desired, q95_desired):
     "x is (a, loc, scale) in that order."
     q05, q50, q95 = scipy.stats.skewnorm.ppf((0.05, 0.50, 0.95), x[0], loc=x[1], scale=x[2])
@@ -98,16 +68,7 @@ def opt(x, q05_desired, q50_desired, q95_desired):
     return (q05-q05_desired, q50-q50_desired, q95-q95_desired)
 
 #scipy.optimize.root(opt, (2.0, 2.6, 1.2), (1.24, 1.81, 2.59), options={'maxfev': 5000})
-
-
-# In[ ]:
-
-
 #scipy.optimize.root(opt, (1, 0.85, 1), (0.69, 0.85, 0.98), options={'maxfev': 5000})
-
-
-# In[ ]:
-
 
 samples = {}
 samples['ECS'] = scipy.stats.skewnorm.rvs(8.82185594, loc=1.95059779, scale=1.55584604, size=10**5, random_state=91603)
@@ -120,40 +81,11 @@ samples['ERFaci'] = scipy.stats.norm.rvs(loc=-1.0, scale=0.7/NINETY_TO_ONESIGMA,
 samples['ERFaer'] = scipy.stats.norm.rvs(loc=-1.3, scale=np.sqrt(0.7**2+0.3**2)/NINETY_TO_ONESIGMA, size=10**5, random_state=3916153)
 samples['CO2 concentration'] = scipy.stats.norm.rvs(loc=397.5469792683919, scale=0.36, size=10**5, random_state=81693)
 
-
-# In[ ]:
-
-
-ohc_in
-
-
-# In[ ]:
-
-
-# pl.hist(samples['ECS'], bins=100, alpha=0.5, label='Target distribution', density=True)
-# pl.hist(ecs_in[valid_temp], bins=100, alpha=0.5, label='RMSE < 0.16 K posterior', density=True)
-# pl.legend()
-# print('target distribution:', np.percentile(samples['ECS'], (5, 16, 50, 84, 95)))
-# print('naive constraints:', np.percentile(ecs_in[valid_temp], (5, 16, 50, 84, 95)))
-# pl.title('Equilibrium climate sensitivity')
-# pl.xlim(0, 8)
-# pl.ylabel('Density')
-# pl.xlabel('deg C')
-# # pl.savefig('../plots/reweighting.png')
-
-
-# In[ ]:
-
-
 ar_distributions = {}
 for constraint in ['ECS', 'TCR', 'OHC', 'temperature 1995-2014', 'temperature 2081-2100', 'ERFari', 'ERFaci', 'ERFaer', 'CO2 concentration']:
     ar_distributions[constraint] = {}
     ar_distributions[constraint]['bins'] = np.histogram(samples[constraint], bins=200, density=True)[1]
     ar_distributions[constraint]['values'] = samples[constraint]
-
-
-# In[ ]:
-
 
 weights_20yr = np.ones(21)
 weights_20yr[0] = 0.5
@@ -161,10 +93,6 @@ weights_20yr[-1] = 0.5
 weights_51yr = np.ones(52)
 weights_51yr[0] = 0.5
 weights_51yr[-1] = 0.5
-
-
-# In[ ]:
-
 
 accepted = pd.DataFrame(
     {
@@ -180,16 +108,6 @@ accepted = pd.DataFrame(
     },
     index=valid_temp
 )
-
-
-# In[ ]:
-
-
-accepted
-
-
-# In[ ]:
-
 
 def calculate_sample_weights(distributions, samples, niterations=50):
     #weights = np.ones(samples[list(accepted.keys())[0]].shape[0])
@@ -241,10 +159,6 @@ def calculate_sample_weights(distributions, samples, niterations=50):
         pd.DataFrame(np.array(gofs), columns=unique_codes),
         pd.DataFrame(np.array(gofs_full), columns=["Target marginal"] + unique_codes)
     )
-
-
-# In[ ]:
-
 
 def get_unique_code_weights(unique_code, distributions, samples, weights, j, k):
     bin_edges = distributions[unique_code]["bins"]
@@ -302,75 +216,20 @@ def get_unique_code_weights(unique_code, distributions, samples, weights, j, k):
 
     return unique_code_weights, our_values_bin_idx
 
-
-# In[ ]:
-
-
 weights, gofs, gofs_full = calculate_sample_weights(
     ar_distributions, accepted, niterations=30
 )
 
-
-# In[ ]:
-
-
 gofs_full
-
-
-# In[ ]:
-
-
 weights
-
-
-# In[ ]:
-
-
 gofs
-
-
-# In[ ]:
-
-
 effective_samples = int(np.floor(np.sum(np.minimum(weights, 1))))
-effective_samples
-
-
-# In[ ]:
+print("Number of effective samples:", effective_samples)
 
 
 draws = []
-
 drawn_samples = accepted.sample(n=output_ensemble_size, replace=False, weights=weights, random_state=10099)
 draws.append((drawn_samples))
-
-#for i in tqdman.tqdm(range(10)):
-#    drawn_samples = accepted.sample(n=OUTPUT_ENSEMBLE_SIZE, replace=False, weights=weights, random_state=)
-    #     drawn_samples = samples_df.sample(n=10, replace=False, weights=weights)
-
-    #summary_table = get_summary_table(drawn_samples)
-
-    #score, coloured_df = utils.plotting.colour_df(summary_table, transpose=True)
-
-#    draws.append((drawn_samples))
-
-#sorted([v[1] for v in draws])[:10]
-
-
-# In[ ]:
-
-
-draws[0]
-
-
-# In[ ]:
-
-
-#pl.hist(draws[0]['temperature 1995-2014'])
-
-
-# In[ ]:
-
 
 target_ecs = scipy.stats.gaussian_kde(samples['ECS'])
 prior_ecs = scipy.stats.gaussian_kde(ecs_in)
@@ -412,10 +271,6 @@ prior_co2 = scipy.stats.gaussian_kde(co2_in)
 post1_co2 = scipy.stats.gaussian_kde(co2_in[valid_temp])
 post2_co2 = scipy.stats.gaussian_kde(draws[0]['CO2 concentration'])
 
-
-# In[ ]:
-
-
 colors = {
     'prior': '#207F6E',
     'post1': '#684C94',
@@ -423,223 +278,165 @@ colors = {
     'target': 'black'
 }
 
+if plots:
+    fig,ax = pl.subplots(2,3, figsize=(15, 10))
+    start = 0
+    stop = 8
+    ax[0,0].plot(np.linspace(start, stop, 1000), prior_ecs(np.linspace(start, stop, 1000)), color=colors['prior'], label='Prior')
+    ax[0,0].plot(np.linspace(start, stop, 1000), post1_ecs(np.linspace(start, stop, 1000)), color=colors['post1'], label='Temperature RMSE')
+    ax[0,0].plot(np.linspace(start, stop, 1000), post2_ecs(np.linspace(start, stop, 1000)), color=colors['post2'], label='All constraints')
+    ax[0,0].plot(np.linspace(start, stop, 1000), target_ecs(np.linspace(start, stop, 1000)), color=colors['target'], label='Target')
+    ax[0,0].set_xlim(start, stop)
+    ax[0,0].set_ylim(0, 0.5)
+    ax[0,0].set_title('ECS')
+    ax[0,0].set_yticklabels([])
+    ax[0,0].set_xlabel('°C')
 
-# In[ ]:
+    start = 0
+    stop = 4
+    ax[0,1].plot(np.linspace(start, stop, 1000), prior_tcr(np.linspace(start, stop, 1000)), color=colors['prior'], label='Prior')
+    ax[0,1].plot(np.linspace(start, stop, 1000), post1_tcr(np.linspace(start, stop, 1000)), color=colors['post1'], label='Temperature RMSE')
+    ax[0,1].plot(np.linspace(start, stop, 1000), post2_tcr(np.linspace(start, stop, 1000)), color=colors['post2'], label='All constraints')
+    ax[0,1].plot(np.linspace(start, stop, 1000), target_tcr(np.linspace(start, stop, 1000)), color=colors['target'], label='Target')
+    ax[0,1].set_xlim(start, stop)
+    ax[0,1].set_ylim(0, 1.2)
+    ax[0,1].set_title('TCR')
+    ax[0,1].set_yticklabels([])
+    ax[0,1].set_xlabel('°C')
 
+    start = 0.5
+    stop = 1.3
+    ax[0,2].plot(np.linspace(start, stop, 1000), target_temp(np.linspace(start, stop, 1000)), color=colors['target'], label='Target')
+    ax[0,2].plot(np.linspace(start, stop, 1000), prior_temp(np.linspace(start, stop, 1000)), color=colors['prior'], label='Prior')
+    ax[0,2].plot(np.linspace(start, stop, 1000), post1_temp(np.linspace(start, stop, 1000)), color=colors['post1'], label='Temperature RMSE')
+    ax[0,2].plot(np.linspace(start, stop, 1000), post2_temp(np.linspace(start, stop, 1000)), color=colors['post2'], label='All constraints')
+    ax[0,2].set_xlim(start, stop)
+    ax[0,2].set_ylim(0, 5)
+    ax[0,2].set_title('Temperature anomaly')
+    ax[0,2].set_yticklabels([])
+    ax[0,2].set_xlabel('°C, 1995-2014 minus 1850-1900')
 
-# fig,ax = pl.subplots(2,3, figsize=(15, 10))
-# start = 0
-# stop = 8
-# ax[0,0].plot(np.linspace(start, stop, 1000), prior_ecs(np.linspace(start, stop, 1000)), color=colors['prior'], label='Prior')
-# ax[0,0].plot(np.linspace(start, stop, 1000), post1_ecs(np.linspace(start, stop, 1000)), color=colors['post1'], label='Temperature RMSE')
-# ax[0,0].plot(np.linspace(start, stop, 1000), post2_ecs(np.linspace(start, stop, 1000)), color=colors['post2'], label='All constraints')
-# ax[0,0].plot(np.linspace(start, stop, 1000), target_ecs(np.linspace(start, stop, 1000)), color=colors['target'], label='Target')
-# ax[0,0].set_xlim(start, stop)
-# ax[0,0].set_ylim(0, 0.5)
-# ax[0,0].set_title('ECS')
-# ax[0,0].set_yticklabels([])
-# ax[0,0].set_xlabel('°C')
-#
-# start = 0
-# stop = 4
-# ax[0,1].plot(np.linspace(start, stop, 1000), prior_tcr(np.linspace(start, stop, 1000)), color=colors['prior'], label='Prior')
-# ax[0,1].plot(np.linspace(start, stop, 1000), post1_tcr(np.linspace(start, stop, 1000)), color=colors['post1'], label='Temperature RMSE')
-# ax[0,1].plot(np.linspace(start, stop, 1000), post2_tcr(np.linspace(start, stop, 1000)), color=colors['post2'], label='All constraints')
-# ax[0,1].plot(np.linspace(start, stop, 1000), target_tcr(np.linspace(start, stop, 1000)), color=colors['target'], label='Target')
-# ax[0,1].set_xlim(start, stop)
-# ax[0,1].set_ylim(0, 1.2)
-# ax[0,1].set_title('TCR')
-# ax[0,1].set_yticklabels([])
-# ax[0,1].set_xlabel('°C')
-#
-# start = 0.5
-# stop = 1.3
-# ax[0,2].plot(np.linspace(start, stop, 1000), target_temp(np.linspace(start, stop, 1000)), color=colors['target'], label='Target')
-# ax[0,2].plot(np.linspace(start, stop, 1000), prior_temp(np.linspace(start, stop, 1000)), color=colors['prior'], label='Prior')
-# ax[0,2].plot(np.linspace(start, stop, 1000), post1_temp(np.linspace(start, stop, 1000)), color=colors['post1'], label='Temperature RMSE')
-# ax[0,2].plot(np.linspace(start, stop, 1000), post2_temp(np.linspace(start, stop, 1000)), color=colors['post2'], label='All constraints')
-# ax[0,2].set_xlim(start, stop)
-# ax[0,2].set_ylim(0, 5)
-# ax[0,2].set_title('Temperature anomaly')
-# ax[0,2].set_yticklabels([])
-# ax[0,2].set_xlabel('°C, 1995-2014 minus 1850-1900')
-#
-# # start = -2.5
-# # stop = 0
-# # ax[1,0].plot(np.linspace(start, stop), target_aer(np.linspace(start, stop)), label='Target distribution')
-# # ax[1,0].plot(np.linspace(start, stop), prior_aer(np.linspace(start, stop)), label='RMSE < 0.16 K posterior')
-# # ax[1,0].plot(np.linspace(start, stop), post_aer(np.linspace(start, stop)))
-# # ax[1,0].set_xlim(start, stop)
-# # ax[1,0].set_ylim(0, 1.2)
-#
-# start = -3
-# stop = 0
-# ax[1,0].plot(np.linspace(start, stop, 1000), target_aer(np.linspace(start, stop, 1000)), color=colors['target'], label='Target')
-# ax[1,0].plot(np.linspace(start, stop, 1000), prior_aer(np.linspace(start, stop, 1000)), color=colors['prior'], label='Prior')
-# ax[1,0].plot(np.linspace(start, stop, 1000), post1_aer(np.linspace(start, stop, 1000)), color=colors['post1'], label='Temperature RMSE')
-# ax[1,0].plot(np.linspace(start, stop, 1000), post2_aer(np.linspace(start, stop, 1000)), color=colors['post2'], label='All constraints')
-# ax[1,0].set_xlim(start, stop)
-# ax[1,0].set_ylim(0, 1.6)
-# ax[1,0].set_title('Aerosol ERF')
-# ax[1,0].legend(frameon=False, loc='upper left')
-# ax[1,0].set_yticklabels([])
-# ax[1,0].set_xlabel('W m$^{-2}$, 2005-2014 minus 1750')
-#
-# start = 394
-# stop = 402
-# ax[1,1].plot(np.linspace(start, stop, 1000), target_co2(np.linspace(start, stop, 1000)), color=colors['target'], label='Target')
-# ax[1,1].plot(np.linspace(start, stop, 1000), prior_co2(np.linspace(start, stop, 1000)), color=colors['prior'], label='Prior')
-# ax[1,1].plot(np.linspace(start, stop, 1000), post1_co2(np.linspace(start, stop, 1000)), color=colors['post1'], label='Temperature RMSE')
-# ax[1,1].plot(np.linspace(start, stop, 1000), post2_co2(np.linspace(start, stop, 1000)), color=colors['post2'], label='All constraints')
-# ax[1,1].set_xlim(start, stop)
-# ax[1,1].set_ylim(0, 1.2)
-# ax[1,1].set_title('CO$_2$ concentration')
-# ax[1,1].set_yticklabels([])
-# ax[1,1].set_xlabel('ppm, 2014')
-#
-# start = 0
-# stop = 800
-# ax[1,2].plot(np.linspace(start, stop), target_ohc(np.linspace(start, stop)), color=colors['target'], label='Target')
-# ax[1,2].plot(np.linspace(start, stop), prior_ohc(np.linspace(start, stop)), color=colors['prior'], label='Prior')
-# ax[1,2].plot(np.linspace(start, stop), post1_ohc(np.linspace(start, stop)), color=colors['post1'], label='Temperature RMSE')
-# ax[1,2].plot(np.linspace(start, stop), post2_ohc(np.linspace(start, stop)), color=colors['post2'], label='All constraints')
-# ax[1,2].set_xlim(start, stop)
-# ax[1,2].set_ylim(0, .006)
-# ax[1,2].set_title('Ocean heat content change')
-# ax[1,2].set_yticklabels([])
-# ax[1,2].set_xlabel('ZJ, 2018 minus 1971')
-# #ax[0,1].hist(samples['TCR'], bins=100, alpha=0.5, label='Target distribution', density=True)
-# #ax[0,1].hist(tcr_in[valid_temp], bins=100, alpha=0.5, label='RMSE < 0.16 K posterior', density=True);
-# #ax[0,1].hist(draws[0]['TCR'], bins=100, alpha=0.5, density=True);
-# #ax[0,0].hist(samples['ECS'], bins=100, alpha=0.5, label='Target distribution', density=True)
-# #ax[0,0].hist(ecs_in[valid_temp], bins=100, alpha=0.5, label='RMSE < 0.16 K posterior', density=True)
-#
-# fig.tight_layout()
-# # pl.savefig('../plots/constraints.png')
-# # pl.savefig('../plots/constraints.pdf')
+    # start = -2.5
+    # stop = 0
+    # ax[1,0].plot(np.linspace(start, stop), target_aer(np.linspace(start, stop)), label='Target distribution')
+    # ax[1,0].plot(np.linspace(start, stop), prior_aer(np.linspace(start, stop)), label='RMSE < 0.16 K posterior')
+    # ax[1,0].plot(np.linspace(start, stop), post_aer(np.linspace(start, stop)))
+    # ax[1,0].set_xlim(start, stop)
+    # ax[1,0].set_ylim(0, 1.2)
+
+    start = -3
+    stop = 0
+    ax[1,0].plot(np.linspace(start, stop, 1000), target_aer(np.linspace(start, stop, 1000)), color=colors['target'], label='Target')
+    ax[1,0].plot(np.linspace(start, stop, 1000), prior_aer(np.linspace(start, stop, 1000)), color=colors['prior'], label='Prior')
+    ax[1,0].plot(np.linspace(start, stop, 1000), post1_aer(np.linspace(start, stop, 1000)), color=colors['post1'], label='Temperature RMSE')
+    ax[1,0].plot(np.linspace(start, stop, 1000), post2_aer(np.linspace(start, stop, 1000)), color=colors['post2'], label='All constraints')
+    ax[1,0].set_xlim(start, stop)
+    ax[1,0].set_ylim(0, 1.6)
+    ax[1,0].set_title('Aerosol ERF')
+    ax[1,0].legend(frameon=False, loc='upper left')
+    ax[1,0].set_yticklabels([])
+    ax[1,0].set_xlabel('W m$^{-2}$, 2005-2014 minus 1750')
+
+    start = 394
+    stop = 402
+    ax[1,1].plot(np.linspace(start, stop, 1000), target_co2(np.linspace(start, stop, 1000)), color=colors['target'], label='Target')
+    ax[1,1].plot(np.linspace(start, stop, 1000), prior_co2(np.linspace(start, stop, 1000)), color=colors['prior'], label='Prior')
+    ax[1,1].plot(np.linspace(start, stop, 1000), post1_co2(np.linspace(start, stop, 1000)), color=colors['post1'], label='Temperature RMSE')
+    ax[1,1].plot(np.linspace(start, stop, 1000), post2_co2(np.linspace(start, stop, 1000)), color=colors['post2'], label='All constraints')
+    ax[1,1].set_xlim(start, stop)
+    ax[1,1].set_ylim(0, 1.2)
+    ax[1,1].set_title('CO$_2$ concentration')
+    ax[1,1].set_yticklabels([])
+    ax[1,1].set_xlabel('ppm, 2014')
+
+    start = 0
+    stop = 800
+    ax[1,2].plot(np.linspace(start, stop), target_ohc(np.linspace(start, stop)), color=colors['target'], label='Target')
+    ax[1,2].plot(np.linspace(start, stop), prior_ohc(np.linspace(start, stop)), color=colors['prior'], label='Prior')
+    ax[1,2].plot(np.linspace(start, stop), post1_ohc(np.linspace(start, stop)), color=colors['post1'], label='Temperature RMSE')
+    ax[1,2].plot(np.linspace(start, stop), post2_ohc(np.linspace(start, stop)), color=colors['post2'], label='All constraints')
+    ax[1,2].set_xlim(start, stop)
+    ax[1,2].set_ylim(0, .006)
+    ax[1,2].set_title('Ocean heat content change')
+    ax[1,2].set_yticklabels([])
+    ax[1,2].set_xlabel('ZJ, 2018 minus 1971')
+    #ax[0,1].hist(samples['TCR'], bins=100, alpha=0.5, label='Target distribution', density=True)
+    #ax[0,1].hist(tcr_in[valid_temp], bins=100, alpha=0.5, label='RMSE < 0.16 K posterior', density=True);
+    #ax[0,1].hist(draws[0]['TCR'], bins=100, alpha=0.5, density=True);
+    #ax[0,0].hist(samples['ECS'], bins=100, alpha=0.5, label='Target distribution', density=True)
+    #ax[0,0].hist(ecs_in[valid_temp], bins=100, alpha=0.5, label='RMSE < 0.16 K posterior', density=True)
+
+    fig.tight_layout()
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/constraints.png')
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/constraints.pdf')
+    pl.close()
 
 
-# In[ ]:
+if plots:
+    pl.scatter(draws[0]['TCR'], draws[0]['ECS'])
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/ecs_tcr_constrained.png')
+    pl.close()
 
 
+if plots:
+    pl.scatter(draws[0]['TCR'], draws[0]['ERFaci']+draws[0]['ERFari'])
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/tcr_aer_constrained.png')
+    pl.close()
+
+
+# move these to the validation script
 np.percentile(draws[0]['ECS'], (5, 50, 95))
-
-
-# In[ ]:
-
-
 np.percentile(draws[0]['TCR'], (5, 50, 95))
-
-
-# In[ ]:
-
-
-pl.scatter(draws[0]['TCR'], draws[0]['ECS'])
-
-
-# In[ ]:
-
-
 np.percentile(draws[0]['CO2 concentration'], (5, 50, 95))
-
-
-# In[ ]:
-
-
 np.percentile(draws[0]['temperature 1995-2014'], (5, 50, 95))
-
-
-# In[ ]:
-
-
 np.percentile(draws[0]['ERFari'], (5, 50, 95))
-
-
-# In[ ]:
-
-
 np.percentile(draws[0]['ERFaci'], (5, 50, 95))
-
-
-# In[ ]:
-
-
 np.percentile(draws[0]['ERFaci']+draws[0]['ERFari'], (5, 50, 95))
-
-
-# In[ ]:
-
-
 np.percentile(draws[0]['OHC'], (5, 50, 95))
 
 
-# In[ ]:
+if plots:
+    df_gmst = pd.read_csv('../../../../../data/forcing/AR6_GMST.csv')
+    gmst = df_gmst['gmst'].values
 
+    fig, ax = pl.subplots(figsize=(5, 5))
+    ax.fill_between(
+        np.arange(1850, 2102),
+        np.min(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), axis=1),
+        np.max(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), axis=1),
+        color='#000000',
+        alpha=0.2,
+    )
+    ax.fill_between(
+        np.arange(1850, 2102),
+        np.percentile(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), 5, axis=1),
+        np.percentile(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), 95, axis=1),
+        color='#000000',
+        alpha=0.2,
+    )
+    ax.fill_between(
+        np.arange(1850, 2102),
+        np.percentile(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), 16, axis=1),
+        np.percentile(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), 84, axis=1),
+        color='#000000',
+        alpha=0.2,
+    )
+    ax.plot(
+        np.arange(1850, 2102),
+        np.median(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), axis=1),
+        color='#000000',
+    )
 
-pl.scatter(draws[0]['TCR'], draws[0]['ERFaci']+draws[0]['ERFari'])
+    ax.plot(np.arange(1850.5, 2021), gmst, color='b', label='Observations')
 
+    ax.legend(frameon=False, loc='upper left')
 
-# In[ ]:
-
-
-draws[0].index
-
-
-# In[ ]:
-
-
-df_gmst = pd.read_csv('../../../../../data/forcing/AR6_GMST.csv')
-gmst = df_gmst['gmst'].values
-
-
-# In[ ]:
-
-
-# fig, ax = pl.subplots(figsize=(5, 5))
-# ax.fill_between(
-#     np.arange(1850, 2102),
-#     np.min(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), axis=1),
-#     np.max(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), axis=1),
-#     color='#000000',
-#     alpha=0.2,
-# )
-# ax.fill_between(
-#     np.arange(1850, 2102),
-#     np.percentile(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), 5, axis=1),
-#     np.percentile(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), 95, axis=1),
-#     color='#000000',
-#     alpha=0.2,
-# )
-# ax.fill_between(
-#     np.arange(1850, 2102),
-#     np.percentile(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), 16, axis=1),
-#     np.percentile(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), 84, axis=1),
-#     color='#000000',
-#     alpha=0.2,
-# )
-# ax.plot(
-#     np.arange(1850, 2102),
-#     np.median(temp_in[:,draws[0].index]-np.average(temp_in[:52,draws[0].index], weights=weights_51yr, axis=0), axis=1),
-#     color='#000000',
-# )
-#
-# ax.plot(np.arange(1850.5, 2021), gmst, color='b', label='Observations')
-#
-# ax.legend(frameon=False, loc='upper left')
-#
-# ax.set_xlim(1850,2100)
-# ax.set_ylim(-1, 5)
-# ax.set_ylabel('°C relative to 1850-1900')
-# ax.axhline(0, color='k', ls=":", lw=0.5)
-# pl.tight_layout()
-#pl.title('constrained & reweighted (1001)')
-#pl.savefig('../plots/final_reweighted_ssp245.png')
-
-
-# In[ ]:
-
+    ax.set_xlim(1850,2100)
+    ax.set_ylim(-1, 5)
+    ax.set_ylabel('°C relative to 1850-1900')
+    ax.axhline(0, color='k', ls=":", lw=0.5)
+    pl.tight_layout()
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/final_reweighted_ssp245.png')
+    pl.close()
 
 np.savetxt(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/runids_rmse_reweighted_pass.csv', sorted(draws[0].index))
-
-
-# In[ ]:

@@ -49,9 +49,10 @@ fair_v = os.getenv('FAIR_VERSION')
 constraint_set = os.getenv('CONSTRAINT_SET')
 samples = int(os.getenv("PRIOR_SAMPLES"))
 batch_size = int(os.getenv("BATCH_SIZE"))
+WORKERS = int(os.getenv("WORKERS"))
 
 # number of processors
-WORKERS = multiprocessing.cpu_count()
+WORKERS = min(multiprocessing.cpu_count(), WORKERS) 
 
 assert fair_v == __version__
 

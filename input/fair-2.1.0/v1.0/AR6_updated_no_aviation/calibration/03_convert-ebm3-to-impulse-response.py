@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Convert EBM to IRM
-#
+"""Convert energy balance model to impulse response model."""
+
 # This notebook takes the three-layer energy balance model tunings from Donald Cummins and converts them to a three-layer impulse response function.
 #
 # It will then save these into a CSV file.
-
-# In[ ]:
-
 
 import os
 
@@ -16,7 +13,6 @@ import numpy as np
 import pandas as pd
 import scipy.linalg
 from tqdm import tqdm
-from dotenv import load_dotenv
 
 from fair.constants import DOUBLING_TIME_1PCT
 from fair.earth_params import seconds_per_year, earth_radius
@@ -24,8 +20,7 @@ from fair.forcing.ghg import meinshausen2020
 from fair.energy_balance_model import EnergyBalanceModel
 from fair import __version__
 
-# Get environment variables
-load_dotenv()
+print("Converting EBM parameters to IRM parameters...")
 
 cal_v = os.getenv('CALIBRATION_VERSION')
 fair_v = os.getenv('FAIR_VERSION')

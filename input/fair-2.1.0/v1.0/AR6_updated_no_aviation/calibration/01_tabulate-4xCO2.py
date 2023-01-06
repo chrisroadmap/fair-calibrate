@@ -1,21 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Combine Hege-Beate's 4xCO2 text data into one file
-#
-# This replaces the original download of 4xCO2 data using `netcdf-scm`. Hege-Beate's data contains many more models.
-#
-# Departure from the original calibration: where models have more than 150 years, we will use them. Why? It's impossible to calibrate NorESM2 well from 150 years, we need the tail of the response.
+"""Combine Hege-Beate's data into one file."""
 
 import pandas as pd
 import glob
 from pathlib import PurePath
 import os
-from dotenv import load_dotenv
 from fair import __version__
 
-# Get environment variables
-load_dotenv()
+print("Making nice 4xCO2 data...")
 
 cal_v = os.getenv('CALIBRATION_VERSION')
 fair_v = os.getenv('FAIR_VERSION')

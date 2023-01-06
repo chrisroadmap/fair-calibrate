@@ -1,22 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Takes constrained runs and dumps into a new file
-#
-# This is what the people want!
-
-# In[ ]:
+"""Takes constrained runs and dumps parameters into the output file"""
 
 import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as pl
 
-from dotenv import load_dotenv
 from fair import __version__
 
-# Get environment variables
-load_dotenv()
+print("Dumping output...")
 
 cal_v = os.getenv('CALIBRATION_VERSION')
 fair_v = os.getenv('FAIR_VERSION')
@@ -26,11 +20,6 @@ output_ensemble_size = int(os.getenv("POSTERIOR_SAMPLES"))
 
 assert fair_v == __version__
 
-
-
-# In[ ]:
-
-
 df_cc=pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/carbon_cycle.csv')
 df_cr=pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/climate_response_ebm3.csv')
 df_aci=pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/aerosol_cloud.csv')
@@ -39,23 +28,11 @@ df_ozone=pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_
 df_scaling=pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/forcing_scaling.csv')
 df_1750co2=pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/co2_concentration_1750.csv')
 
-
-# In[ ]:
-
-
 valid_all = np.loadtxt(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/runids_rmse_reweighted_pass.csv').astype(np.int64)#[:1000]
 valid_all
 
-
-# In[ ]:
-
-
 seed = 1355763 + 399 * valid_all
 seed
-
-
-# In[ ]:
-
 
 params_out = pd.concat(
     (
@@ -70,15 +47,7 @@ params_out = pd.concat(
     )
 , axis=1)
 
-
-# In[ ]:
-
-
 pd.Series(seed, index=valid_all)
-
-
-# In[ ]:
-
 
 params_out.columns = ['gamma', 'c1', 'c2', 'c3', 'kappa1', 'kappa2', 'kappa3', 'epsilon',
        'sigma_eta', 'sigma_xi', 'F_4xCO2', 'r0', 'rU', 'rT', 'rA', 'ari BC', 'ari CH4',
@@ -90,17 +59,6 @@ params_out.columns = ['gamma', 'c1', 'c2', 'c3', 'kappa1', 'kappa2', 'kappa3', '
        'scale Light absorbing particles on snow and ice', 'scale Land use',
        'scale Volcanic', 'solar_amplitude', 'solar_trend', 'co2_concentration_1750', 'seed']
 
-
-# In[ ]:
-
-
 params_out.drop(columns=['ari CO'], inplace=True)
 
-
-# In[ ]:
-
-
 params_out.to_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/calibrated_constrained_parameters.csv')
-
-
-# In[ ]:

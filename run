@@ -1,2 +1,18 @@
 #!/usr/bin/env bash
-# placeholder script to run pipeline
+# usage: ./run
+
+source activate fair-calibrate
+
+# Don't forget to set your environment variables in .env
+if [ -f .env ]
+then
+  export $(cat .env | xargs)
+fi
+
+cd input/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET}/calibration
+
+file_array=( $(\ls [0-9][0-9]_*.*) )
+for file in "${file_array[@]}"; do
+    ./${file};
+    [[ $? -ne 0 ]] && exit;
+done

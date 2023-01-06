@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+"""Calibrate methane lifetime from precursors and climate."""
+
 # # What affects methane chemical lifetime?
 #
 # - methane
@@ -20,9 +22,6 @@
 # 3. find a least squares fit with reasonable sensitivies across the historical
 # 4. run a Monte Carlo that perturbs the sensitivity of lifetime to each emitted species
 
-# In[ ]:
-
-
 import os
 import numpy as np
 import pandas as pd
@@ -36,61 +35,43 @@ from tqdm import tqdm
 from fair import FAIR
 from fair.interface import fill, initialise
 
-from dotenv import load_dotenv
 from fair import __version__
 
-# Get environment variables
-load_dotenv()
+print("Calibrating methane lifetime...")
 
 cal_v = os.getenv('CALIBRATION_VERSION')
 fair_v = os.getenv('FAIR_VERSION')
 constraint_set = os.getenv('CONSTRAINT_SET')
+plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
 assert fair_v == __version__
 
-
-# In[ ]:
-
-
-# #pl.rcParams['figure.figsize'] = (11.4, 11.4)
-# pl.rcParams['font.size'] = 16
-# pl.rcParams['font.family'] = 'Arial'
-# pl.rcParams['ytick.direction'] = 'in'
-# pl.rcParams['ytick.minor.visible'] = True
-# pl.rcParams['ytick.major.right'] = True
-# pl.rcParams['ytick.right'] = True
-# pl.rcParams['xtick.direction'] = 'in'
-# pl.rcParams['xtick.minor.visible'] = True
-# pl.rcParams['xtick.major.top'] = True
-# pl.rcParams['xtick.top'] = True
-# pl.rcParams['axes.spines.top'] = True
-# pl.rcParams['axes.spines.bottom'] = True
-# pl.rcParams['figure.dpi'] = 300
-
-
-# In[ ]:
-
-
-# mkdir_p('../plots/')
-
+if plots:
+    #pl.rcParams['figure.figsize'] = (11.4, 11.4)
+    pl.rcParams['font.size'] = 16
+    pl.rcParams['font.family'] = 'Arial'
+    pl.rcParams['ytick.direction'] = 'in'
+    pl.rcParams['ytick.minor.visible'] = True
+    pl.rcParams['ytick.major.right'] = True
+    pl.rcParams['ytick.right'] = True
+    pl.rcParams['xtick.direction'] = 'in'
+    pl.rcParams['xtick.minor.visible'] = True
+    pl.rcParams['xtick.major.top'] = True
+    pl.rcParams['xtick.top'] = True
+    pl.rcParams['axes.spines.top'] = True
+    pl.rcParams['axes.spines.bottom'] = True
+    pl.rcParams['figure.dpi'] = 300
+    os.makedirs(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/', exist_ok=True)
 
 # ## Temperature data
 #
 # Use observations 1850-2020, then simulate an SSP3-7.0 climate with a linear warming rate to 4C in 2100.
-
-# In[ ]:
-
 
 df_temp = pd.read_csv('../../../../../data/forcing/AR6_GMST.csv')
 gmst = np.zeros(351)
 gmst[100:271] = df_temp['gmst'].values
 gmst[271:351] = np.linspace(gmst[270], 4, 80)
 
-
 # ## Get emissions and concentrations
-
-# In[ ]:
-
-
 rcmip_emissions_file = pooch.retrieve(
     url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
     known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
@@ -109,10 +90,6 @@ df_conc = pd.read_csv(rcmip_concentration_file)
 input = {}
 hc_input = {}
 
-
-# In[ ]:
-
-
 conc_species = ['CH4', 'N2O']
 hc_species = ['CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115', 'HCFC-22', 'HCFC-141b', 'HCFC-142b',
                'CCl4', 'CHCl3', 'CH2Cl2', 'CH3Cl', 'CH3CCl3', 'CH3Br', 'Halon-1211', 'Halon-1301', 'Halon-2402']
@@ -130,10 +107,6 @@ for species in hc_species:
         (df_conc['Region']=='World'), '1750':'2100'
     ].interpolate(axis=1).values.squeeze()
 
-
-# In[ ]:
-
-
 emis_species = ['CO', 'VOC', 'NOx']
 for species in emis_species:
     input[species] = df_emis.loc[
@@ -141,15 +114,7 @@ for species in emis_species:
         (df_emis['Region']=='World'), '1750':'2100'
     ].interpolate(axis=1).values.squeeze()
 
-
-# In[ ]:
-
-
 input['temp'] = gmst
-
-
-# In[ ]:
-
 
 def calculate_eesc(
     concentration,
@@ -166,10 +131,6 @@ def calculate_eesc(
         br_cl_ratio * br_atoms * (concentration) * fractional_release / fractional_release_cfc11
     ) * fractional_release_cfc11
     return eesc_out
-
-
-# In[ ]:
-
 
 fractional_release = {
     'CFC-11':0.47,
@@ -231,10 +192,6 @@ br_atoms = {
     'Halon-2402':2
 }
 
-
-# In[ ]:
-
-
 hc_eesc = {}
 total_eesc = 0
 
@@ -248,56 +205,12 @@ for species in hc_species:
     )
     total_eesc = total_eesc + hc_eesc[species]
 
-
-# In[ ]:
-
-
 total_eesc_1850 = total_eesc[100]
-
-
-# In[ ]:
-
-
-total_eesc_1850
-
-
-# In[ ]:
-
-
-# hfc_erf = {}
-# hfc_sum = 0
-# for species in ['HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32',
-#     'HFC-365mfc', 'HFC-4310mee']:
-#     hfc_erf[species] = (input[species][269] * radiative_efficiency[species]/1000)
-#     hfc_sum = hfc_sum + hfc_erf[species]
-
-
-# In[ ]:
-
-
-# hfc134a_eq = 0
-# for species in hfc_species:
-#     hfc134a_eq = hfc134a_eq + (hfc_input[species] * radiative_efficiency[species])/(radiative_efficiency['HFC-134a'])
-
-
-# In[ ]:
-
-
-#total_eesc, hc_eesc['CFC-11'], hc_eesc['CFC-12']
-
-
-# In[ ]:
-
 
 for species in hc_species:
     pl.plot(hc_eesc[species])
 
-
-# In[ ]:
-
-
 input['HC'] = total_eesc
-
 
 # Use 1850 and 2014 emissions or concentrations corresponding to methane lifetime changes in Thornhill et al. 2021.
 #
@@ -310,9 +223,6 @@ input['HC'] = total_eesc
 # Saunois (2020): 90% of sink is OH chemistry in troposphere and is 553 [476–677] Tg CH4 yr−1, which is close to the IPCC number of 560, (chapter 5)
 #
 # Chapter 6 only give time constants for soil uptake and the combined chemistry loss (trop OH + chlorine + stratosphere).
-
-# In[ ]:
-
 
 def alpha_scaling_exp(
     input,
@@ -327,35 +237,22 @@ def alpha_scaling_exp(
         )
     return np.exp(log_lifetime_scaling)
 
-
-# In[ ]:
-
-
 normalisation = {}
 for species in ['CH4', 'N2O', 'VOC', 'NOx', 'HC']:
     normalisation[species] = input[species][264] - input[species][100]
     print(species, normalisation[species])
 normalisation['temp'] = 1
 
-
-# In[ ]:
-
-
 baseline = {}
 for species in ['CH4', 'N2O', 'VOC', 'NOx', 'HC']:
     baseline[species] = input[species][100]
 baseline['temp'] = 0
-
 
 # ## Steps 1 and 2
 #
 # Get and tune to AerChemMIP models
 #
 # MRI and GISS both give pretty good historical emulations
-
-# In[ ]:
-
-
 parameters = {}
 
 parameters['AerChemMIP_mean'] = {
@@ -416,20 +313,8 @@ parameters['MRI'] = {
     'temp': 0  # missing
 }
 
-
-# In[ ]:
-
-
 lifetime_scaling = {}
-
-
-# In[ ]:
-
-
 models = ['UKESM', 'GFDL', 'GISS', 'MRI']
-
-
-# In[ ]:
 
 
 for model in models:
@@ -440,33 +325,6 @@ for model in models:
         normalisation,
         parameters[model],
     )
-
-
-# In[ ]:
-
-
-#pl.plot(np.arange(1750, 2501), aerchemmip_mean[:] * 8.25)
-
-
-# In[ ]:
-
-
-#1/(1/135 + 1/9.7)
-
-
-# In[ ]:
-
-
-#1/(1/120 + 1/200 + 1/150 + 1/11.2)
-
-
-# In[ ]:
-
-
-1/np.inf
-
-
-# In[ ]:
 
 
 # put this into a simple one box model
@@ -502,32 +360,17 @@ def one_box(
     )
     return concentration_out, gas_boxes_new, airborne_emissions_new
 
-
-# In[ ]:
-
-
 emis_ch4 = df_emis.loc[
     (df_emis['Scenario']=='ssp370') & (df_emis['Variable'].str.endswith('CH4')) &
     (df_emis['Region']=='World'), '1750':'2500'
 ].interpolate(axis=1).values.squeeze()
-
-
-# In[ ]:
-
 
 burden_per_emission = 1 / (5.1352e18 / 1e18 * 16.043 / 28.97)
 partition_fraction = 1
 pre_industrial_concentration = 729.2
 natural_emissions_adjustment = emis_ch4[0]
 
-
-# In[ ]:
-
-
 conc_ch4 = {}
-
-
-# In[ ]:
 
 
 for model in models:
@@ -549,51 +392,18 @@ for model in models:
             natural_emissions_adjustment=natural_emissions_adjustment,
         )
 
-
-# In[ ]:
-
-
-# this is for another day :)
-# df_ch4 = pd.read_csv('../data/calibration/methane_ukesm1.csv', index_col=0)
-
-
-# In[ ]:
-
-
-# df_ch4.mean(axis=1)
-
-
-# In[ ]:
-
-
-# pl.plot(np.arange(1850.5, 2015), conc_ch4['UKESM'][100:265], label='FaIR UKESM1 calibration')
-# pl.plot(df_ch4.index, df_ch4.mean(axis=1), label='UKESM1')
-# pl.legend()
-# #pl.savefig('../plots/ukesm_historical_methane.png')
-
-
-# In[ ]:
-
-
-for model in models:
-    pl.plot(np.arange(1750, 2021), conc_ch4[model][:271], label=model)
-pl.plot(np.arange(1750, 2021), input['CH4'][:271], color='k', label='obs')
-pl.legend()
-#pl.savefig('../plots/aerchemmip_tuning_ch4_conc_1750-2020.pdf')
-
+if plots:
+    for model in models:
+        pl.plot(np.arange(1750, 2021), conc_ch4[model][:271], label=model)
+    pl.plot(np.arange(1750, 2021), input['CH4'][:271], color='k', label='obs')
+    pl.legend()
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/aerchemmip_tuning_ch4_conc_1750-2020.pdf')
+    pl.close()
 
 # ## Step 3
 #
 # Find least squares sensible historical fit
-
-# In[ ]:
-
-
 invect = np.array([input['CH4'], input['NOx'], input['VOC'], input['HC'], input['N2O'], input['temp']])
-
-
-# In[ ]:
-
 
 def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
     conc_ch4 = np.zeros(271)
@@ -651,9 +461,6 @@ p, cov = scipy.optimize.curve_fit(
 )
 
 
-# In[ ]:
-
-
 parameters['best_fit'] = {
     'base': p[6],
     'CH4': p[0],
@@ -664,19 +471,10 @@ parameters['best_fit'] = {
     'N2O': p[4],
     'temp': p[5],
 }
-p
-
-
-# In[ ]:
-
 
 # these are the feedback values per ppb / per Mt that go into FaIR
 for specie in ['CH4', 'NOx', 'VOC', 'HC', 'N2O']:
     print(specie, parameters['best_fit'][specie]/normalisation[specie])
-
-
-# In[ ]:
-
 
 beta_hc_sum = 0
 
@@ -690,10 +488,6 @@ for species in hc_species:
     beta_hc_sum = beta_hc_sum + beta_hc
 print(beta_hc_sum)
 
-
-# In[ ]:
-
-
 lifetime_scaling['best_fit'] = alpha_scaling_exp(
     input,
     baseline,
@@ -701,36 +495,19 @@ lifetime_scaling['best_fit'] = alpha_scaling_exp(
     parameters['best_fit'],
 )
 
+#if plots:
+#    pl.plot(np.arange(1750, 2101), lifetime_scaling['best_fit'])
 
-# In[ ]:
-
-
-pl.plot(np.arange(1750, 2101), lifetime_scaling['best_fit'])
-
-
-# In[ ]:
-
-
-lifetime_scaling['best_fit'][0]
-
-
-# In[ ]:
-
+print("Baseline lifetime:" lifetime_scaling['best_fit'][0])
 
 lifetime_scaling['best_fit'][0] * parameters['best_fit']['base']
 
-
-# In[ ]:
-
-
-pl.plot(np.arange(1750, 2101), lifetime_scaling['best_fit'] * parameters['best_fit']['base'], label='best_fit')
-pl.legend()
-pl.ylabel('CH4 chemical lifetime (yr)')
-#pl.savefig('../plots/ch4_chemical_lifetime_best_fit.pdf')
-
-
-# In[ ]:
-
+if plots:
+    pl.plot(np.arange(1750, 2101), lifetime_scaling['best_fit'] * parameters['best_fit']['base'], label='best_fit')
+    pl.legend()
+    pl.ylabel('CH4 chemical lifetime (yr)')
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/ch4_chemical_lifetime_best_fit.pdf')
+    pl.close()
 
 conc_ch4['best_fit'] = np.zeros(351)
 gas_boxes = 0
@@ -755,9 +532,6 @@ for i in range(351):
 #
 # should do something with the temperature projections here
 
-# In[ ]:
-
-
 emis_ch4_ssps = {}
 
 for ssp in ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']:
@@ -765,10 +539,6 @@ for ssp in ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-
         (df_emis['Scenario']==ssp) & (df_emis['Variable'].str.endswith('CH4')) &
         (df_emis['Region']=='World'), '1750':'2100'
     ].interpolate(axis=1).values.squeeze()
-
-
-# In[ ]:
-
 
 for ssp in ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']:
     conc_ch4[ssp] = np.zeros(351)
@@ -789,66 +559,55 @@ for ssp in ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-
             natural_emissions_adjustment=natural_emissions_adjustment,
         )
 
-
 # ### Four panel plot
+if plots:
+    ar6_colors = {
+        'ssp119': '#00a9cf',
+        'ssp126': '#003466',
+        'ssp245': '#f69320',
+        'ssp370': '#df0000',
+        'ssp434': '#2274ae',
+        'ssp460': '#b0724e',
+        'ssp534-over': '#92397a',
+        'ssp585': '#980002'
+    }
 
-# In[ ]:
+    fig, ax = pl.subplots(1, 3, figsize=(15, 4.5))
+    for model in models:
+        ax[0].plot(np.arange(1750, 2101), lifetime_scaling[model] * parameters[model]['base'], label=model)
+    ax[0].plot(np.arange(1750, 2101), lifetime_scaling['best_fit'] * parameters[model]['base'], color='0.5', label='Best fit')
+    #ax[0].legend(loc='upper left', bbox_to_anchor=[0, 0.9], frameon=False)
+    ax[0].set_xlim(1750, 2100)
+    ax[0].set_ylabel('yr')
+    ax[0].set_title('(a) CH$_4$ lifetime SSP3-7.0')
 
+    for model in models:
+        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
+    ax[1].plot(np.arange(1750, 2101), conc_ch4['best_fit'], color='0.5', label='Best fit')
+    ax[1].plot(np.arange(1750, 2101), input['CH4'], color='k', label='observations +\nMAGICC6')
+    ax[1].set_ylabel('ppb')
+    ax[1].set_xlim(1750, 2100)
+    ax[1].legend(frameon=False)
+    ax[1].set_title('(b) CH$_4$ concentration SSP3-7.0')
 
-ar6_colors = {
-    'ssp119': '#00a9cf',
-    'ssp126': '#003466',
-    'ssp245': '#f69320',
-    'ssp370': '#df0000',
-    'ssp434': '#2274ae',
-    'ssp460': '#b0724e',
-    'ssp534-over': '#92397a',
-    'ssp585': '#980002'
-}
+    # ax[1,0].plot(np.arange(1750, 2101), conc_ch4['best_fit'], color='0.5', label='Best fit')
+    # ax[1,0].plot(np.arange(1750, 2101), input['CH4'], color='k', label='observations + MAGICC6')
+    # ax[1,0].set_ylabel('ppb')
+    # ax[1,0].set_xlim(1750, 2100)
+    # ax[1,0].set_title('(c) CH$_4$ concentration, best lifetime coefficient fit')
+    # ax[1,0].legend(frameon=False)
 
+    for ssp in ['ssp119', 'ssp126', 'ssp434', 'ssp534-over', 'ssp245', 'ssp460', 'ssp370',  'ssp585']:
+        ax[2].plot(np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp])
+    ax[2].set_ylabel('ppb')
+    ax[2].set_title('(c) Best fit CH$_4$ projections')
+    ax[2].set_xlim(1750, 2100)
+    ax[2].legend(frameon=False)
 
-# In[ ]:
-
-
-fig, ax = pl.subplots(1, 3, figsize=(15, 4.5))
-for model in models:
-    ax[0].plot(np.arange(1750, 2101), lifetime_scaling[model] * parameters[model]['base'], label=model)
-ax[0].plot(np.arange(1750, 2101), lifetime_scaling['best_fit'] * parameters[model]['base'], color='0.5', label='Best fit')
-#ax[0].legend(loc='upper left', bbox_to_anchor=[0, 0.9], frameon=False)
-ax[0].set_xlim(1750, 2100)
-ax[0].set_ylabel('yr')
-ax[0].set_title('(a) CH$_4$ lifetime SSP3-7.0')
-
-for model in models:
-    ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
-ax[1].plot(np.arange(1750, 2101), conc_ch4['best_fit'], color='0.5', label='Best fit')
-ax[1].plot(np.arange(1750, 2101), input['CH4'], color='k', label='observations +\nMAGICC6')
-ax[1].set_ylabel('ppb')
-ax[1].set_xlim(1750, 2100)
-ax[1].legend(frameon=False)
-ax[1].set_title('(b) CH$_4$ concentration SSP3-7.0')
-
-# ax[1,0].plot(np.arange(1750, 2101), conc_ch4['best_fit'], color='0.5', label='Best fit')
-# ax[1,0].plot(np.arange(1750, 2101), input['CH4'], color='k', label='observations + MAGICC6')
-# ax[1,0].set_ylabel('ppb')
-# ax[1,0].set_xlim(1750, 2100)
-# ax[1,0].set_title('(c) CH$_4$ concentration, best lifetime coefficient fit')
-# ax[1,0].legend(frameon=False)
-
-for ssp in ['ssp119', 'ssp126', 'ssp434', 'ssp534-over', 'ssp245', 'ssp460', 'ssp370',  'ssp585']:
-    ax[2].plot(np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp])
-ax[2].set_ylabel('ppb')
-ax[2].set_title('(c) Best fit CH$_4$ projections')
-ax[2].set_xlim(1750, 2100)
-ax[2].legend(frameon=False)
-
-fig.tight_layout()
-# pl.savefig('../plots/methane_calibrations.png')
-# pl.savefig('../plots/methane_calibrations.pdf')
-
-
-# In[ ]:
-
+    fig.tight_layout()
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/methane_calibrations.png')
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/methane_calibrations.pdf')
+    pl.close()
 
 # these are the feedback values per ppb / per Mt that go into FaIR
 out = np.empty((1,7))
@@ -858,10 +617,4 @@ for i, specie in enumerate(['CH4', 'NOx', 'VOC', 'HC', 'N2O']):
 out[0,6] = parameters['best_fit']['temp']
 
 df = pd.DataFrame(out, columns = ['base', 'CH4', 'NOx', 'VOC', 'HC', 'N2O', 'temp'], index = ['historical_best'])
-df
-
-
-# In[ ]:
-
-
 df.to_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/CH4_lifetime.csv')
