@@ -498,7 +498,7 @@ lifetime_scaling['best_fit'] = alpha_scaling_exp(
 #if plots:
 #    pl.plot(np.arange(1750, 2101), lifetime_scaling['best_fit'])
 
-print("Baseline lifetime:" lifetime_scaling['best_fit'][0])
+print("Baseline lifetime:", lifetime_scaling['best_fit'][0])
 
 lifetime_scaling['best_fit'][0] * parameters['best_fit']['base']
 
