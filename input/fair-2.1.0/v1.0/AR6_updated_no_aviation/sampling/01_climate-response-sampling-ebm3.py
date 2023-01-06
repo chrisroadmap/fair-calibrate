@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import os
 import scipy.stats
+import scipy.linalg
 import matplotlib.pyplot as pl
 from tqdm import tqdm
 
@@ -133,6 +134,36 @@ ebm_sample[:, ebm_sample[4,:] <= 0.3] = np.nan                # kappa1 = lambda
 
 mask = np.all(np.isnan(ebm_sample), axis=0)
 ebm_sample = ebm_sample[:,~mask]
+
+# check that covariance matrix is positive semidefinite and if not, remove param combo.
+# to do: change away from sparse, once we move away from R
+for isample in tqdm(range(len(ebm_sample.T))):
+    ebm = EnergyBalanceModel(
+        ebm_sample[1:4, isample],
+        ocean_heat_transfer=ebm_sample[4:7, isample],
+        deep_ocean_efficacy=ebm_sample[7, isample],
+        gamma_autocorrelation=ebm_sample[0, isample],
+        sigma_xi=ebm_sample[9, isample],
+        sigma_eta=ebm_sample[8, isample],
+        stochastic_run=True,
+    )
+    eb_matrix = ebm._eb_matrix()
+    q_mat = np.zeros((4, 4))
+    q_mat[0,0] = ebm.sigma_eta**2
+    q_mat[1,1] = (ebm.sigma_xi / ebm.ocean_heat_capacity[0])**2
+    h_mat = np.zeros((8, 8))
+    h_mat[:4, :4] = -eb_matrix
+    h_mat[:4, 4:] = q_mat
+    h_mat[4:, 4:] = eb_matrix.T
+    g_mat = scipy.sparse.linalg.expm(h_mat)
+    q_mat_d = g_mat[4:, 4:].T @ g_mat[:4, 4:]
+    eigval, eigvec = scipy.linalg.eigh(q_mat_d)
+    if np.min(eigval) < 0:
+        ebm_sample[:, isample] = np.nan
+
+mask = np.all(np.isnan(ebm_sample), axis=0)
+ebm_sample = ebm_sample[:,~mask]
+
 ebm_sample_df=pd.DataFrame(
     data=ebm_sample[:,:samples].T, columns=['gamma','c1','c2','c3','kappa1','kappa2','kappa3','epsilon','sigma_eta','sigma_xi','F_4xCO2']
 )
