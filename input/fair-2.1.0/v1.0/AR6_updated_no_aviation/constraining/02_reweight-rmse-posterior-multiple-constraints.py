@@ -229,6 +229,7 @@ gofs
 effective_samples = int(np.floor(np.sum(np.minimum(weights, 1))))
 print("Number of effective samples:", effective_samples)
 
+assert effective_samples >= output_ensemble_size
 
 draws = []
 drawn_samples = accepted.sample(n=output_ensemble_size, replace=False, weights=weights, random_state=10099)

@@ -15,10 +15,13 @@ import scipy.stats
 import scipy.linalg
 import matplotlib.pyplot as pl
 from tqdm import tqdm
+import warnings
 
 from fair.energy_balance_model import EnergyBalanceModel
 from fair import __version__
 from dotenv import load_dotenv
+
+warnings.simplefilter("error", RuntimeWarning)
 
 load_dotenv()
 
@@ -139,12 +142,13 @@ ebm_sample = ebm_sample[:,~mask]
 # to do: change away from sparse, once we move away from R
 for isample in tqdm(range(len(ebm_sample.T))):
     ebm = EnergyBalanceModel(
-        ebm_sample[1:4, isample],
+        ocean_heat_capacity=ebm_sample[1:4, isample],
         ocean_heat_transfer=ebm_sample[4:7, isample],
         deep_ocean_efficacy=ebm_sample[7, isample],
         gamma_autocorrelation=ebm_sample[0, isample],
         sigma_xi=ebm_sample[9, isample],
         sigma_eta=ebm_sample[8, isample],
+        forcing_4co2=ebm_sample[10, isample],
         stochastic_run=True,
     )
     eb_matrix = ebm._eb_matrix()
@@ -157,19 +161,28 @@ for isample in tqdm(range(len(ebm_sample.T))):
     h_mat[4:, 4:] = eb_matrix.T
     g_mat = scipy.sparse.linalg.expm(h_mat)
     q_mat_d = g_mat[4:, 4:].T @ g_mat[:4, 4:]
-    eigval, eigvec = scipy.linalg.eigh(q_mat_d)
-    if np.min(eigval) < 0:
+    q_mat_d = q_mat_d.astype(np.float64)
+    #eigval, eigvec = scipy.linalg.eigh(q_mat_d)
+    #if np.min(eigval) < 0:
+    #    ebm_sample[:, isample] = np.nan
+
+    # I can't work out exactly what checks scipy is doing to decide the param
+    # set is a fail. Best to just let it tell me if it likes it or not.
+    try:
+        scipy.stats.multivariate_normal.rvs(size=1, mean=np.zeros(4), cov=q_mat_d)
+    except:
         ebm_sample[:, isample] = np.nan
 
 mask = np.all(np.isnan(ebm_sample), axis=0)
 ebm_sample = ebm_sample[:,~mask]
+
+print(len(ebm_sample.T))
 
 ebm_sample_df=pd.DataFrame(
     data=ebm_sample[:,:samples].T, columns=['gamma','c1','c2','c3','kappa1','kappa2','kappa3','epsilon','sigma_eta','sigma_xi','F_4xCO2']
 )
 
 assert len(ebm_sample_df) >= samples
-
 
 os.makedirs(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/', exist_ok=True)
 

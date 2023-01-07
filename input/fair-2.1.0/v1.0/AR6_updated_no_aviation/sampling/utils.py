@@ -79,8 +79,8 @@ def _parallel_process(  # pylint:disable=too-many-arguments
     configuration,
     pool=None,
     config_are_kwargs=False,
-    front_serial=2,
-    front_parallel=18,
+    front_serial=0,
+    front_parallel=0,
     timeout=None,
 ):
     """
