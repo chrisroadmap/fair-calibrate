@@ -59,7 +59,7 @@ params_out.columns = ['gamma', 'c1', 'c2', 'c3', 'kappa1', 'kappa2', 'kappa3', '
        'shape BC', 'shape OC', 'beta', 'o3 CH4', 'o3 N2O',
        'o3 Equivalent effective stratospheric chlorine', 'o3 CO', 'o3 VOC', 'o3 NOx',
        'scale CO2', 'scale CH4', 'scale N2O', 'scale minorGHG', 'scale Stratospheric water vapour',
-       'scale Light absorbing particles on snow and ice', 'scale Land use',
+       'scale Contrails', 'scale Light absorbing particles on snow and ice', 'scale Land use',
        'scale Volcanic', 'solar_amplitude', 'solar_trend', 'co2_concentration_1750', 'seed']
 
 params_out.drop(columns=['ari CO'], inplace=True)
