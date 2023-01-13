@@ -38,7 +38,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-pl.style.use('../../../../../defaults.mplstyle')
 
 cal_v = os.getenv('CALIBRATION_VERSION')
 fair_v = os.getenv('FAIR_VERSION')
@@ -47,6 +46,25 @@ samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
 
 print("Sampling aerosol cloud interactions...")
+
+if plots:
+    #pl.rcParams['figure.figsize'] = (11.75, 5.875)
+    pl.rcParams['font.size'] = 16
+    pl.rcParams['font.family'] = 'Arial'
+    pl.rcParams['ytick.direction'] = 'in'
+    pl.rcParams['ytick.minor.visible'] = True
+    pl.rcParams['ytick.major.right'] = True
+    pl.rcParams['ytick.right'] = True
+    pl.rcParams['xtick.direction'] = 'in'
+    pl.rcParams['xtick.minor.visible'] = True
+    pl.rcParams['xtick.major.top'] = True
+    pl.rcParams['xtick.top'] = True
+    pl.rcParams['axes.spines.top'] = True
+    pl.rcParams['axes.spines.bottom'] = True
+    pl.rcParams['figure.dpi'] = 150
+    os.makedirs(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/', exist_ok=True)
+
+# In[ ]:
 
 
 files = glob.glob('../../../../../data/smith2021aerosol/*.csv')
@@ -121,6 +139,21 @@ params_ar6, cov = curve_fit(
     max_nfev = 10000
 )
 
+params_ar6
+
+#
+#
+# fig, ax = pl.subplots(3, 4, figsize=(16, 12))
+# for imodel, model in enumerate(models):
+#     ax[imodel//4, imodel%4].plot(years[model], aci[model])
+#     ax[imodel//4, imodel%4].plot(np.arange(1750.5, 2101), aci_log([so2, bc, oc], *param_fits[model]))
+#     ax[imodel//4, imodel%4].set_title(model)
+# ax[2,3].plot(np.arange(1750.5, 2020), df_ar6['aerosol-cloud_interactions'].values)
+# ax[2,3].plot(np.arange(1750.5, 2101), aci_log1750([so2, bc, oc], *params_ar6))
+
+
+# In[ ]:
+
 if plots:
     colors = {
         'CanESM5'    :  'red',#'#1e4c24',
@@ -169,7 +202,10 @@ if plots:
     }
 
 
-    fig, ax = pl.subplots(3, 4, figsize=(10, 5), squeeze=False)
+    # In[ ]:
+
+
+    fig, ax = pl.subplots(3,4, figsize=(15, 6.5), squeeze=False)
     for imodel, model in enumerate(sorted(models)):
         i = imodel//4
         j = imodel%4
@@ -187,24 +223,35 @@ if plots:
         else:
             modlab = 'HadGEM3'
         ax[i,j].text(0.03,0.05,modlab,transform=ax[i,j].transAxes, fontweight='bold')
+        #ax[i,1].text(0.95,0.09,'ERFaci',transform=ax[i,1].transAxes, ha='right')
 
     ax[0,0].set_ylabel('W m$^{-2}$')
     ax[1,0].set_ylabel('W m$^{-2}$')
     ax[2,0].set_ylabel('W m$^{-2}$')
     ax[2,3].axis('off')
 
-    pl.suptitle('Aerosol-cloud interactions parameterisations')
-
+    #pl.suptitle('Aerosol-cloud interaction forcing emulations in FaIR v2.1')
     fig.tight_layout()
-    os.makedirs(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}', exist_ok=True)
-    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/aci_calibration.png')
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/plots/aci_calibration.png')
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/plots/aci_calibration.pdf')
     pl.close()
 
 df_params = pd.DataFrame(param_fits, index=['aci_scale', 'Sulfur', 'BC', 'OC']).T
 
+#
+# fig, ax = pl.subplots(3, 4, figsize=(16, 12))
+# for imodel, model in enumerate(models):
+#     ax[imodel//4, imodel%4].plot(np.arange(1750.5, 2101), aci_log([so2, bc, oc], *param_fits[model]))
+#     ax[imodel//4, imodel%4].plot(np.arange(1750.5, 2101), aci_log1750([so2, bc, oc], *param_fits[model]))
+
+#
+# fig, ax = pl.subplots(3, 4, figsize=(16, 12))
+# for imodel, model in enumerate(models):
+#     ax[imodel//4, imodel%4].plot(np.arange(1750.5, 2101), aci_log([so2, bc, oc], *param_fits[model]) - aci_log1750([so2, bc, oc], *param_fits[model]))
+
+
 df_params.to_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/aerosol_cloud.csv')
 
-print("Correlation coefficients between aci parameters")
 print(df_params.corr())
 
 beta_samp = df_params['aci_scale']
@@ -224,12 +271,16 @@ aci_sample[2, aci_sample[2,:] < 0] = np.nan
 mask = np.any(np.isnan(aci_sample), axis=0)
 aci_sample = aci_sample[:, ~mask]
 
+mask.sum()
+
+aci_sample
+
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 erfaci_sample = scipy.stats.uniform.rvs(size=samples, loc=-2.0, scale=2.0, random_state=71271)
 
 beta = np.zeros(samples)
 erfaci = np.zeros((351,samples))
-for i in tqdm(range(samples), desc="aci samples"):
+for i in tqdm(range(samples)):
     ts2010 = np.mean(
         aci_log(
             [so2[255:265], bc[255:265], oc[255:265]],

@@ -19,7 +19,6 @@ from fair import __version__
 from dotenv import load_dotenv
 
 load_dotenv()
-pl.style.use('../../../../../defaults.mplstyle')
 
 print("Doing RMSE constraint...")
 
@@ -31,6 +30,21 @@ plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
 
 assert fair_v == __version__
 
+if plots:
+    pl.rcParams['font.size'] = 16
+    pl.rcParams['font.family'] = 'Arial'
+    pl.rcParams['ytick.direction'] = 'in'
+    pl.rcParams['ytick.minor.visible'] = True
+    pl.rcParams['ytick.major.right'] = True
+    pl.rcParams['ytick.right'] = True
+    pl.rcParams['xtick.direction'] = 'in'
+    pl.rcParams['xtick.minor.visible'] = True
+    pl.rcParams['xtick.major.top'] = True
+    pl.rcParams['xtick.top'] = True
+    pl.rcParams['axes.spines.top'] = True
+    pl.rcParams['axes.spines.bottom'] = True
+    pl.rcParams['figure.dpi'] = 150
+    os.makedirs(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/', exist_ok=True)
 
 
 temp_in = np.load(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/temperature_1850-2101.npy')
@@ -81,9 +95,8 @@ if plots:
     ax.set_ylim(-1, 5)
     ax.set_ylabel('°C relative to 1850-1900')
     ax.axhline(0, color='k', ls=":", lw=0.5)
-    pl.title('Temperature anomaly: ssp245 prior')
     pl.tight_layout()
-    os.makedirs(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/', exist_ok=True)
+    #pl.title('Temperature anomaly - unconstrained')
     pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_ssp245.png')
     pl.close()
 
@@ -95,7 +108,7 @@ print("Passing RMSE constraint:", np.sum(accept_temp))
 valid_temp = np.arange(samples, dtype=int)[accept_temp]
 
 if plots:
-    fig, ax = pl.subplots(figsize=(5, 5))
+    fig, ax = pl.subplots(figsize=(5,5))
     ax.fill_between(
         np.arange(1850, 2102),
         np.min(temp_in[:,accept_temp]-np.average(temp_in[:52, accept_temp], weights=weights, axis=0), axis=1),
@@ -129,11 +142,10 @@ if plots:
     ax.set_ylim(-1, 5)
     ax.set_ylabel('°C relative to 1850-1900')
     ax.axhline(0, color='k', ls=":", lw=0.5)
-    pl.title("Temperature anomaly: ssp245 RMSE constraint")
     pl.tight_layout()
     pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/post_rsme_ssp245.png')
     pl.close()
 
 valid_temp = np.arange(samples, dtype=int)[accept_temp]
 os.makedirs(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors', exist_ok=True)
-np.savetxt(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/runids_rmse_pass.csv', valid_temp.astype(int), fmt='%d')
+np.savetxt(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/runids_rmse_pass.csv', valid_temp)

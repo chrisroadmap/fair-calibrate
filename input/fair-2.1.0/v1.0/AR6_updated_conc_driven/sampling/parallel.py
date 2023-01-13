@@ -1,5 +1,6 @@
 # put imports outside: we don't have a lot of overhead here, and it looks nicer.
 import os
+import pandas as pd
 from fair import FAIR
 import xarray as xr
 from fair.io import read_properties
@@ -23,20 +24,37 @@ def run_fair(cfg):
     species, properties = read_properties()
 
     da_emissions = xr.load_dataarray(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/ssp_emissions_1750-2500.nc')
+    da_concentration = xr.load_dataarray(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/concentration/ssp_concentration_1750-2500.nc')
+    df_forcing = pd.read_csv('../../../../../data/forcing/AR6_SSP_landuse_forcing_prescribed.csv', index_col=0)
+    luf = df_forcing.loc[1750:2021, scenarios[0]].values
 
     f = FAIR(ch4_method='Thornhill2021')
-    f.define_time(1750, 2101, 1)
+    f.define_time(1750, 2021, 1)
     f.define_scenarios(scenarios)
     f.define_configs(list(range(batch_start, batch_end)))
+    species.remove("CO2 FFI")
+    species.remove("CO2 AFOLU")
+    species.remove("Halon-1202")
+    ghgs = ['CO2', 'CH4', 'N2O', 'CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115', 'HCFC-22', 'HCFC-141b', 'HCFC-142b', 'CCl4', 'CHCl3', 'CH2Cl2', 'CH3Cl', 'CH3CCl3', 'CH3Br', 'Halon-1211', 'Halon-1301', 'Halon-2402', 'CF4', 'C2F6', 'C3F8', 'c-C4F8', 'C4F10', 'C5F12', 'C6F14', 'C7F16', 'C8F18', 'NF3', 'SF6', 'SO2F2', 'HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32', 'HFC-365mfc', 'HFC-4310mee']
+
+    for specie in ghgs:
+        properties[specie]['input_mode'] = 'concentration'
+
+    properties['Land use']['input_mode'] = 'forcing'
+
     f.define_species(species, properties)
     f.allocate()
 
-    trend_shape = np.ones(352)
+    trend_shape = np.ones(272)
     trend_shape[:271] = np.linspace(0, 1, 271)
 
-    da = da_emissions.loc[dict(config='unspecified', scenario='ssp245')][:351, ...]
+    da = da_emissions.loc[dict(config='unspecified', scenario='ssp245')][:271, ...]
     fe = da.expand_dims(dim=['scenario', 'config'], axis=(1,2))
     f.emissions = fe.drop('config') * np.ones((1,1,batch_size,1))
+
+    da = da_concentration.loc[dict(config='unspecified', scenario='ssp245')][:272, ...]
+    fe = da.expand_dims(dim=['scenario', 'config'], axis=(1,2))
+    f.concentration = fe.drop('config') * np.ones((1,1,batch_size,1))
 
     # solar and volcanic forcing
     fill(
@@ -48,6 +66,9 @@ def run_fair(cfg):
          trend_shape[:, None, None] * cfg['scaling_solar_trend'],
          specie='Solar'
     )
+    
+    # Land use
+    fill(f.forcing, luf[:, None, None], specie='Land use')
 
     # climate response
     fill(f.climate_configs['ocean_heat_capacity'], np.array([cfg['c1'], cfg['c2'], cfg['c3']]).T)
@@ -87,18 +108,13 @@ def run_fair(cfg):
     fill(f.species_configs['forcing_scale'], cfg['scaling_CO2'], specie='CO2')
     fill(f.species_configs['forcing_scale'], cfg['scaling_CH4'], specie='CH4')
     fill(f.species_configs['forcing_scale'], cfg['scaling_N2O'], specie='N2O')
-    #fill(f.species_configs['forcing_scale'], cfg['scaling_minorGHG'], specie='CO2')
     fill(f.species_configs['forcing_scale'], cfg['scaling_stwv'], specie='Stratospheric water vapour')
     fill(f.species_configs['forcing_scale'], cfg['scaling_contrails'], specie='Contrails')
     fill(f.species_configs['forcing_scale'], cfg['scaling_lapsi'], specie='Light absorbing particles on snow and ice')
     fill(f.species_configs['forcing_scale'], cfg['scaling_landuse'], specie='Land use')
 
-    for specie in ['CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115', 'HCFC-22', 'HCFC-141b', 'HCFC-142b',
-        'CCl4', 'CHCl3', 'CH2Cl2', 'CH3Cl', 'CH3CCl3', 'CH3Br', 'Halon-1211', 'Halon-1202', 'Halon-1301', 'Halon-2402',
-        'CF4', 'C2F6', 'C3F8', 'c-C4F8', 'C4F10', 'C5F12', 'C6F14', 'C7F16', 'C8F18', 'NF3', 'SF6', 'SO2F2',
-        'HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32',
-        'HFC-365mfc', 'HFC-4310mee']:
-            fill(f.species_configs['forcing_scale'], cfg['scaling_minorGHG'], specie=specie)
+    for specie in ['CFC-11', 'CFC-12', 'CFC-113', 'CFC-114', 'CFC-115', 'HCFC-22', 'HCFC-141b', 'HCFC-142b', 'CCl4', 'CHCl3', 'CH2Cl2', 'CH3Cl', 'CH3CCl3', 'CH3Br', 'Halon-1211', 'Halon-1301', 'Halon-2402', 'CF4', 'C2F6', 'C3F8', 'c-C4F8', 'C4F10', 'C5F12', 'C6F14', 'C7F16', 'C8F18', 'NF3', 'SF6', 'SO2F2', 'HFC-125', 'HFC-134a', 'HFC-143a', 'HFC-152a', 'HFC-227ea', 'HFC-23', 'HFC-236fa', 'HFC-245fa', 'HFC-32', 'HFC-365mfc', 'HFC-4310mee']:
+        fill(f.species_configs['forcing_scale'], cfg['scaling_minorGHG'], specie=specie)
 
     # aerosol radiation interactions
     fill(f.species_configs['erfari_radiative_efficiency'], cfg['ari_BC'], specie='BC')
@@ -123,11 +139,8 @@ def run_fair(cfg):
     # tune down volcanic efficacy
     fill(f.species_configs['forcing_efficacy'], 0.6, specie='Volcanic')
 
-    # CO2 in 1750
-    fill(f.species_configs['baseline_concentration'], cfg['CO2_1750'], specie='CO2')
-
     # initial conditions
-    initialise(f.concentration, f.species_configs['baseline_concentration'])
+    #initialise(f.concentration, f.species_configs['baseline_concentration'])
     initialise(f.forcing, 0)
     initialise(f.temperature, 0)
     initialise(f.cumulative_emissions, 0)
@@ -140,9 +153,9 @@ def run_fair(cfg):
     return (
         f.temperature[100:, 0, :, 0],
         f.ocean_heat_content_change[268:270, 0, :].mean(axis=0)-f.ocean_heat_content_change[221:223, 0, :].mean(axis=0),
-        f.concentration[264, 0, :, 2],
-        np.average(f.forcing[255:266, 0, :, 56], weights=np.array([0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]), axis=0),
-        np.average(f.forcing[255:266, 0, :, 57], weights=np.array([0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]), axis=0),
+        f.cumulative_emissions[270, 0, :, 0],
+        np.average(f.forcing[255:266, 0, :, 53], weights=np.array([0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]), axis=0),
+        np.average(f.forcing[255:266, 0, :, 54], weights=np.array([0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]), axis=0),
         f.ebms.ecs,
         f.ebms.tcr
     )

@@ -32,7 +32,23 @@ fair_v = os.getenv('FAIR_VERSION')
 constraint_set = os.getenv('CONSTRAINT_SET')
 samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
-pl.style.use('../../../../../defaults.mplstyle')
+
+if plots:
+    pl.rcParams['figure.figsize'] = (5.875, 5.875)
+    pl.rcParams['font.size'] = 12
+    pl.rcParams['font.family'] = 'Arial'
+    pl.rcParams['ytick.direction'] = 'in'
+    pl.rcParams['ytick.minor.visible'] = True
+    pl.rcParams['ytick.major.right'] = True
+    pl.rcParams['ytick.right'] = True
+    pl.rcParams['xtick.direction'] = 'in'
+    pl.rcParams['xtick.minor.visible'] = True
+    pl.rcParams['xtick.major.top'] = True
+    pl.rcParams['xtick.top'] = True
+    pl.rcParams['axes.spines.top'] = True
+    pl.rcParams['axes.spines.bottom'] = True
+    pl.rcParams['figure.dpi'] = 300
+    os.makedirs(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/', exist_ok=True)
 
 df = pd.read_csv(
     os.path.join(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/4xCO2_cummins_ebm3_cmip6.csv")
@@ -97,12 +113,11 @@ params = pd.DataFrame(params)
 print(params.corr())
 
 if plots:
-    fig = pl.figure(figsize=(5.875, 5.875))
+    fig = pl.figure()
     pd.plotting.scatter_matrix(params);
     pl.suptitle('Distributions and correlations of CMIP6 calibrations')
     pl.tight_layout()
     pl.subplots_adjust(wspace=0, hspace=0)
-    os.makedirs(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/', exist_ok=True)
     pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/ebm3_distributions.png')
     pl.close()
 
@@ -147,6 +162,9 @@ for isample in tqdm(range(len(ebm_sample.T))):
     g_mat = scipy.sparse.linalg.expm(h_mat)
     q_mat_d = g_mat[4:, 4:].T @ g_mat[:4, 4:]
     q_mat_d = q_mat_d.astype(np.float64)
+    #eigval, eigvec = scipy.linalg.eigh(q_mat_d)
+    #if np.min(eigval) < 0:
+    #    ebm_sample[:, isample] = np.nan
 
     # I can't work out exactly what checks scipy is doing to decide the param
     # set is a fail. Best to just let it tell me if it likes it or not.
@@ -158,7 +176,7 @@ for isample in tqdm(range(len(ebm_sample.T))):
 mask = np.all(np.isnan(ebm_sample), axis=0)
 ebm_sample = ebm_sample[:,~mask]
 
-print("Total number of retained samples:", len(ebm_sample.T))
+print(len(ebm_sample.T))
 
 ebm_sample_df=pd.DataFrame(
     data=ebm_sample[:,:samples].T, columns=['gamma','c1','c2','c3','kappa1','kappa2','kappa3','epsilon','sigma_eta','sigma_xi','F_4xCO2']
@@ -170,7 +188,9 @@ os.makedirs(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prio
 
 ebm_sample_df.to_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/climate_response_ebm3.csv', index=False)
 
-print("CO2 scaling factor check:", np.percentile(1+ 0.563*(ebm_sample_df['F_4xCO2'].mean() - ebm_sample_df['F_4xCO2'])/ebm_sample_df['F_4xCO2'].mean(), (5,50,95)))
+# around best
+print(np.percentile(1+ 0.563*(ebm_sample_df['F_4xCO2'].mean() - ebm_sample_df['F_4xCO2'])/ebm_sample_df['F_4xCO2'].mean(), (5,50,95)))
 
 # what we do want to do is to scale the variability in 4xCO2 (correlated with the other EBM parameters)
 # to feed into the effective radiative forcing scaling factor.
+1 + 0.563*(ebm_sample_df['F_4xCO2'].mean() - ebm_sample_df['F_4xCO2'])/ebm_sample_df['F_4xCO2'].mean()

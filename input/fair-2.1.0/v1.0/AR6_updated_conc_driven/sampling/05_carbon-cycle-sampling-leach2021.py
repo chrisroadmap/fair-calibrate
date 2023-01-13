@@ -26,8 +26,6 @@ fair_v = os.getenv('FAIR_VERSION')
 constraint_set = os.getenv('CONSTRAINT_SET')
 samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
-pl.style.use('../../../../../defaults.mplstyle')
-
 
 print("Making carbon cycle calibrations...")
 

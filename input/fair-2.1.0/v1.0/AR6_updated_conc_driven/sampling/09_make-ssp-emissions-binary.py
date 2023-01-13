@@ -28,6 +28,9 @@ print("Making SSP emissions binary...")
 scenarios = ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']
 
 species, properties = read_properties()
+species.remove('CO2 FFI')
+species.remove('CO2 AFOLU')
+species.remove("Halon-1202")
 
 f = FAIR(ch4_method='thornhill2021')
 f.define_time(1750, 2500, 1)
