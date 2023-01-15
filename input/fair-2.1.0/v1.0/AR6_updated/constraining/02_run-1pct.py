@@ -8,7 +8,6 @@ import os
 import numpy as np
 import pandas as pd
 import scipy.stats
-from tqdm.auto import tqdm
 import xarray as xr
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing

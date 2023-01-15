@@ -10,7 +10,6 @@ import pooch
 import matplotlib.pyplot as pl
 import scipy.stats
 import xarray as xr
-from tqdm import tqdm
 
 from fair import FAIR
 from fair.io import read_properties

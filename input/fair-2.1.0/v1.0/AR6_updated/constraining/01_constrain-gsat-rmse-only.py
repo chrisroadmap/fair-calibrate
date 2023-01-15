@@ -17,7 +17,6 @@ from tqdm.auto import tqdm
 from fair.energy_balance_model import EnergyBalanceModel
 from fair import __version__
 from dotenv import load_dotenv
-
 load_dotenv()
 pl.style.use('../../../../../defaults.mplstyle')
 
@@ -28,6 +27,7 @@ fair_v = os.getenv('FAIR_VERSION')
 constraint_set = os.getenv('CONSTRAINT_SET')
 samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
+progress = os.getenv("PROGRESS", "False").lower() in ('true', '1', 't')
 
 assert fair_v == __version__
 
@@ -87,7 +87,7 @@ if plots:
     pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_ssp245.png')
     pl.close()
 
-for i in tqdm(range(samples)):
+for i in tqdm(range(samples), disable=1-progress):
     rmse_temp[i] = rmse(gmst[:171], temp_in[:171,i]-np.average(temp_in[:52, i], weights=weights, axis=0))
 
 accept_temp=(rmse_temp<0.16)

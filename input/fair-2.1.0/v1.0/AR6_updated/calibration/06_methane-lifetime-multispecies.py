@@ -30,8 +30,6 @@ import matplotlib.pyplot as pl
 import time
 import scipy.stats
 import scipy.optimize
-from tqdm import tqdm
-
 from fair import FAIR
 from fair.interface import fill, initialise
 
@@ -47,23 +45,7 @@ fair_v = os.getenv('FAIR_VERSION')
 constraint_set = os.getenv('CONSTRAINT_SET')
 plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
 assert fair_v == __version__
-
-if plots:
-    #pl.rcParams['figure.figsize'] = (11.4, 11.4)
-    pl.rcParams['font.size'] = 16
-    pl.rcParams['font.family'] = 'Arial'
-    pl.rcParams['ytick.direction'] = 'in'
-    pl.rcParams['ytick.minor.visible'] = True
-    pl.rcParams['ytick.major.right'] = True
-    pl.rcParams['ytick.right'] = True
-    pl.rcParams['xtick.direction'] = 'in'
-    pl.rcParams['xtick.minor.visible'] = True
-    pl.rcParams['xtick.major.top'] = True
-    pl.rcParams['xtick.top'] = True
-    pl.rcParams['axes.spines.top'] = True
-    pl.rcParams['axes.spines.bottom'] = True
-    pl.rcParams['figure.dpi'] = 300
-    os.makedirs(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/', exist_ok=True)
+pl.style.use('../../../../../defaults.mplstyle')
 
 # ## Temperature data
 #
@@ -210,8 +192,8 @@ for species in hc_species:
 
 total_eesc_1850 = total_eesc[100]
 
-for species in hc_species:
-    pl.plot(hc_eesc[species])
+#for species in hc_species:
+#    pl.plot(hc_eesc[species])
 
 input['HC'] = total_eesc
 
@@ -400,7 +382,8 @@ if plots:
         pl.plot(np.arange(1750, 2021), conc_ch4[model][:271], label=model)
     pl.plot(np.arange(1750, 2021), input['CH4'][:271], color='k', label='obs')
     pl.legend()
-    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/aerchemmip_tuning_ch4_conc_1750-2020.pdf')
+    os.makedirs(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/', exist_ok=True)
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/aerchemmip_tuning_ch4_conc_1750-2020.png')
     pl.close()
 
 # ## Step 3
@@ -509,7 +492,7 @@ if plots:
     pl.plot(np.arange(1750, 2101), lifetime_scaling['best_fit'] * parameters['best_fit']['base'], label='best_fit')
     pl.legend()
     pl.ylabel('CH4 chemical lifetime (yr)')
-    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/ch4_chemical_lifetime_best_fit.pdf')
+    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/ch4_chemical_lifetime_best_fit.png')
     pl.close()
 
 conc_ch4['best_fit'] = np.zeros(351)
@@ -575,7 +558,7 @@ if plots:
         'ssp585': '#980002'
     }
 
-    fig, ax = pl.subplots(1, 3, figsize=(15, 4.5))
+    fig, ax = pl.subplots(1, 3, figsize=(12, 3.5))
     for model in models:
         ax[0].plot(np.arange(1750, 2101), lifetime_scaling[model] * parameters[model]['base'], label=model)
     ax[0].plot(np.arange(1750, 2101), lifetime_scaling['best_fit'] * parameters[model]['base'], color='0.5', label='Best fit')
@@ -609,7 +592,6 @@ if plots:
 
     fig.tight_layout()
     pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/methane_calibrations.png')
-    pl.savefig(f'../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/methane_calibrations.pdf')
     pl.close()
 
 # these are the feedback values per ppb / per Mt that go into FaIR

@@ -26,6 +26,7 @@ samples = int(os.getenv("PRIOR_SAMPLES"))
 output_ensemble_size = int(os.getenv("POSTERIOR_SAMPLES"))
 plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
 pl.style.use('../../../../../defaults.mplstyle')
+progress = os.getenv("PROGRESS", "False").lower() in ('true', '1', 't')
 
 assert fair_v == __version__
 
@@ -191,7 +192,7 @@ def calculate_sample_weights(distributions, samples, niterations=50):
 
     unique_codes = list(distributions.keys())#[::-1]
 
-    for k in tqdm(range(niterations), desc="Iterations", leave=False):
+    for k in tqdm(range(niterations), desc="Iterations", leave=False, disable=1-progress):
         gofs.append([])
         if k == (niterations - 1):
             weights_second_last_iteration = weights.copy()

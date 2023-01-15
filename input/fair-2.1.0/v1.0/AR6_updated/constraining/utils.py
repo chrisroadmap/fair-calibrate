@@ -10,6 +10,7 @@ load_dotenv()
 
 front_serial = int(os.getenv('FRONT_SERIAL'))
 front_parallel = int(os.getenv('FRONT_PARALLEL'))
+progress = os.getenv("PROGRESS", "False").lower() in ('true', '1', 't')
 
 LOGGER = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ _default_tqdm_params = {
     "mininterval": 5,
     "unit": "it",
     "unit_scale": True,
+    "disable": 1-progress,
 }
 
 

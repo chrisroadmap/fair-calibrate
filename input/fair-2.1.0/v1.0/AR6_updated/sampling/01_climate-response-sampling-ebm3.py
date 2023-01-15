@@ -33,6 +33,7 @@ constraint_set = os.getenv('CONSTRAINT_SET')
 samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
 pl.style.use('../../../../../defaults.mplstyle')
+progress = os.getenv("PROGRESS", "False").lower() in ('true', '1', 't')
 
 df = pd.read_csv(
     os.path.join(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/4xCO2_cummins_ebm3_cmip6.csv")
@@ -125,7 +126,7 @@ ebm_sample = ebm_sample[:,~mask]
 
 # check that covariance matrix is positive semidefinite and if not, remove param combo.
 # to do: change away from sparse, once we move away from R
-for isample in tqdm(range(len(ebm_sample.T))):
+for isample in tqdm(range(len(ebm_sample.T)), disable=1-progress):
     ebm = EnergyBalanceModel(
         ocean_heat_capacity=ebm_sample[1:4, isample],
         ocean_heat_transfer=ebm_sample[4:7, isample],

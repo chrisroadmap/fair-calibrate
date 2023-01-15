@@ -45,6 +45,7 @@ fair_v = os.getenv('FAIR_VERSION')
 constraint_set = os.getenv('CONSTRAINT_SET')
 samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", 'False').lower() in ('true', '1', 't')
+progress = os.getenv("PROGRESS", "False").lower() in ('true', '1', 't')
 
 print("Sampling aerosol cloud interactions...")
 
@@ -229,7 +230,7 @@ erfaci_sample = scipy.stats.uniform.rvs(size=samples, loc=-2.0, scale=2.0, rando
 
 beta = np.zeros(samples)
 erfaci = np.zeros((351,samples))
-for i in tqdm(range(samples), desc="aci samples"):
+for i in tqdm(range(samples), desc="aci samples", disable=1-progress):
     ts2010 = np.mean(
         aci_log(
             [so2[255:265], bc[255:265], oc[255:265]],

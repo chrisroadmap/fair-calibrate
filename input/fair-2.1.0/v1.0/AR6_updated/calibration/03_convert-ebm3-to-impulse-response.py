@@ -12,7 +12,6 @@ import os
 import numpy as np
 import pandas as pd
 import scipy.linalg
-from tqdm import tqdm
 
 from fair.constants import DOUBLING_TIME_1PCT
 from fair.earth_params import seconds_per_year, earth_radius

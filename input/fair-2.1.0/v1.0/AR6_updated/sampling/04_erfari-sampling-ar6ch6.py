@@ -14,7 +14,6 @@ import numpy as np
 import matplotlib.pyplot as pl
 import json
 import scipy.stats
-from tqdm import tqdm
 
 from fair import __version__
 from dotenv import load_dotenv

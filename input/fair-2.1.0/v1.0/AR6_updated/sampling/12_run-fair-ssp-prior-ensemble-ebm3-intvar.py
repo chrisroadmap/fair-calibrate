@@ -22,7 +22,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as pl
 import scipy.stats
-from tqdm.auto import tqdm
 import xarray as xr
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing
