@@ -5,27 +5,16 @@ Multiple strategies to calibrate the FaIR model.
 
 ### requirements
 - `anaconda` for `python3`
-- `python` 3.6+
-- for the Cummins calibration, a reasonably modern version of `R` (4.1.1 used here)
+- `python>=3.6`
+- for the Cummins calibration, `R>=4.1.1` and `cmake>=3.2`
 
-### python and jupyter notebooks
+### set up environments for Python and R
 ```
 conda env create -f environment.yml
 conda activate fair-calibrate
-nbstripout --install
-```
-
-If you get module import errors running any of the notebooks, it's likely that your local environment is not up to date:
-```
-cd fair-calibrate  # path to wherever your local copy is
-
-# get latest version
-git fetch
-git pull
-
-# update environment
-conda activate fair2.1-calibrate
-conda env update -f environment.yml --prune
+cd r_scripts
+R
+> source("setup.r")
 ```
 
 ## How to run
@@ -38,50 +27,36 @@ The `.env` file contains environment variables that should be changed in order t
 # example .env
 CALIBRATION_VERSION=1.0
 FAIR_VERSION=2.1.0
-CONSTRAINTS=ar6
-PRIOR_SAMPLES=1500000
-POSTERIOR_SAMPLES=1001
 CONSTRAINT_SET=AR6_updated
+PRIOR_SAMPLES=1500000        # how many prior samples to draw
+POSTERIOR_SAMPLES=1001       # final posterior ensemble size
+BATCH_SIZE=500               # how many scenarios to run in parallel
+WORKERS=40                   # how many cores to use for parallel runs
+FRONT_SERIAL=0               # for debugging, how many serial runs to do first
+FRONT_PARALLEL=0             # after serial runs, how many parallel runs to test
+
+PLOTS=True                   # Produce plots?
+PROGRESS=False               # show progress bar? (good for interactive, bad
+                             # on HPC batch jobs)
 ```
 
-The output will be produced in `output/fair-X.X.X/vY.Y.Y/` where X is the FaIR version and Y is the calibration version. Multiple constraint philosphies can be applied for the same set of calibrations; these are in the posteriors/CONSTRAINTS subdirectory where CONSTRAINTS is a named set of constraints used (e.g. AR6, 2022 observations, etc.). The posteriors are the only data output that will be committed to Git, but the intention is that the full workflow will be on Zenodo.
+The output will be produced in `output/fair-X.X.X/vY.Y.Y/Z/` where X is the FaIR version, Y is the calibration version and Z is the constraint set used. Multiple constraint philosphies can be applied for the same set of calibrations (e.g. AR6, 2022 observations, etc.). No posterior data will be committed to Git owing to size, but the intention is that the full output data will be on Zenodo.
 
 ### To run the workflow
 
-actually this isn't quite right - the R scripts come between notebooks 2 and 3 in the calibration I think. TODO: make an automated workflow.
+1. Create the `.env` file - see above
+2. Check the recipe inside the `run` bash script
+3. ./run
 
-1. Create the `.env` file.
-2. Run the notebooks inside `notebooks/calibration`.
-3. Run the R scripts inside `r_scripts`.
-4. Run the notebooks inside `notebooks/sampling`.
-5. Run the notebooks inside `notebooks/constraining`.
+Scripts can be run individually, but must be run from the directories in which they reside (5 subdirectories deep).
 
-#### Notebooks (steps 2, 3, 5)
-
-From command line, make sure you are inside the environment, then launch Jupyter
-
-```
-conda activate fair-calibrate
-jupyter notebook
-```
-
-### the R scripts
-
-Open the R console (either the GUI or from the command line) and set the working directory to the `r_scripts` directory of your local repository.
-
-```
-setwd("r_scripts")
-source("setup.r")
-source("calibrate_cummins_3layer.r")
-source("calibrate_cummins_2layer.r")
-source("calibrate_cummins_3layer_longrunmip.r")
-```
-
-Note: I get different results from the 3-layer model calibration between using pre-compiled R binary for for Mac compared to building the R binary from source on CentOS7; both using R-4.1.1. Since the Linux OS is well out of date (Leeds IT: get your act together... again) and the Mac-derived results look way more sensible, the Mac results are the ones that should be used. A future **TODO** would be to switch to ``py-bobyqa`` which is the optimizer used in the R code, and remove dependence on R.
+## Notes
+1. I get different results from the 3-layer model calibration between using pre-compiled R binary for for Mac compared to building the R binary from source on CentOS7; both using R-4.1.1, and again using the Arc4 HPC. The Arc4 results are used. A future **TODO** would be to switch to ``py-bobyqa`` which is the optimizer used in the R code, and remove dependence on R, which *may* improve performace.
+2. Related to above, scipy's multivariate normal and sparse matrix algebra routines seem fragile, and change between scipy versions (1.8, 1.9, 1.10). If anyone trying to reproduce this runs into "positive semidefinite" errors, raise an issue.
 
 ## Documentation:
 
-It is critical that each calibration version and calibration set is well documented, as they may be used by others: often, differences in the responses in climate emulators are more a function of calibration than of model structural differences (we don't have a single good reference to prove this yet, but trust us).
+It is critical that each calibration version and calibration set is well documented, as they may be used by others: often, differences in the responses in climate emulators are more a function of calibration than of model structural differences (I don't have a single good reference to prove this yet, but trust me).
 
 Maybe a TODO: move to READTHEDOCS or a wiki.
 
@@ -108,9 +83,7 @@ Thornhill et al. 2021b: https://doi.org/10.5194/acp-21-1105-2021
 - 1001-member posterior (deliberately chosen).
 - Emissions and concentrations from RCMIP (i.e. based on CMIP6)
 - Temperature from AR6 WG1 (1850-2020, mean of 4 datasets), constrained using ssp245 projections beyond 2014.
+- ssp245 projections for 2081-2100.
 - Ocean heat content from AR6 WG1 (1971-2018), linear.
 - two step constraining procedure used: first RMSE of less than 0.16K, then 6-variable distribution fitting.
 - Aerosol ERF, ERFari and ERFaci as in AR6 WG1
-
-#### AR6_updated_no_aviation
-- As `AR6_updated`, but with historical and future forcing from aviation set to zero. The historical is recalibrated to switch aviation off.
