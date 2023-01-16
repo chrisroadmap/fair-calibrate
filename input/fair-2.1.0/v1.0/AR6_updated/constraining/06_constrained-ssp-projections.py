@@ -510,7 +510,8 @@ if plots:
 
 # ## Dump out
 
-f.to_netcdf(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/ssp_emissions_driven.nc')
+# 13 GB file, which we probably don't want
+#f.to_netcdf(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/ssp_emissions_driven.nc')
 
 #for scen_idx in [('ssp126', 1), ('ssp245', 2), ('ssp370', 3)]:
 #    df_dump = pd.DataFrame(
