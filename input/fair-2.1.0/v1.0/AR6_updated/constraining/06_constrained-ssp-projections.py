@@ -401,7 +401,7 @@ for irow in range(15):
         (5, 50, 95),
     )
 
-print("Anomlaies rel. 1995-2014:")
+print("Anomalies rel. 1995-2014:")
 print((temp_model_19952014))
 print()
 print("Anomalies rel. 1850-1900:")
@@ -414,6 +414,16 @@ print(
 print(
     "Methane concentration 2019:",
     np.percentile(f.concentration[269:271, 2, :, 3].mean(axis=0), (5, 50, 95)),
+)
+print(
+    "WMGHG forcing 2019:",
+    np.percentile(
+        (
+            f.forcing[269:271, 2, :, 2:5].sum(axis=2)
+            + f.forcing[269:271, 2, :, 11:51].sum(axis=2)
+        ).mean(axis=0),
+        (5, 50, 95),
+    ),
 )
 
 

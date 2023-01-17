@@ -687,9 +687,12 @@ print(
     "Aerosol ERF 2005-2014 rel. 1750:",
     np.percentile(draws[0]["ERFaci"] + draws[0]["ERFari"], (5, 50, 95)),
 )
-print("OHC change 2018 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95)))
+print(
+    "OHC change 2018 rel. 1971*:", np.percentile(draws[0]["OHC"] * 0.91, (16, 50, 84))
+)
 print("ssp245 2081-2100:", np.percentile(draws[0]["ssp245 2081-2100"], (5, 50, 95)))
 
+print("*likely range")
 
 if plots:
     df_gmst = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv")
