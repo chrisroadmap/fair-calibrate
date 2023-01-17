@@ -10,10 +10,11 @@ data/ar6_ensemble_batches_rcp/*
 data/edgar-4.3.2/
 data/output/*.nc
 
-# all output, except initial calibrations and final posteriors (needs direct Zenodo upload)
-output/*/*/priors/*
-output/*/*/emissions/*
-output/*/*/prior_runs/*
+# all plots
+plots/
+
+# all output (needs direct Zenodo upload)
+output/
 
 # OS files
 .DS_Store

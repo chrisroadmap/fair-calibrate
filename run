@@ -1,2 +1,23 @@
 #!/usr/bin/env bash
-# placeholder script to run pipeline
+# usage: ./run
+
+eval "$(conda shell.bash hook)"
+conda activate fair-calibrate
+
+# Don't forget to set your environment variables in .env
+if [ -f .env ]
+then
+  export $(cat .env | xargs)
+fi
+
+script_dir=$PWD
+
+for pipeline in calibration sampling constraining; do
+    cd ${script_dir}/input/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET}/${pipeline}
+    file_array=( $(\ls [0-9][0-9]_*.*) )
+    for file in "${file_array[@]}"; do
+        chmod +x ${file};
+        ./${file};
+        [[ $? -ne 0 ]] && exit;
+    done
+done

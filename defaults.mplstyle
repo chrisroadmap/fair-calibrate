@@ -1,0 +1,13 @@
+font.size           : 12
+font.family         : Arial
+ytick.direction     : in
+ytick.minor.visible : True
+ytick.major.right   : True
+ytick.right         : True
+xtick.direction     : in
+xtick.minor.visible : True
+xtick.major.top     : True
+xtick.top           : True
+axes.spines.top     : True
+axes.spines.bottom  : True
+figure.dpi          : 150

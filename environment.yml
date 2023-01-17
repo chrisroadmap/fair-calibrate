@@ -3,21 +3,18 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - ffmpeg
-  - ipywidgets
-  - jupyter
+  - black
+  - flake8
+  - isort
   - matplotlib
-  - nbstripout
   - netCDF4
   - numpy
-  - openpyxl
   - pandas
   - pooch
   - python-dotenv
   - scipy
   - tqdm
   - xarray
-  - xlrd
   - pip
   - pip:
     - fair==2.1.0
