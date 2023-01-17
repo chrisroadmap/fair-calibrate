@@ -50,6 +50,11 @@ The output will be produced in `output/fair-X.X.X/vY.Y.Y/Z/` where X is the FaIR
 
 Scripts can be run individually, but must be run from the directories in which they reside (5 subdirectories deep).
 
+Scripts are automatically run in numerical order by the workflow if they are prefixed with a two digit number and an underscore, in this order:
+- `calibration/`
+- `sampling/`
+- `constraining/`
+
 ## Notes
 1. I get different results from the 3-layer model calibration between using pre-compiled R binary for for Mac compared to building the R binary from source on CentOS7; both using R-4.1.1, and again using the Arc4 HPC. The Arc4 results are used. A future **TODO** would be to switch to ``py-bobyqa`` which is the optimizer used in the R code, and remove dependence on R, which *may* improve performace.
 2. Related to above, scipy's multivariate normal and sparse matrix algebra routines seem fragile, and change between scipy versions (1.8, 1.9, 1.10). If anyone trying to reproduce this runs into "positive semidefinite" errors, raise an issue.
