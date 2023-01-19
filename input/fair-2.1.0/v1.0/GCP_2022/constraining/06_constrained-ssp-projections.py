@@ -9,6 +9,7 @@ import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 import pooch
+import xarray as xr
 from dotenv import load_dotenv
 from fair import FAIR
 from fair.interface import fill, initialise
@@ -73,7 +74,15 @@ species, properties = read_properties()
 f.define_species(species, properties)
 f.allocate()
 
-f.fill_from_rcmip()
+# run with harmonized emissions
+da_emissions = xr.load_dataarray(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "ssp_emissions_1750-2500.nc"
+)
+
+da = da_emissions.loc[dict(config="unspecified")][:550, ...]
+fe = da.expand_dims(dim=["config"], axis=(2))
+f.emissions = fe.drop("config") * np.ones((1, 1, output_ensemble_size, 1))
 
 # solar and volcanic forcing
 fill(
