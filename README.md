@@ -68,7 +68,14 @@ It is critical that each calibration version and calibration set is well documen
 
 Maybe a TODO: move to READTHEDOCS or a wiki.
 
+## Versioning strategy:
+
+- If adding a new constraint set to an existing calibration mechanism and nothing else changes, this is a *micro* version (e.g. 1.0 to 1.0.1). There is no need to create new folders under this version; everything that applies to v1.0 would be valid for v1.0.1, v1.0.2 etc. Most updated will likely fall into this category.
+- If an update or tweak to an existing calibration mechanism would change previously submitted results, this is a *minor* version. We would create a new folder for these inputs and results. v1.1 would differ from v1.0 for the same constraints.
+- If a new calibration strategy is completely different and would break backward compatibility, this is a *major* version (e.g. 2.0).
+
 ### Calibration versions
+Only major and minor versions need documenting here.
 
 #### v1.0
 - 1.5 million prior ensemble
@@ -80,14 +87,10 @@ Maybe a TODO: move to READTHEDOCS or a wiki.
 - **Ozone** uses the same coefficeints as AR6 (Smith et al. 2021b).
 - **Effective radaitive forcing uncertainty** follows the distributions in AR6.
 
-Smith et al. 2021a: https://doi.org/10.1029/2020JD033622 |
-Smith et al. 2021b: https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_FGD_Chapter07_SM.pdf |
-Thornhill et al. 2021a: https://doi.org/10.5194/acp-21-853-2021 |
-Thornhill et al. 2021b: https://doi.org/10.5194/acp-21-1105-2021
-
 ### Constraint sets:
+Tag micro versions here along with descriptions.
 
-#### AR6_updated
+#### AR6_updated (v1.0)
 - 1001-member posterior (deliberately chosen).
 - Emissions and concentrations from RCMIP (i.e. based on CMIP6)
 - Temperature from AR6 WG1 (1850-2020, mean of 4 datasets), constrained using ssp245 projections beyond 2014.
@@ -95,3 +98,17 @@ Thornhill et al. 2021b: https://doi.org/10.5194/acp-21-1105-2021
 - Ocean heat content from AR6 WG1 (1971-2018), linear.
 - two step constraining procedure used: first RMSE of less than 0.16K, then 6-variable distribution fitting.
 - Aerosol ERF, ERFari and ERFaci as in AR6 WG1
+
+#### CEDS_2022 (v1.0.1)
+Same as v1.0, except:
+- CO2 FFI and AFOLU emissions are from Global Carbon Project (Friedlingstein et al. 2022), up to and including 2022 which is an estimate. 
+- SSP CO2 emissions are harmonized, with 2021 as the harmonization year. So 2022 is the first year in which scenarios may differ.
+
+### References
+- Friedlingstein et al. 2022: https://doi.org/10.5194/essd-14-4811-2022
+- Leach et al. 2021: https://doi.org/10.5194/gmd-14-3007-2021
+- Smith et al. 2021a: https://doi.org/10.1029/2020JD033622
+- Smith et al. 2021b: https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_FGD_Chapter07_SM.pdf
+- Thornhill et al. 2021a: https://doi.org/10.5194/acp-21-853-2021
+- Thornhill et al. 2021b: https://doi.org/10.5194/acp-21-1105-2021
+
