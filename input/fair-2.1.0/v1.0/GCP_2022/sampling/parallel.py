@@ -204,6 +204,13 @@ def run_fair(cfg):
     # tune down volcanic efficacy
     fill(f.species_configs["forcing_efficacy"], 0.6, specie="Volcanic")
 
+    # land use parameter needs rescaling
+    fill(
+        f.species_configs["land_use_cumulative_emissions_to_forcing"],
+        -0.000236847,
+        specie="CO2 AFOLU",
+    )
+
     # CO2 in 1750
     fill(f.species_configs["baseline_concentration"], cfg["CO2_1750"], specie="CO2")
 
