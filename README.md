@@ -99,10 +99,14 @@ Tag micro versions here along with descriptions.
 - two step constraining procedure used: first RMSE of less than 0.16K, then 6-variable distribution fitting.
 - Aerosol ERF, ERFari and ERFaci as in AR6 WG1
 
-#### CEDS_2022 (v1.0.1)
+#### GCP_2022 (v1.0.1)
 Same as v1.0, except:
-- CO2 FFI and AFOLU emissions are from Global Carbon Project (Friedlingstein et al. 2022), up to and including 2022 which is an estimate. 
+- CO2 FFI and AFOLU emissions are from Global Carbon Project (Friedlingstein et al. 2022), up to and including 2022 which is an estimate.
 - SSP CO2 emissions are harmonized, with 2021 as the harmonization year. So 2022 is the first year in which scenarios may differ.
+
+#### GCP_2022 (v1.0.2)
+Same as v1.0.1 except:
+- land use forcing from cumulative CO2 emissions was not consistent with the AR6 assessment because of the change in CO2 emissions dataset and has been fixed.
 
 ### References
 - Friedlingstein et al. 2022: https://doi.org/10.5194/essd-14-4811-2022
@@ -111,4 +115,3 @@ Same as v1.0, except:
 - Smith et al. 2021b: https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_FGD_Chapter07_SM.pdf
 - Thornhill et al. 2021a: https://doi.org/10.5194/acp-21-853-2021
 - Thornhill et al. 2021b: https://doi.org/10.5194/acp-21-1105-2021
-

@@ -249,6 +249,12 @@ for specie in [
 # tune down volcanic efficacy
 fill(f.species_configs["forcing_efficacy"], 0.6, specie="Volcanic")
 
+# land use parameter needs rescaling
+fill(
+    f.species_configs["land_use_cumulative_emissions_to_forcing"],
+    -0.000236847,
+    specie="CO2 AFOLU",
+)
 
 # initial condition of CO2 concentration (but not baseline for forcing calculations)
 fill(
