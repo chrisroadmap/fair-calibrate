@@ -6,7 +6,7 @@
 # data is updated.
 
 # Here, we use v2.4.
-
+import matplotlib.pyplot as pl
 import os
 from pathlib import PurePath
 
@@ -78,17 +78,56 @@ update.loc['N2O', 1997:2021] = (
     gfed41s_df.loc['N2O', '1997':'2021'].values.squeeze()
 )
 
+# SLCFs = CEDS + VUA
+species = ['Sulfur', 'CO', 'VOC', 'NOx', 'BC', 'OC', 'NH3']
+
+# don't use NMHC field from GFED... don't know what it actually represents
+gfed41s_df.loc['NMVOC'] = pd.concat((gfed41s_df.loc['C2H6':'C3H6O'], gfed41s_df.loc['C2H6S':])).sum()
+
+
+ceds_convert = {specie: 1/1000 for specie in species}
+gfed_convert = {specie: 1 for specie in species}
+gfed_convert['NOx'] = 46.006/30.006
+ceds_names = {specie: specie for specie in species}
+ceds_names.update({'VOC': 'NMVOC', 'Sulfur': 'SO2'})
+
+
+for specie in species:
+    df_ceds_latest = pd.read_csv(f'../../../../../data/emissions/ceds_v20210421/{ceds_names[specie]}_global_CEDS_emissions_by_sector_2021_04_21.csv')
+    df_ceds_latest.drop(columns=['em', 'sector', 'units'], inplace=True)
+    rcmip = emis_df.loc[
+        (emis_df['Scenario']=='ssp245')&
+        (emis_df['Region']=='World')&
+        (emis_df['Variable'].str.startswith(f'Emissions|{specie}|')),
+    :]
+    ceds_rcmip = [f'Emissions|{specie}|MAGICC AFOLU|Agriculture', f'Emissions|{specie}|MAGICC Fossil and Industrial']
+    uva_rcmip = [
+        f'Emissions|{specie}|MAGICC AFOLU|Agricultural Waste Burning',
+        f'Emissions|{specie}|MAGICC AFOLU|Forest Burning',
+        f'Emissions|{specie}|MAGICC AFOLU|Grassland Burning',
+        f'Emissions|{specie}|MAGICC AFOLU|Peat Burning'
+    ]
+    update.loc[specie, 1750:1996] = (
+        df_ceds_latest.sum().values[:247] * ceds_convert[specie] +
+        rcmip.loc[rcmip['Variable'].isin(uva_rcmip), '1750':'1996'].interpolate(axis=1).sum().values.squeeze() * gfed_convert[specie]
+    )
+    update.loc[specie, 1997:2019] = (
+        df_ceds_latest.sum().values[247:] * ceds_convert[specie] +
+        gfed41s_df.loc[ceds_names[specie], '1997':'2019'].values.squeeze() * gfed_convert[specie]
+    )
+    update.loc[specie, 2020:2021] = (
+        df_ceds_latest.sum().values[-1] * ceds_convert[specie] +
+        gfed41s_df.loc[ceds_names[specie], '2020':'2021'].values.squeeze() * gfed_convert[specie]
+    )
+
+
 print(update)
+# update.T.plot()
+# pl.show()
 
+os.makedirs(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/", exist_ok=True)
 
-
-
-
-# df_out = pd.DataFrame([ch4, n2o], columns = ["CH4", "N2O"], index=np.arange(1750, 2022))
-#
-# os.makedirs(
-#     f"../../../../../data/emissions/",
-#     exist_ok=True,
-# )
-#
-# df_out.to_csv('../../../../../data/emissions/primap-hist-2.4_1750-2021.csv')
+update.to_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "primap_ceds_gfed_1750-2021.csv"
+)

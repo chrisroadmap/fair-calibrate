@@ -26,6 +26,10 @@
 # 3. find a least squares fit with reasonable sensitivies across the historical
 # 4. run a Monte Carlo that perturbs the sensitivity of lifetime to each emitted species
 
+# CALIBRATION is against CMIP6 data as that's what models were run with
+# CONSTRAINT is against most up to date emissions and concentrations.
+# Here we fix the historical NOx emissions. Should this be v1.1?
+
 import os
 
 import matplotlib.pyplot as pl
@@ -54,9 +58,8 @@ pl.style.use("../../../../../defaults.mplstyle")
 # rate to 4C in 2100.
 
 df_temp = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv")
-gmst = np.zeros(351)
-gmst[100:271] = df_temp["gmst"].values
-gmst[271:351] = np.linspace(gmst[270], 4, 80)
+gmst = np.zeros(270)
+gmst[100:270] = df_temp["gmst"].values[:-1]
 
 # ## Get emissions and concentrations
 rcmip_emissions_file = pooch.retrieve(
@@ -101,11 +104,11 @@ for species in conc_species:
             (df_conc["Scenario"] == "ssp370")
             & (df_conc["Variable"].str.endswith(species))
             & (df_conc["Region"] == "World"),
-            "1750":"2100",
+            "1750":"2020",
         ]
         .interpolate(axis=1)
         .values.squeeze()
-    )
+    )[:-1]
 
 for species in hc_species:
     species_rcmip_name = species.replace("-", "")
@@ -114,24 +117,44 @@ for species in hc_species:
             (df_conc["Scenario"] == "ssp370")
             & (df_conc["Variable"].str.endswith(species_rcmip_name))
             & (df_conc["Region"] == "World"),
-            "1750":"2100",
+            "1750":"2020",
         ]
         .interpolate(axis=1)
         .values.squeeze()
-    )
+    )[:-1]
 
 emis_species = ["CO", "VOC", "NOx"]
+gfed_convert = {specie: 1 for specie in emis_species}
+gfed_convert['NOx'] = 46.006/30.006
 for species in emis_species:
+    ceds_rcmip = [f'Emissions|{species}|MAGICC AFOLU|Agriculture', f'Emissions|{species}|MAGICC Fossil and Industrial']
+    uva_rcmip = [
+        f'Emissions|{species}|MAGICC AFOLU|Agricultural Waste Burning',
+        f'Emissions|{species}|MAGICC AFOLU|Forest Burning',
+        f'Emissions|{species}|MAGICC AFOLU|Grassland Burning',
+        f'Emissions|{species}|MAGICC AFOLU|Peat Burning'
+    ]
     input[species] = (
         df_emis.loc[
             (df_emis["Scenario"] == "ssp370")
-            & (df_emis["Variable"].str.endswith(species))
+            & (df_emis["Variable"].isin(uva_rcmip))
             & (df_emis["Region"] == "World"),
-            "1750":"2100",
+            "1750":"2020",
         ]
         .interpolate(axis=1)
+        .sum()
+        .values.squeeze()*gfed_convert[species]
+    )[:-1] + (
+        df_emis.loc[
+            (df_emis["Scenario"] == "ssp370")
+            & (df_emis["Variable"].isin(ceds_rcmip))
+            & (df_emis["Region"] == "World"),
+            "1750":"2020",
+        ]
+        .interpolate(axis=1)
+        .sum()
         .values.squeeze()
-    )
+    )[:-1]
 
 input["temp"] = gmst
 
@@ -403,7 +426,7 @@ emis_ch4 = (
         (df_emis["Scenario"] == "ssp370")
         & (df_emis["Variable"].str.endswith("CH4"))
         & (df_emis["Region"] == "World"),
-        "1750":"2500",
+        "1750":"2020",
     ]
     .interpolate(axis=1)
     .values.squeeze()
