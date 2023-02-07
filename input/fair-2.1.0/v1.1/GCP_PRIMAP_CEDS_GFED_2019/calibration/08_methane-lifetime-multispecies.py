@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
 
 """Calibrate methane lifetime from precursors and climate."""
 
@@ -36,6 +34,7 @@ import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 import pooch
+from scipy.interpolate import interp1d
 import scipy.optimize
 import scipy.stats
 from dotenv import load_dotenv
@@ -53,27 +52,28 @@ assert fair_v == __version__
 pl.style.use("../../../../../defaults.mplstyle")
 
 # ## Temperature data
-#
-# Use observations 1850-2020, then simulate an SSP3-7.0 climate with a linear warming
-# rate to 4C in 2100.
+# Use observations 1850-2019
 
 df_temp = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv")
 gmst = np.zeros(270)
 gmst[100:270] = df_temp["gmst"].values[:-1]
 
 # ## Get emissions and concentrations
-rcmip_emissions_file = pooch.retrieve(
-    url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
-    known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
+# this time from observations and PRIMAP
+df_emis = pd.read_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "primap_ceds_gfed_1750-2021.csv",
+    index_col=0
 )
 
-rcmip_concentration_file = pooch.retrieve(
-    url=("doi:10.5281/zenodo.4589756/" "rcmip-concentrations-annual-means-v5-1-0.csv"),
-    known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
+df_conc = pd.read_csv(
+    "../../../../../data/concentrations/LLGHG_history_AR6_v9_for_archive.csv",
+    index_col=0
 )
 
-df_emis = pd.read_csv(rcmip_emissions_file)
-df_conc = pd.read_csv(rcmip_concentration_file)
+# We presume concentrations are mid-year from IPCC. That's fine for calibration. 
+# When running FaIR, remember concentrations are on time bounds.
+
 input = {}
 hc_input = {}
 
@@ -97,67 +97,24 @@ hc_species = [
     "Halon-1301",
     "Halon-2402",
 ]
-
+print(df_conc)
+output_years = np.arange(1750, 2020)
+conc_years = np.concatenate(([1750], np.arange(1850, 2020)))
 for species in conc_species:
-    input[species] = (
-        df_conc.loc[
-            (df_conc["Scenario"] == "ssp370")
-            & (df_conc["Variable"].str.endswith(species))
-            & (df_conc["Region"] == "World"),
-            "1750":"2020",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-    )[:-1]
+    temp_input = df_conc.loc[:, species].values
+    f = interp1d(conc_years, temp_input)
+    input[species] = f(output_years)
 
 for species in hc_species:
-    species_rcmip_name = species.replace("-", "")
-    hc_input[species] = (
-        df_conc.loc[
-            (df_conc["Scenario"] == "ssp370")
-            & (df_conc["Variable"].str.endswith(species_rcmip_name))
-            & (df_conc["Region"] == "World"),
-            "1750":"2020",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-    )[:-1]
+    temp_input = df_conc.loc[:, species].values
+    f = interp1d(conc_years, temp_input)
+    hc_input[species] = f(output_years)
 
 emis_species = ["CO", "VOC", "NOx"]
-gfed_convert = {specie: 1 for specie in emis_species}
-gfed_convert['NOx'] = 46.006/30.006
 for species in emis_species:
-    ceds_rcmip = [f'Emissions|{species}|MAGICC AFOLU|Agriculture', f'Emissions|{species}|MAGICC Fossil and Industrial']
-    uva_rcmip = [
-        f'Emissions|{species}|MAGICC AFOLU|Agricultural Waste Burning',
-        f'Emissions|{species}|MAGICC AFOLU|Forest Burning',
-        f'Emissions|{species}|MAGICC AFOLU|Grassland Burning',
-        f'Emissions|{species}|MAGICC AFOLU|Peat Burning'
-    ]
-    input[species] = (
-        df_emis.loc[
-            (df_emis["Scenario"] == "ssp370")
-            & (df_emis["Variable"].isin(uva_rcmip))
-            & (df_emis["Region"] == "World"),
-            "1750":"2020",
-        ]
-        .interpolate(axis=1)
-        .sum()
-        .values.squeeze()*gfed_convert[species]
-    )[:-1] + (
-        df_emis.loc[
-            (df_emis["Scenario"] == "ssp370")
-            & (df_emis["Variable"].isin(ceds_rcmip))
-            & (df_emis["Region"] == "World"),
-            "1750":"2020",
-        ]
-        .interpolate(axis=1)
-        .sum()
-        .values.squeeze()
-    )[:-1]
+    input[species] = (df_emis.loc[species, :"2019"].values.squeeze())
 
 input["temp"] = gmst
-
 
 def calculate_eesc(
     concentration,
@@ -253,11 +210,6 @@ for species in hc_species:
     )
     total_eesc = total_eesc + hc_eesc[species]
 
-total_eesc_1850 = total_eesc[100]
-
-# for species in hc_species:
-#    pl.plot(hc_eesc[species])
-
 input["HC"] = total_eesc
 
 # Use 1850 and 2014 emissions or concentrations corresponding to methane lifetime
@@ -309,7 +261,9 @@ baseline["temp"] = 0
 
 # ## Steps 1 and 2
 #
-# Get and tune to AerChemMIP models
+# Get and tune to AerChemMIP models. Now, because we are not using CMIP6 emissions and
+# concentration datasets any more, we should not necessarily expect such a good
+# correspondence.
 #
 # MRI and GISS both give pretty good historical emulations
 parameters = {}
@@ -396,12 +350,11 @@ def one_box(
     alpha_lifetime,
     partition_fraction,
     pre_industrial_concentration,
-    soil_lifetime=135,
     timestep=1,
     natural_emissions_adjustment=0,
 ):
 
-    effective_lifetime = 1 / (1 / (alpha_lifetime * lifetime) + 1 / soil_lifetime)
+    effective_lifetime = (alpha_lifetime * lifetime)
     decay_rate = timestep / (effective_lifetime)
     decay_factor = np.exp(-decay_rate)
     gas_boxes_new = (
@@ -421,17 +374,7 @@ def one_box(
     return concentration_out, gas_boxes_new, airborne_emissions_new
 
 
-emis_ch4 = (
-    df_emis.loc[
-        (df_emis["Scenario"] == "ssp370")
-        & (df_emis["Variable"].str.endswith("CH4"))
-        & (df_emis["Region"] == "World"),
-        "1750":"2020",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-)
-
+emis_ch4 = df_emis.loc['CH4', :"2019"].values.squeeze()
 burden_per_emission = 1 / (5.1352e18 / 1e18 * 16.043 / 28.97)
 partition_fraction = 1
 pre_industrial_concentration = 729.2
@@ -441,11 +384,12 @@ conc_ch4 = {}
 
 
 for model in models:
-    conc_ch4[model] = np.zeros(351)
+    conc_ch4[model] = np.zeros(271)
     gas_boxes = 0
     airborne_emissions = 0
-    for i in range(351):
-        conc_ch4[model][i], gas_boxes, airborne_emissions = one_box(
+    conc_ch4[model][0] = pre_industrial_concentration
+    for i in range(270):
+        conc_ch4[model][i+1], gas_boxes, airborne_emissions = one_box(
             emis_ch4[i],
             gas_boxes,
             airborne_emissions,
@@ -454,15 +398,14 @@ for model in models:
             lifetime_scaling[model][i],
             partition_fraction,
             pre_industrial_concentration,
-            soil_lifetime=np.inf,
             timestep=1,
             natural_emissions_adjustment=natural_emissions_adjustment,
         )
 
 if plots:
     for model in models:
-        pl.plot(np.arange(1750, 2021), conc_ch4[model][:271], label=model)
-    pl.plot(np.arange(1750, 2021), input["CH4"][:271], color="k", label="obs")
+        pl.plot(np.arange(1750, 2021), conc_ch4[model], label=model)
+    pl.plot(np.arange(1750.5, 2020), input["CH4"], color="k", label="obs")
     pl.legend()
     os.makedirs(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
@@ -485,6 +428,7 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
     conc_ch4 = np.zeros(271)
     gas_boxes = 0
     airborne_emissions = 0
+    conc_ch4[0] = pre_industrial_concentration
 
     params = {}
     params["CH4"] = rch4
@@ -509,8 +453,8 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
         params,
     )
 
-    for i in range(271):
-        conc_ch4[i], gas_boxes, airborne_emissions = one_box(
+    for i in range(270):
+        conc_ch4[i+1], gas_boxes, airborne_emissions = one_box(
             emis_ch4[i],
             gas_boxes,
             airborne_emissions,
@@ -519,19 +463,22 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
             lifetime_scaling[i],
             partition_fraction,
             pre_industrial_concentration,
-            soil_lifetime=np.inf,
             timestep=1,
             natural_emissions_adjustment=natural_emissions_adjustment,
         )
+
+    # convert bounds to midyear
+    conc_ch4 = (conc_ch4[1:] + conc_ch4[:-1])/2
     return conc_ch4
 
 
 p, cov = scipy.optimize.curve_fit(
     fit_precursors,
-    invect[:, :271],
-    input["CH4"][:271],
+    invect[:, :270],
+    input["CH4"][:270],
     bounds=(  # AerChemMIP min to max range
         (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3),
+#        (0.18, -0.46, 0.11, -0.15, -0.039, -0.0612, 6.3),
         (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4),
     ),
 )
@@ -579,7 +526,7 @@ lifetime_scaling["best_fit"][0] * parameters["best_fit"]["base"]
 
 if plots:
     pl.plot(
-        np.arange(1750, 2101),
+        np.arange(1750.5, 2020),
         lifetime_scaling["best_fit"] * parameters["best_fit"]["base"],
         label="best_fit",
     )
@@ -591,11 +538,12 @@ if plots:
     )
     pl.close()
 
-conc_ch4["best_fit"] = np.zeros(351)
+conc_ch4["best_fit"] = np.zeros(271)
 gas_boxes = 0
 airborne_emissions = 0
-for i in range(351):
-    conc_ch4["best_fit"][i], gas_boxes, airborne_emissions = one_box(
+conc_ch4["best_fit"][0] = pre_industrial_concentration
+for i in range(270):
+    conc_ch4["best_fit"][i+1], gas_boxes, airborne_emissions = one_box(
         emis_ch4[i],
         gas_boxes,
         airborne_emissions,
@@ -604,135 +552,155 @@ for i in range(351):
         lifetime_scaling["best_fit"][i],
         partition_fraction,
         pre_industrial_concentration,
-        soil_lifetime=np.inf,
         timestep=1,
         natural_emissions_adjustment=natural_emissions_adjustment,
     )
 
 
-# ### Compare the SSP3-7.0 fit to other SSPs
+# TODO: harmonize SSPs and plot methane concentration projections
+
+## ### Compare the SSP3-7.0 fit to other SSPs
+##
+## should do something with the temperature projections here
 #
-# should do something with the temperature projections here
-
-emis_ch4_ssps = {}
-
-for ssp in [
-    "ssp119",
-    "ssp126",
-    "ssp245",
-    "ssp370",
-    "ssp434",
-    "ssp460",
-    "ssp534-over",
-    "ssp585",
-]:
-    emis_ch4_ssps[ssp] = (
-        df_emis.loc[
-            (df_emis["Scenario"] == ssp)
-            & (df_emis["Variable"].str.endswith("CH4"))
-            & (df_emis["Region"] == "World"),
-            "1750":"2100",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-    )
-
-for ssp in [
-    "ssp119",
-    "ssp126",
-    "ssp245",
-    "ssp370",
-    "ssp434",
-    "ssp460",
-    "ssp534-over",
-    "ssp585",
-]:
-    conc_ch4[ssp] = np.zeros(351)
-    gas_boxes = 0
-    airborne_emissions = 0
-    for i in range(351):
-        conc_ch4[ssp][i], gas_boxes, airborne_emissions = one_box(
-            emis_ch4_ssps[ssp][i],
-            gas_boxes,
-            airborne_emissions,
-            burden_per_emission,
-            parameters["best_fit"]["base"],
-            lifetime_scaling["best_fit"][i],
-            partition_fraction,
-            pre_industrial_concentration,
-            soil_lifetime=np.inf,
-            timestep=1,
-            natural_emissions_adjustment=natural_emissions_adjustment,
-        )
-
-# ### Four panel plot
+#emis_ch4_ssps = {}
+#
+#for ssp in [
+#    "ssp119",
+#    "ssp126",
+#    "ssp245",
+#    "ssp370",
+#    "ssp434",
+#    "ssp460",
+#    "ssp534-over",
+#    "ssp585",
+#]:
+#    emis_ch4_ssps[ssp] = (
+#        df_emis.loc[
+#            (df_emis["Scenario"] == ssp)
+#            & (df_emis["Variable"].str.endswith("CH4"))
+#            & (df_emis["Region"] == "World"),
+#            "1750":"2100",
+#        ]
+#        .interpolate(axis=1)
+#        .values.squeeze()
+#    )
+#
+#for ssp in [
+#    "ssp119",
+#    "ssp126",
+#    "ssp245",
+#    "ssp370",
+#    "ssp434",
+#    "ssp460",
+#    "ssp534-over",
+#    "ssp585",
+#]:
+#    conc_ch4[ssp] = np.zeros(351)
+#    gas_boxes = 0
+#    airborne_emissions = 0
+#    for i in range(351):
+#        conc_ch4[ssp][i], gas_boxes, airborne_emissions = one_box(
+#            emis_ch4_ssps[ssp][i],
+#            gas_boxes,
+#            airborne_emissions,
+#            burden_per_emission,
+#            parameters["best_fit"]["base"],
+#            lifetime_scaling["best_fit"][i],
+#            partition_fraction,
+#            pre_industrial_concentration,
+#            timestep=1,
+#            natural_emissions_adjustment=natural_emissions_adjustment,
+#        )
+#
+## ### Four panel plot
 if plots:
-    ar6_colors = {
-        "ssp119": "#00a9cf",
-        "ssp126": "#003466",
-        "ssp245": "#f69320",
-        "ssp370": "#df0000",
-        "ssp434": "#2274ae",
-        "ssp460": "#b0724e",
-        "ssp534-over": "#92397a",
-        "ssp585": "#980002",
-    }
-
-    fig, ax = pl.subplots(1, 3, figsize=(12, 3.5))
-    for model in models:
-        ax[0].plot(
-            np.arange(1750, 2101),
-            lifetime_scaling[model] * parameters[model]["base"],
-            label=model,
-        )
-    ax[0].plot(
-        np.arange(1750, 2101),
-        lifetime_scaling["best_fit"] * parameters[model]["base"],
-        color="0.5",
-        label="Best fit",
+    fig, ax = pl.subplots(figsize=(3.5, 3.5))
+    ax.plot(
+        np.arange(1750, 2021), conc_ch4["best_fit"], color="0.5", label="Best fit"
     )
-    # ax[0].legend(loc='upper left', bbox_to_anchor=[0, 0.9], frameon=False)
-    ax[0].set_xlim(1750, 2100)
-    ax[0].set_ylabel("yr")
-    ax[0].set_title("(a) CH$_4$ lifetime SSP3-7.0")
-
-    for model in models:
-        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
-    ax[1].plot(
-        np.arange(1750, 2101), conc_ch4["best_fit"], color="0.5", label="Best fit"
+    ax.plot(
+        np.arange(1750.5, 2020), input["CH4"], color="k", label="observations: AR6"
     )
-    ax[1].plot(
-        np.arange(1750, 2101), input["CH4"], color="k", label="observations +\nMAGICC6"
-    )
-    ax[1].set_ylabel("ppb")
-    ax[1].set_xlim(1750, 2100)
-    ax[1].legend(frameon=False)
-    ax[1].set_title("(b) CH$_4$ concentration SSP3-7.0")
-
-    for ssp in [
-        "ssp119",
-        "ssp126",
-        "ssp434",
-        "ssp534-over",
-        "ssp245",
-        "ssp460",
-        "ssp370",
-        "ssp585",
-    ]:
-        ax[2].plot(
-            np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp]
-        )
-    ax[2].set_ylabel("ppb")
-    ax[2].set_title("(c) Best fit CH$_4$ projections")
-    ax[2].set_xlim(1750, 2100)
-    ax[2].legend(frameon=False)
-
+    ax.set_ylabel("ppb")
+    ax.set_xlim(1750, 2020)
+    ax.legend(frameon=False)
+    ax.set_title("(b) CH$_4$ concentration")
     fig.tight_layout()
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "methane_calibrations.png"
     )
     pl.close()
+
+
+
+#    ar6_colors = {
+#        "ssp119": "#00a9cf",
+#        "ssp126": "#003466",
+#        "ssp245": "#f69320",
+#        "ssp370": "#df0000",
+#        "ssp434": "#2274ae",
+#        "ssp460": "#b0724e",
+#        "ssp534-over": "#92397a",
+#        "ssp585": "#980002",
+#    }
+#
+#    fig, ax = pl.subplots(1, 3, figsize=(12, 3.5))
+#    for model in models:
+#        ax[0].plot(
+#            np.arange(1750, 2101),
+#            lifetime_scaling[model] * parameters[model]["base"],
+#            label=model,
+#        )
+#    ax[0].plot(
+#        np.arange(1750, 2101),
+#        lifetime_scaling["best_fit"] * parameters[model]["base"],
+#        color="0.5",
+#        label="Best fit",
+#    )
+#    # ax[0].legend(loc='upper left', bbox_to_anchor=[0, 0.9], frameon=False)
+#    ax[0].set_xlim(1750, 2100)
+#    ax[0].set_ylabel("yr")
+#    ax[0].set_title("(a) CH$_4$ lifetime SSP3-7.0")
+#
+#    for model in models:
+#        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
+#    ax[1].plot(
+#        np.arange(1750, 2101), conc_ch4["best_fit"], color="0.5", label="Best fit"
+#    )
+#    ax[1].plot(
+#        np.arange(1750, 2101), input["CH4"], color="k", label="observations +\nMAGICC6"
+#    )
+#    ax[1].set_ylabel("ppb")
+#    ax[1].set_xlim(1750, 2100)
+#    ax[1].legend(frameon=False)
+#    ax[1].set_title("(b) CH$_4$ concentration SSP3-7.0")
+#
+#    for ssp in [
+#        "ssp119",
+#        "ssp126",
+#        "ssp434",
+#        "ssp534-over",
+#        "ssp245",
+#        "ssp460",
+#        "ssp370",
+#        "ssp585",
+#    ]:
+#        ax[2].plot(
+#            np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp]
+#        )
+#    ax[2].set_ylabel("ppb")
+#    ax[2].set_title("(c) Best fit CH$_4$ projections")
+#    ax[2].set_xlim(1750, 2100)
+#    ax[2].legend(frameon=False)
+#
+#    fig.tight_layout()
+#    pl.savefig(
+#        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+#        "methane_calibrations.png"
+#    )
+#    pl.close()
 
 # these are the feedback values per ppb / per Mt that go into FaIR
 out = np.empty((1, 7))

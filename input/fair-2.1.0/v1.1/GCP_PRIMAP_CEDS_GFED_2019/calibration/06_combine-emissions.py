@@ -121,6 +121,13 @@ for specie in species:
     )
 
 
+update = update.rename_axis('Variable').reset_index(level=0)
+
+update.insert(loc=0, column="Model", value = "History")
+update.insert(loc=1, column="Scenario", value = "PRIMAP+CEDS+GFED")
+update.insert(loc=2, column="Region", value = "World")
+update.insert(loc=4, column="Unit", value = ["Mt CH4/yr", "Mt N2O/yr", "Mt SO2/yr",
+    "Mt CO/yr", "Mt VOC/yr", "Mt NO2/yr", "Mt BC/yr", "Mt OC/yr", "Mt NH3/yr"])
 print(update)
 # update.T.plot()
 # pl.show()
@@ -129,5 +136,6 @@ os.makedirs(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emis
 
 update.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "primap_ceds_gfed_1750-2021.csv"
+    "primap_ceds_gfed_1750-2021.csv",
+    index=False
 )
