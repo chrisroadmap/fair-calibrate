@@ -85,7 +85,11 @@ Only major and minor versions need documenting here.
 - **Aerosol cloud interactions** depend on SO2, BC and OC, using calibrations from Smith et al. 2021a (developed for AR6) using 11 RFMIP and AerChemMIP models, with a prior of -2 to 0 W/m2.
 - **Aerosol radiation interactions** use prior values from AR6 Ch6, with a factor of two uncertainty for each species and a prior in the range of -0.6 to 0.0.
 - **Ozone** uses the same coefficeints as AR6 (Smith et al. 2021b).
-- **Effective radaitive forcing uncertainty** follows the distributions in AR6.
+- **Effective radiative forcing uncertainty** follows the distributions in AR6.
+
+#### v1.1
+- APRP will be fixed (thanks to Mark Zelinka) and used to recalibrate the aerosol indirect from CMIP6 models.
+- NOx emissions have been fixed (in RCMIP, biomass burning is in units of NO, and agriculture/fossil is in units of NO2). FaIR assumes NO2. Biomass burning emissions have been converted.
 
 ### Constraint sets:
 Tag micro versions here along with descriptions.
