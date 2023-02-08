@@ -58,30 +58,49 @@ f.fill_from_rcmip()
 variables = [
     "Emissions|CO2|Energy and Industrial Processes",
     "Emissions|CO2|AFOLU",
-    "CH4",
-    "N2O",
-    "Sulfur",
-    "CO",
-    "VOC",
-    "NOx",
-    "BC",
-    "OC",
-    "NH3"
+    "Emissions|CH4",
+    "Emissions|N2O",
+    "Emissions|Sulfur",
+    "Emissions|CO",
+    "Emissions|VOC",
+    "Emissions|NOx",
+    "Emissions|BC",
+    "Emissions|OC",
+    "Emissions|NH3"
 ]
 
 # RCMIP is broken in the future and too much effort to mess around with
 # we'll make our own data
 
-
-##### START HERE
+var_units = {
+    "Emissions|CO2|Energy and Industrial Processes": "Gt CO2/yr",
+    "Emissions|CO2|AFOLU": "Gt CO2/yr",
+    "Emissions|CH4": "Mt CH4/yr",
+    "Emissions|N2O": "Mt N2O/yr",
+    "Emissions|Sulfur": "Mt SO2/yr",
+    "Emissions|CO": "Mt CO/yr",
+    "Emissions|VOC": "Mt VOC/yr",
+    "Emissions|NOx": "Mt NO2/yr",
+    "Emissions|BC": "Mt BC/yr",
+    "Emissions|OC": "Mt OC/yr",
+    "Emissions|NH3": "Mt NH3/yr"
+}
 
 ##### ALSO NEED NEW SCRIPT THAT CALIBRATES THE N2O LIFETIME
 
 rcmip_variables = [
     "Emissions|CO2|MAGICC Fossil and Industrial",
     "Emissions|CO2|MAGICC AFOLU",
+    "Emissions|CH4",
+    "Emissions|N2O",
+    "Emissions|Sulfur",
+    "Emissions|CO",
+    "Emissions|VOC",
+    "Emissions|NOx",
+    "Emissions|BC",
+    "Emissions|OC",
+    "Emissions|NH3",
 ]
-
 
 times = []
 years = range(1750, 2023)
@@ -102,40 +121,82 @@ history = (
     .interpolate(target_times=times)
     .timeseries(time_axis="year")
 )
+others = (
+    scmdata.ScmRun(
+        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+        "primap_ceds_gfed_1750-2021.csv", lowercase_cols=True
+    )
+    .filter(region="World", variable=variables)
+    .interpolate(target_times=times)
+    .timeseries(time_axis="year")
+)
+history = pd.concat((history, others))
+
 # I don't like scmdata's default conversion, so hack
 # history["units"] = "Gt CO2/yr"
-history = history * 44.009 / 12.011
+history.iloc[history.index.get_level_values('variable').isin((
+    "Emissions|CO2|Energy and Industrial Processes",
+    "Emissions|CO2|AFOLU"
+))] = history.iloc[history.index.get_level_values('variable').isin((
+    "Emissions|CO2|Energy and Industrial Processes",
+    "Emissions|CO2|AFOLU",
+))] * 44.009 / 12.011
 arrays = []
 for idx in range(0, len(history.index)):
     arrays.append(list(history.index[idx]))
-    arrays[-1][3] = "GtCO2/yr"
+    arrays[-1][2] = "GCP+PRIMAP+CEDS+GFED"
+
+units = [
+    "Gt CO2/yr",
+    "Gt CO2/yr",
+    "Mt CH4/yr",
+    "Mt N2O/yr",
+    "Mt SO2/yr",
+    "Mt CO/yr",
+    "Mt VOC/yr",
+    "Mt NO2/yr",
+    "Mt BC/yr",
+    "Mt OC/yr",
+    "Mt NH3/yr"
+]
+
+for iu, unit in enumerate(units):
+    arrays[iu][3] = unit
 
 new_index = pd.MultiIndex.from_tuples(
     list(zip(*list(map(list, zip(*arrays))))), names=history.index.names
 )
 history.index = new_index
 
-
-rcmip_emissions_file = pooch.retrieve(
-    url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
-    known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
-)
 future = (
-    scmdata.ScmRun(rcmip_emissions_file, lowercase_cols=True)
+    scmdata.ScmRun("../../../../../data/emissions/rcmip-5-1-0-corrected-nox.csv", lowercase_cols=True)
     .filter(scenario=scenarios, variable=rcmip_variables, region="World")
     .interpolate(times_future)
     .timeseries(time_axis="year")
 )
-future = future / 1000
+
+#future[:, 0] = future[:,0] / 1000
+future.iloc[future.index.get_level_values('variable').isin((
+    "Emissions|CO2|MAGICC Fossil and Industrial",
+    "Emissions|CO2|MAGICC AFOLU",
+    "Emissions|N2O"
+))] = future.iloc[future.index.get_level_values('variable').isin((
+    "Emissions|CO2|MAGICC Fossil and Industrial",
+    "Emissions|CO2|MAGICC AFOLU",
+    "Emissions|N2O"
+))] / 1000
+
 
 arrays = []
 for idx in range(0, len(future.index)):
     arrays.append(list(future.index[idx]))
-    if arrays[-1][6] == "Emissions|CO2|MAGICC Fossil and Industrial":
-        arrays[-1][6] = "Emissions|CO2|Energy and Industrial Processes"
-    else:
-        arrays[-1][6] = "Emissions|CO2|AFOLU"
-    arrays[-1][5] = "GtCO2/yr"
+    if arrays[-1][4] == "Emissions|CO2|MAGICC Fossil and Industrial":
+        arrays[-1][4] = "Emissions|CO2|Energy and Industrial Processes"
+    elif arrays[-1][4] == "Emissions|CO2|MAGICC AFOLU":
+        arrays[-1][4] = "Emissions|CO2|AFOLU"
+
+for iu in range(len(future.index)):
+    arrays[iu][3] = var_units[arrays[iu][4]]
 
 new_index = pd.MultiIndex.from_tuples(
     list(zip(*list(map(list, zip(*arrays))))), names=future.index.names
@@ -146,12 +207,24 @@ future.index = new_index
 overrides = pd.DataFrame(
     [
         {
-            "method": "reduce_ratio_2080",  # always ratio method by choice
+            "method": "reduce_ratio_2150_cov",
+            "variable": "Emissions|CO",
+        },
+        {
+            "method": "reduce_ratio_2080",
             "variable": "Emissions|CO2|Energy and Industrial Processes",
         },
         {
             "method": "reduce_offset_2150_cov",
             "variable": "Emissions|CO2|AFOLU",
+        },
+        {
+            "method": "reduce_ratio_2150_cov",
+            "variable": "Emissions|OC",
+        },
+        {
+            "method": "reduce_ratio_2150_cov",
+            "variable": "Emissions|VOC",
         },
     ]
 )
@@ -178,56 +251,51 @@ os.makedirs(
 )
 
 scenarios_harmonised.to_csv(
-    "../../../../../data/emissions/co2_ffi_afolu_harmonized.csv", index=False
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/co2_ch4_n2o_slcfs_harmonized.csv", index=False
 )
+
 
 history = history.reset_index()
 
+fair_map = {
+    "Emissions|CO2|Energy and Industrial Processes": "CO2 FFI",
+    "Emissions|CO2|AFOLU": "CO2 AFOLU",
+    "Emissions|CH4": "CH4",
+    "Emissions|N2O": "N2O",
+    "Emissions|Sulfur": "Sulfur",
+    "Emissions|CO": "CO",
+    "Emissions|VOC": "VOC",
+    "Emissions|NOx": "NOx",
+    "Emissions|BC": "BC",
+    "Emissions|OC": "OC",
+    "Emissions|NH3": "NH3"
+}
+
 # fill emissions
 for scenario in scenarios:
-    data_his = history.loc[
-        (history["scenario"] == "Global Carbon Project")
-        & (history["variable"] == "Emissions|CO2|Energy and Industrial Processes"),
-        1750:2018,
-    ].values.squeeze()
-    data_fut = scenarios_harmonised.loc[
-        (scenarios_harmonised["scenario"] == scenario)
-        & (
-            scenarios_harmonised["variable"]
-            == "Emissions|CO2|Energy and Industrial Processes"
-        ),
-        2019:2499,
-    ].values.squeeze()
-    data = np.concatenate((data_his, data_fut))
-    fill(
-        f.emissions,
-        data,
-        config="unspecified",
-        scenario=scenario,
-        #        timepoints=np.arange(1750.5, 2021),
-        specie="CO2 FFI",
-    )
-
-    data_his = history.loc[
-        (history["scenario"] == "Global Carbon Project")
-        & (history["variable"] == "Emissions|CO2|AFOLU"),
-        1750:2018,
-    ].values.squeeze()
-    data_fut = scenarios_harmonised.loc[
-        (scenarios_harmonised["scenario"] == scenario)
-        & (scenarios_harmonised["variable"] == "Emissions|CO2|AFOLU"),
-        2019:2499,
-    ].values.squeeze()
-    data = np.concatenate((data_his, data_fut))
-    fill(
-        f.emissions,
-        data,
-        config="unspecified",
-        scenario=scenario,
-        #        timepoints=range(2021.5, 2501),
-        specie="CO2 AFOLU",
-    )
-    # f.emissions.loc[dict(scenario=scenario, timepoints=)]
+    for specie in fair_map:
+        data_his = history.loc[
+            (history["scenario"] == "GCP+PRIMAP+CEDS+GFED")
+            & (history["variable"] == specie),
+            1750:2018,
+        ].values.squeeze()
+        data_fut = scenarios_harmonised.loc[
+            (scenarios_harmonised["scenario"] == scenario)
+            & (
+                scenarios_harmonised["variable"]
+                == specie
+            ),
+            2019:2499,
+        ].values.squeeze()
+        data = np.concatenate((data_his, data_fut))
+        fill(
+            f.emissions,
+            data,
+            config="unspecified",
+            scenario=scenario,
+            #        timepoints=np.arange(1750.5, 2021),
+            specie=fair_map[specie],
+        )
 
 f.emissions.to_netcdf(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"

@@ -39,6 +39,7 @@ import scipy.optimize
 import scipy.stats
 from dotenv import load_dotenv
 from fair import __version__
+import xarray as xr
 
 load_dotenv()
 
@@ -71,7 +72,7 @@ df_conc = pd.read_csv(
     index_col=0
 )
 
-# We presume concentrations are mid-year from IPCC. That's fine for calibration. 
+# We presume concentrations are mid-year from IPCC. That's fine for calibration.
 # When running FaIR, remember concentrations are on time bounds.
 
 input = {}
@@ -112,8 +113,8 @@ for species in hc_species:
 
 emis_species = ["CO", "VOC", "NOx"]
 for species in emis_species:
-    input[species] = (df_emis.loc[species, :"2019"].values.squeeze())
-
+    input[species] = (df_emis.loc[
+        df_emis["Variable"]==f'Emissions|{species}', "1750":"2019"].values.squeeze())
 input["temp"] = gmst
 
 def calculate_eesc(
@@ -369,12 +370,12 @@ def one_box(
     airborne_emissions_new = gas_boxes_new
     concentration_out = (
         pre_industrial_concentration
-        + burden_per_emission * (airborne_emissions_new + airborne_emissions_old) / 2
+        + burden_per_emission * airborne_emissions_new
     )
     return concentration_out, gas_boxes_new, airborne_emissions_new
 
 
-emis_ch4 = df_emis.loc['CH4', :"2019"].values.squeeze()
+emis_ch4 = df_emis.loc[df_emis["Variable"]=='Emissions|CH4', "1750":"2019"].values.squeeze()
 burden_per_emission = 1 / (5.1352e18 / 1e18 * 16.043 / 28.97)
 partition_fraction = 1
 pre_industrial_concentration = 729.2
@@ -563,29 +564,35 @@ for i in range(270):
 ##
 ## should do something with the temperature projections here
 #
-#emis_ch4_ssps = {}
+emis_ch4_ssps = {}
+
+da_emissions = xr.load_dataarray(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "ssp_emissions_1750-2500.nc"
+)
+
+
+# for ssp in [
+#     "ssp119",
+#     "ssp126",
+#     "ssp245",
+#     "ssp370",
+#     "ssp434",
+#     "ssp460",
+#     "ssp534-over",
+#     "ssp585",
+# ]:
 #
-#for ssp in [
-#    "ssp119",
-#    "ssp126",
-#    "ssp245",
-#    "ssp370",
-#    "ssp434",
-#    "ssp460",
-#    "ssp534-over",
-#    "ssp585",
-#]:
-#    emis_ch4_ssps[ssp] = (
-#        df_emis.loc[
-#            (df_emis["Scenario"] == ssp)
-#            & (df_emis["Variable"].str.endswith("CH4"))
-#            & (df_emis["Region"] == "World"),
-#            "1750":"2100",
-#        ]
-#        .interpolate(axis=1)
-#        .values.squeeze()
-#    )
-#
+#     emis_ch4_ssps[ssp] = (
+#         da_emissions.loc[
+#             dict(
+#                 specie='CH4',
+#                 scenario=ssp
+#             ),
+#         ]
+#         .values.squeeze()
+#     )
+
 #for ssp in [
 #    "ssp119",
 #    "ssp126",
@@ -633,36 +640,34 @@ if plots:
     )
     pl.close()
 
-
-
-#    ar6_colors = {
-#        "ssp119": "#00a9cf",
-#        "ssp126": "#003466",
-#        "ssp245": "#f69320",
-#        "ssp370": "#df0000",
-#        "ssp434": "#2274ae",
-#        "ssp460": "#b0724e",
-#        "ssp534-over": "#92397a",
-#        "ssp585": "#980002",
-#    }
-#
-#    fig, ax = pl.subplots(1, 3, figsize=(12, 3.5))
-#    for model in models:
-#        ax[0].plot(
-#            np.arange(1750, 2101),
-#            lifetime_scaling[model] * parameters[model]["base"],
-#            label=model,
-#        )
-#    ax[0].plot(
-#        np.arange(1750, 2101),
-#        lifetime_scaling["best_fit"] * parameters[model]["base"],
-#        color="0.5",
-#        label="Best fit",
-#    )
-#    # ax[0].legend(loc='upper left', bbox_to_anchor=[0, 0.9], frameon=False)
-#    ax[0].set_xlim(1750, 2100)
-#    ax[0].set_ylabel("yr")
-#    ax[0].set_title("(a) CH$_4$ lifetime SSP3-7.0")
+    # ar6_colors = {
+    #     "ssp119": "#00a9cf",
+    #     "ssp126": "#003466",
+    #     "ssp245": "#f69320",
+    #     "ssp370": "#df0000",
+    #     "ssp434": "#2274ae",
+    #     "ssp460": "#b0724e",
+    #     "ssp534-over": "#92397a",
+    #     "ssp585": "#980002",
+    # }
+    #
+    # fig, ax = pl.subplots(1, 3, figsize=(12, 3.5))
+    # for model in models:
+    #     ax[0].plot(
+    #         np.arange(1750, 2101),
+    #         lifetime_scaling[model] * parameters[model]["base"],
+    #         label=model,
+    #     )
+    # ax[0].plot(
+    #     np.arange(1750, 2101),
+    #     lifetime_scaling["best_fit"] * parameters[model]["base"],
+    #     color="0.5",
+    #     label="Best fit",
+    # )
+    # # ax[0].legend(loc='upper left', bbox_to_anchor=[0, 0.9], frameon=False)
+    # ax[0].set_xlim(1750, 2100)
+    # ax[0].set_ylabel("yr")
+    # ax[0].set_title("(a) CH$_4$ lifetime SSP3-7.0")
 #
 #    for model in models:
 #        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)

@@ -55,12 +55,12 @@ uva_rcmip = [
     f'Emissions|CH4|MAGICC AFOLU|Peat Burning'
 ]
 
-update.loc['CH4', 1750:1996] = (
+update.loc['Emissions|CH4', 1750:1996] = (
     primap24_df.loc['CH4', '1750':'1996'].values.squeeze() +
     rcmip.loc[rcmip['Variable'].isin(uva_rcmip), '1750':'1996'].interpolate(axis=1).sum().values.squeeze()#[:-4]
 )
 
-update.loc['CH4', 1997:2021] = (
+update.loc['Emissions|CH4', 1997:2021] = (
     primap24_df.loc['CH4', '1997':'2021'].values.squeeze() +
     gfed41s_df.loc['CH4', '1997':'2021'].values.squeeze()
 )
@@ -69,11 +69,11 @@ update.loc['CH4', 1997:2021] = (
 # biomass burning emissions calculated previously using a very similar method to this:
 # https://github.com/openclimatedata/global-biomass-burning-emissions
 
-update.loc['N2O', 1750:1996] = (
+update.loc['Emissions|N2O', 1750:1996] = (
     primap24_df.loc['N2O', '1750':'1996'].values.squeeze() +
     n2o_biomass.loc[1750:1996].values.squeeze()
 )
-update.loc['N2O', 1997:2021] = (
+update.loc['Emissions|N2O', 1997:2021] = (
     primap24_df.loc['N2O', '1997':].values.squeeze() +
     gfed41s_df.loc['N2O', '1997':'2021'].values.squeeze()
 )
@@ -107,15 +107,15 @@ for specie in species:
         f'Emissions|{specie}|MAGICC AFOLU|Grassland Burning',
         f'Emissions|{specie}|MAGICC AFOLU|Peat Burning'
     ]
-    update.loc[specie, 1750:1996] = (
+    update.loc[f"Emissions|{specie}", 1750:1996] = (
         df_ceds_latest.sum().values[:247] * ceds_convert[specie] +
         rcmip.loc[rcmip['Variable'].isin(uva_rcmip), '1750':'1996'].interpolate(axis=1).sum().values.squeeze() * gfed_convert[specie]
     )
-    update.loc[specie, 1997:2019] = (
+    update.loc[f"Emissions|{specie}", 1997:2019] = (
         df_ceds_latest.sum().values[247:] * ceds_convert[specie] +
         gfed41s_df.loc[ceds_names[specie], '1997':'2019'].values.squeeze() * gfed_convert[specie]
     )
-    update.loc[specie, 2020:2021] = (
+    update.loc[f"Emissions|{specie}", 2020:2021] = (
         df_ceds_latest.sum().values[-1] * ceds_convert[specie] +
         gfed41s_df.loc[ceds_names[specie], '2020':'2021'].values.squeeze() * gfed_convert[specie]
     )
