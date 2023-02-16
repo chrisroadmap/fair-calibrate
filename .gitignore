@@ -1,5 +1,9 @@
+# wget status
+*.status
+
 # large data input and output files
 data/ceds/
+data/cmip6/*.nc
 data/netcdf-scm/cmip_data/
 data/netcdf-scm/*.zip
 data/rcmip/
