@@ -64,27 +64,8 @@ for model in models:
     runs_histsst_piaer[model] = list(set(runids_histsst_piaer_list))
     runs_histsst[model] = list(set(runids_histsst_list))
 
-print(runs_piclim_control)
-print(runs_piclim_histaer)
-print(runs_histsst_piaer)
-print(runs_histsst)
-
 # from email correspondence with Ron Miller 19 May 2020: use r?i1p1f2 from GISS.
 # from email correspondence with Dirk Olivie 19 October 2020: use r?i1p2f1 from NorESM.
-
-# RFMIP-style runs
-for model in models:
-    print(model)
-    print()
-    print('control: ')
-    for run in runs_piclim_control[model]:
-        print('-', run)
-    print()
-    print('histaer: ')
-    for run in runs_piclim_histaer[model]:
-        print('-', run)
-    print()
-    print()
 
 varlist = [
             "rsdt",
@@ -405,8 +386,8 @@ def aerchemmip():
             iris.save(cube_gmym, f"{outdir}/{component}.nc")
 
 
-for model in tqdm(['GISS-E2-1-G'], desc='Models'):
-    # if more than one control ensemble member, concatenate them
+for model in tqdm(models, desc='Models'):
+    # what to do about ec-earth, which is a huge model?
     if len(runs_piclim_control[model])>0:
         rfmip()
     else:
