@@ -205,7 +205,7 @@ def rfmip():
             results[var] = np.ones((pert_nmonths, nlat, nlon)) * np.nan
         results['ERF'] = np.ones((pert_nmonths, nlat, nlon)) * np.nan
 
-        for i in tqdm(range(pert_years), desc='model years', leave=False):
+        for i in tqdm(range(pert_nyears), desc='model years', leave=False):
             interim = {}
             for var in outvars:
                 interim[var] = np.ones((base_nyears, 12, nlat, nlon)) * np.nan
@@ -391,7 +391,7 @@ def aerchemmip():
                 var_name = component,
                 long_name = component_longnames[component],
                 units = 'W m-2',
-                dim_coords_and_dims=[(pert['rsdt'].coord('time'), 0), (pert['rsdt'].coord('latitude'), 1), (pert['rsdt'].coord('longitude'), 2)]
+                dim_coords_and_dims=[(rsdt_pert.coord('time'), 0), (rsdt_pert.coord('latitude'), 1), (rsdt_pert.coord('longitude'), 2)]
             )
 
             iris.coord_categorisation.add_year(cube, 'time')
@@ -405,7 +405,7 @@ def aerchemmip():
             iris.save(cube_gmym, f"{outdir}/{component}.nc")
 
 
-for model in tqdm(['UKESM1-0-LL', 'GISS-E2-1-G'], desc='Models'):
+for model in tqdm(['GISS-E2-1-G'], desc='Models'):
     # if more than one control ensemble member, concatenate them
     if len(runs_piclim_control[model])>0:
         rfmip()
