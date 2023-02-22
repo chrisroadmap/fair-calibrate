@@ -405,7 +405,7 @@ def aerchemmip():
             iris.save(cube_gmym, f"{outdir}/{component}.nc")
 
 
-for model in tqdm(['UKESM1-0-LL, ''GISS-E2-1-G'], desc='Models'):
+for model in tqdm(['UKESM1-0-LL', 'GISS-E2-1-G'], desc='Models'):
     # if more than one control ensemble member, concatenate them
     if len(runs_piclim_control[model])>0:
         rfmip()
