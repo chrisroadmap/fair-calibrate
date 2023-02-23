@@ -386,7 +386,7 @@ def aerchemmip():
             iris.save(cube_gmym, f"{outdir}/{component}.nc")
 
 
-for model in tqdm(models, desc='Models'):
+for model in tqdm(["CanESM5", "CNRM-CM6-1", "GFDL-ESM4", "GFDL-CM4", "IPSL-CM6A-LR", "MPI-ESM-1-2-HAM", "UKESM1-0-LL"], desc='Models'):
     # what to do about ec-earth, which is a huge model?
     if len(runs_piclim_control[model])>0:
         rfmip()
