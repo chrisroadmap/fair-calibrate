@@ -386,8 +386,10 @@ def aerchemmip():
             iris.save(cube_gmym, f"{outdir}/{component}.nc")
 
 
-for model in tqdm(["CanESM5", "CNRM-CM6-1", "GFDL-ESM4", "GFDL-CM4", "IPSL-CM6A-LR", "MPI-ESM-1-2-HAM", "UKESM1-0-LL"], desc='Models'):
+for model in tqdm(["GFDL-CM4", "IPSL-CM6A-LR", "MPI-ESM-1-2-HAM", "UKESM1-0-LL", "MRI-ESM2-0", "GFDL-ESM4"], desc='Models'):
     # what to do about ec-earth, which is a huge model?
+    # GFDL-ESM4 seemed to struggle
+    # I think MRI-ESM would too
     if len(runs_piclim_control[model])>0:
         rfmip()
     else:
