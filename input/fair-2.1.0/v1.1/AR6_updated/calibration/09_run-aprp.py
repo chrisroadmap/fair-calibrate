@@ -16,7 +16,7 @@ from fair import __version__
 import iris
 import iris.coord_categorisation
 import iris.analysis.cartography
-from iris.util import equalise_attributes
+from iris.util import equalise_attributes, unify_time_units
 from tqdm.auto import tqdm
 
 warnings.simplefilter('ignore')
@@ -289,33 +289,43 @@ def aerchemmip():
         os.makedirs(outdir, exist_ok=True)
         clt_pert = iris.load(f"{datadir}/clt_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(clt_pert)
+        unify_time_units(clt_pert)
         clt_pert = clt_pert.concatenate()[0]
         rsdt_pert = iris.load(f"{datadir}/rsdt_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsdt_pert)
+        unify_time_units(rsdt_pert)
         rsdt_pert = rsdt_pert.concatenate()[0]
         rsus_pert = iris.load(f"{datadir}/rsus_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsus_pert)
+        unify_time_units(rsus_pert)
         rsus_pert = rsus_pert.concatenate()[0]
         rsds_pert = iris.load(f"{datadir}/rsds_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsds_pert)
+        unify_time_units(rsds_pert)
         rsds_pert = rsds_pert.concatenate()[0]
         rsdscs_pert = iris.load(f"{datadir}/rsdscs_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsdscs_pert)
+        unify_time_units(rsdscs_pert)
         rsdscs_pert = rsdscs_pert.concatenate()[0]
         rsut_pert = iris.load(f"{datadir}/rsut_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsut_pert)
+        unify_time_units(rsut_pert)
         rsut_pert = rsut_pert.concatenate()[0]
         rsutcs_pert = iris.load(f"{datadir}/rsutcs_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsutcs_pert)
+        unify_time_units(rsutcs_pert)
         rsutcs_pert = rsutcs_pert.concatenate()[0]
         rlut_pert = iris.load(f"{datadir}/rlut_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rlut_pert)
+        unify_time_units(rlut_pert)
         rlut_pert = rlut_pert.concatenate()[0]
         rlutcs_pert = iris.load(f"{datadir}/rlutcs_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rlutcs_pert)
+        unify_time_units(rlutcs_pert)
         rlutcs_pert = rlutcs_pert.concatenate()[0]
         rsuscs_pert = iris.load(f"{datadir}/rsuscs_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsuscs_pert)
+        unify_time_units(rsuscs_pert)
         rsuscs_pert = rsuscs_pert.concatenate()[0]
 
         pert_nmonths = rsdt_pert.shape[0]
@@ -386,7 +396,7 @@ def aerchemmip():
             iris.save(cube_gmym, f"{outdir}/{component}.nc")
 
 
-for model in tqdm(["GFDL-CM4", "IPSL-CM6A-LR", "MPI-ESM-1-2-HAM", "UKESM1-0-LL", "MRI-ESM2-0", "GFDL-ESM4"], desc='Models'):
+for model in tqdm(["MRI-ESM2-0", "GFDL-ESM4", "GFDL-CM4", "EC-Earth3"], desc='Models'):
     # what to do about ec-earth, which is a huge model?
     # GFDL-ESM4 seemed to struggle
     # I think MRI-ESM would too
