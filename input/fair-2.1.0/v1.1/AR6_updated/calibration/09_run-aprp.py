@@ -290,43 +290,43 @@ def aerchemmip():
         clt_pert = iris.load(f"{datadir}/clt_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(clt_pert)
         unify_time_units(clt_pert)
-        clt_pert = clt_pert.concatenate()[0]
+        clt_pert = clt_pert.concatenate_cube()
         rsdt_pert = iris.load(f"{datadir}/rsdt_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsdt_pert)
         unify_time_units(rsdt_pert)
-        rsdt_pert = rsdt_pert.concatenate()[0]
+        rsdt_pert = rsdt_pert.concatenate_cube()
         rsus_pert = iris.load(f"{datadir}/rsus_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsus_pert)
         unify_time_units(rsus_pert)
-        rsus_pert = rsus_pert.concatenate()[0]
+        rsus_pert = rsus_pert.concatenate_cube()
         rsds_pert = iris.load(f"{datadir}/rsds_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsds_pert)
         unify_time_units(rsds_pert)
-        rsds_pert = rsds_pert.concatenate()[0]
+        rsds_pert = rsds_pert.concatenate_cube()
         rsdscs_pert = iris.load(f"{datadir}/rsdscs_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsdscs_pert)
         unify_time_units(rsdscs_pert)
-        rsdscs_pert = rsdscs_pert.concatenate()[0]
+        rsdscs_pert = rsdscs_pert.concatenate_cube()
         rsut_pert = iris.load(f"{datadir}/rsut_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsut_pert)
         unify_time_units(rsut_pert)
-        rsut_pert = rsut_pert.concatenate()[0]
+        rsut_pert = rsut_pert.concatenate_cube()
         rsutcs_pert = iris.load(f"{datadir}/rsutcs_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsutcs_pert)
         unify_time_units(rsutcs_pert)
-        rsutcs_pert = rsutcs_pert.concatenate()[0]
+        rsutcs_pert = rsutcs_pert.concatenate_cube()
         rlut_pert = iris.load(f"{datadir}/rlut_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rlut_pert)
         unify_time_units(rlut_pert)
-        rlut_pert = rlut_pert.concatenate()[0]
+        rlut_pert = rlut_pert.concatenate_cube()
         rlutcs_pert = iris.load(f"{datadir}/rlutcs_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rlutcs_pert)
         unify_time_units(rlutcs_pert)
-        rlutcs_pert = rlutcs_pert.concatenate()[0]
+        rlutcs_pert = rlutcs_pert.concatenate_cube()
         rsuscs_pert = iris.load(f"{datadir}/rsuscs_Amon_{model}_histSST_{run}_*.nc")
         equalise_attributes(rsuscs_pert)
         unify_time_units(rsuscs_pert)
-        rsuscs_pert = rsuscs_pert.concatenate()[0]
+        rsuscs_pert = rsuscs_pert.concatenate_cube()
 
         pert_nmonths = rsdt_pert.shape[0]
         pert_nyears = pert_nmonths//12
