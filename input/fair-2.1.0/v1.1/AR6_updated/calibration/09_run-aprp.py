@@ -108,70 +108,89 @@ def rfmip():
     run = runs_piclim_control[model][0]
     clt_base = iris.load(f"{datadir}/clt_Amon_{model}_piClim-control_{run}_*.nc")
     equalise_attributes(clt_base)
-    clt_base = clt_base.concatenate()[0]
+    unify_time_units(clt_base)
+    clt_base = clt_base.concatenate_cube()
     rsdt_base = iris.load(f"{datadir}/rsdt_Amon_{model}_piClim-control_{run}_*.nc")
     equalise_attributes(rsdt_base)
-    rsdt_base = rsdt_base.concatenate()[0]
+    unify_time_units(rsdt_base)
+    rsdt_base = rsdt_base.concatenate_cube()
     rsus_base = iris.load(f"{datadir}/rsus_Amon_{model}_piClim-control_{run}_*.nc")
     equalise_attributes(rsus_base)
-    rsus_base = rsus_base.concatenate()[0]
+    unify_time_units(rsus_base)
+    rsus_base = rsus_base.concatenate_cube()
     rsds_base = iris.load(f"{datadir}/rsds_Amon_{model}_piClim-control_{run}_*.nc")
     equalise_attributes(rsds_base)
-    rsds_base = rsds_base.concatenate()[0]
+    unify_time_units(rsds_base)
+    rsds_base = rsds_base.concatenate_cube()
     rsdscs_base = iris.load(f"{datadir}/rsdscs_Amon_{model}_piClim-control_{run}_*.nc")
     equalise_attributes(rsdscs_base)
-    rsdscs_base = rsdscs_base.concatenate()[0]
+    unify_time_units(rsdscs_base)
+    rsdscs_base = rsdscs_base.concatenate_cube()
     rsut_base = iris.load(f"{datadir}/rsut_Amon_{model}_piClim-control_{run}_*.nc")
     equalise_attributes(rsut_base)
-    rsut_base = rsut_base.concatenate()[0]
+    unify_time_units(rsut_base)
+    rsut_base = rsut_base.concatenate_cube()
     rsutcs_base = iris.load(f"{datadir}/rsutcs_Amon_{model}_piClim-control_{run}_*.nc")
     equalise_attributes(rsutcs_base)
-    rsutcs_base = rsutcs_base.concatenate()[0]
+    unify_time_units(rsutcs_base)
+    rsutcs_base = rsutcs_base.concatenate_cube()
     rlut_base = iris.load(f"{datadir}/rlut_Amon_{model}_piClim-control_{run}_*.nc")
     equalise_attributes(rlut_base)
-    rlut_base = rlut_base.concatenate()[0]
+    unify_time_units(rlut_base)
+    rlut_base = rlut_base.concatenate_cube()
     rlutcs_base = iris.load(f"{datadir}/rlutcs_Amon_{model}_piClim-control_{run}_*.nc")
     equalise_attributes(rlutcs_base)
-    rlutcs_base = rlutcs_base.concatenate()[0]
+    unify_time_units(rlutcs_base)
+    rlutcs_base = rlutcs_base.concatenate_cube()
     rsuscs_base = iris.load(f"{datadir}/rsuscs_Amon_{model}_piClim-control_{run}_*.nc")
     equalise_attributes(rsuscs_base)
-    rsuscs_base = rsuscs_base.concatenate()[0]
+    unify_time_units(rsuscs_base)
+    rsuscs_base = rsuscs_base.concatenate_cube()
 
     # calculate aprp for each ensemble member
     for run in tqdm(runs_piclim_histaer[model], desc='run', leave=False):
         outdir = f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/aerosol/{model}/{run}'
         os.makedirs(outdir, exist_ok=True)
-
         clt_pert = iris.load(f"{datadir}/clt_Amon_{model}_piClim-histaer_{run}_*.nc")
         equalise_attributes(clt_pert)
-        clt_pert = clt_pert.concatenate()[0]
+        unify_time_units(clt_pert)
+        clt_pert = clt_pert.concatenate_cube()
         rsdt_pert = iris.load(f"{datadir}/rsdt_Amon_{model}_piClim-histaer_{run}_*.nc")
         equalise_attributes(rsdt_pert)
-        rsdt_pert = rsdt_pert.concatenate()[0]
+        unify_time_units(rsdt_pert)
+        rsdt_pert = rsdt_pert.concatenate_cube()
         rsus_pert = iris.load(f"{datadir}/rsus_Amon_{model}_piClim-histaer_{run}_*.nc")
         equalise_attributes(rsus_pert)
-        rsus_pert = rsus_pert.concatenate()[0]
+        unify_time_units(rsus_pert)
+        rsus_pert = rsus_pert.concatenate_cube()
         rsds_pert = iris.load(f"{datadir}/rsds_Amon_{model}_piClim-histaer_{run}_*.nc")
         equalise_attributes(rsds_pert)
-        rsds_pert = rsds_pert.concatenate()[0]
+        unify_time_units(rsds_pert)
+        rsds_pert = rsds_pert.concatenate_cube()
         rsdscs_pert = iris.load(f"{datadir}/rsdscs_Amon_{model}_piClim-histaer_{run}_*.nc")
         equalise_attributes(rsdscs_pert)
-        rsdscs_pert = rsdscs_pert.concatenate()[0]
+        unify_time_units(rsdscs_pert)
+        rsdscs_pert = rsdscs_pert.concatenate_cube()
         rsut_pert = iris.load(f"{datadir}/rsut_Amon_{model}_piClim-histaer_{run}_*.nc")
         equalise_attributes(rsut_pert)
-        rsut_pert = rsut_pert.concatenate()[0]
+        unify_time_units(rsut_pert)
+        rsut_pert = rsut_pert.concatenate_cube()
         rsutcs_pert = iris.load(f"{datadir}/rsutcs_Amon_{model}_piClim-histaer_{run}_*.nc")
         equalise_attributes(rsutcs_pert)
-        rsutcs_pert = rsutcs_pert.concatenate()[0]
+        unify_time_units(rsutcs_pert)
+        rsutcs_pert = rsutcs_pert.concatenate_cube()
         rlut_pert = iris.load(f"{datadir}/rlut_Amon_{model}_piClim-histaer_{run}_*.nc")
         equalise_attributes(rlut_pert)
-        rlut_pert = rlut_pert.concatenate()[0]
+        unify_time_units(rlut_pert)
+        rlut_pert = rlut_pert.concatenate_cube()
         rlutcs_pert = iris.load(f"{datadir}/rlutcs_Amon_{model}_piClim-histaer_{run}_*.nc")
         equalise_attributes(rlutcs_pert)
-        rlutcs_pert = rlutcs_pert.concatenate()[0]
+        unify_time_units(rlutcs_pert)
+        rlutcs_pert = rlutcs_pert.concatenate_cube()
         rsuscs_pert = iris.load(f"{datadir}/rsuscs_Amon_{model}_piClim-histaer_{run}_*.nc")
         equalise_attributes(rsuscs_pert)
-        rsuscs_pert = rsuscs_pert.concatenate()[0]
+        unify_time_units(rsuscs_pert)
+        rsuscs_pert = rsuscs_pert.concatenate_cube()
 
         pert_nmonths = rsdt_pert.shape[0]
         base_nmonths = rsdt_base.shape[0]
@@ -254,34 +273,44 @@ def aerchemmip():
     run = runs_histsst_piaer[model][0]
     clt_base = iris.load(f"{datadir}/clt_Amon_{model}_histSST-piAer_{run}_*.nc")
     equalise_attributes(clt_base)
-    clt_base = clt_base.concatenate()[0]
+    unify_time_units(clt_base)
+    clt_base = clt_base.concatenate_cube()
     rsdt_base = iris.load(f"{datadir}/rsdt_Amon_{model}_histSST-piAer_{run}_*.nc")
     equalise_attributes(rsdt_base)
-    rsdt_base = rsdt_base.concatenate()[0]
+    unify_time_units(rsdt_base)
+    rsdt_base = rsdt_base.concatenate_cube()
     rsus_base = iris.load(f"{datadir}/rsus_Amon_{model}_histSST-piAer_{run}_*.nc")
     equalise_attributes(rsus_base)
-    rsus_base = rsus_base.concatenate()[0]
+    unify_time_units(rsus_base)
+    rsus_base = rsus_base.concatenate_cube()
     rsds_base = iris.load(f"{datadir}/rsds_Amon_{model}_histSST-piAer_{run}_*.nc")
     equalise_attributes(rsds_base)
-    rsds_base = rsds_base.concatenate()[0]
+    unify_time_units(rsds_base)
+    rsds_base = rsds_base.concatenate_cube()
     rsdscs_base = iris.load(f"{datadir}/rsdscs_Amon_{model}_histSST-piAer_{run}_*.nc")
     equalise_attributes(rsdscs_base)
-    rsdscs_base = rsdscs_base.concatenate()[0]
+    unify_time_units(rsdscs_base)
+    rsdscs_base = rsdscs_base.concatenate_cube()
     rsut_base = iris.load(f"{datadir}/rsut_Amon_{model}_histSST-piAer_{run}_*.nc")
     equalise_attributes(rsut_base)
-    rsut_base = rsut_base.concatenate()[0]
+    unify_time_units(rsut_base)
+    rsut_base = rsut_base.concatenate_cube()
     rsutcs_base = iris.load(f"{datadir}/rsutcs_Amon_{model}_histSST-piAer_{run}_*.nc")
     equalise_attributes(rsutcs_base)
-    rsutcs_base = rsutcs_base.concatenate()[0]
+    unify_time_units(rsutcs_base)
+    rsutcs_base = rsutcs_base.concatenate_cube()
     rlut_base = iris.load(f"{datadir}/rlut_Amon_{model}_histSST-piAer_{run}_*.nc")
     equalise_attributes(rlut_base)
-    rlut_base = rlut_base.concatenate()[0]
+    unify_time_units(rlut_base)
+    rlut_base = rlut_base.concatenate_cube()
     rlutcs_base = iris.load(f"{datadir}/rlutcs_Amon_{model}_histSST-piAer_{run}_*.nc")
     equalise_attributes(rlutcs_base)
-    rlutcs_base = rlutcs_base.concatenate()[0]
+    unify_time_units(rlutcs_base)
+    rlutcs_base = rlutcs_base.concatenate_cube()
     rsuscs_base = iris.load(f"{datadir}/rsuscs_Amon_{model}_histSST-piAer_{run}_*.nc")
     equalise_attributes(rsuscs_base)
-    rsuscs_base = rsuscs_base.concatenate()[0]
+    unify_time_units(rsuscs_base)
+    rsuscs_base = rsuscs_base.concatenate_cube()
 
     # calculate aprp for each ensemble member
     for run in tqdm(runs_histsst[model], desc='run', leave=False):
