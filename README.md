@@ -28,7 +28,7 @@ The `.env` file contains environment variables that should be changed in order t
 
 ```
 # example .env
-CALIBRATION_VERSION=1.0
+CALIBRATION_VERSION=1.1
 FAIR_VERSION=2.1.0
 CONSTRAINT_SET=AR6_updated
 PRIOR_SAMPLES=1500000        # how many prior samples to draw
