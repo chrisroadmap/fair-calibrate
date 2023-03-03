@@ -5,6 +5,7 @@ channels:
 dependencies:
   - black
   - flake8
+  - iris
   - isort
   - matplotlib
   - netCDF4
@@ -20,3 +21,4 @@ dependencies:
   - pip:
     - aneris-iamc[units]
     - fair==2.1.0
+    - git+https://github.com/chrisroadmap/climateforcing@aprp-fix

@@ -28,7 +28,7 @@ The `.env` file contains environment variables that should be changed in order t
 
 ```
 # example .env
-CALIBRATION_VERSION=1.0
+CALIBRATION_VERSION=1.1
 FAIR_VERSION=2.1.0
 CONSTRAINT_SET=AR6_updated
 PRIOR_SAMPLES=1500000        # how many prior samples to draw
@@ -77,6 +77,14 @@ Maybe a TODO: move to READTHEDOCS or a wiki.
 ### Calibration versions
 Only major and minor versions need documenting here.
 
+#### v1.1
+
+As v1.0 with following fixes and improvements:
+- **Aerosol cloud interactions** recalibrated to 13 (up from 11) CMIP6 models, and calibration code based on APRP fixed (part of the climateforcing package).
+- **NOx emissions** from RCMIP have been corrected, where biomass burning emissions were in units of NO and agricultural and fossil emissions were in units of NO2, but no conversion was made in RCMIP. This affects historical calibrations for aerosol direct forcing, ozone forcing, and methane lifetime.
+- **Methane lifetime** now reports the correct base lifetime for 1750, which is used in all projections.
+- **Ozone forcing** calibration brought inside the code, rather than using AR6 results.
+
 #### v1.0
 - 1.5 million prior ensemble
 - **Climate response** calibrated on 49 abrupt-4xCO2 experiments from CMIP6 and sampled using correlated kernel density estimates
@@ -90,6 +98,18 @@ Only major and minor versions need documenting here.
 ### Constraint sets:
 Tag micro versions here along with descriptions.
 
+#### AR6_updated (v1.1.0)
+Same constraints as v1.0.
+
+#### GCP_2022 (v1.0.2)
+Same as v1.0.1 except:
+- land use forcing from cumulative CO2 emissions was not consistent with the AR6 assessment because of the change in CO2 emissions dataset and has been fixed.
+
+#### GCP_2022 (v1.0.1)
+Same as v1.0, except:
+- CO2 FFI and AFOLU emissions are from Global Carbon Project (Friedlingstein et al. 2022), up to and including 2022 which is an estimate.
+- SSP CO2 emissions are harmonized, with 2021 as the harmonization year. So 2022 is the first year in which scenarios may differ.
+
 #### AR6_updated (v1.0)
 - 1001-member posterior (deliberately chosen).
 - Emissions and concentrations from RCMIP (i.e. based on CMIP6)
@@ -98,15 +118,6 @@ Tag micro versions here along with descriptions.
 - Ocean heat content from AR6 WG1 (1971-2018), linear.
 - two step constraining procedure used: first RMSE of less than 0.16K, then 6-variable distribution fitting.
 - Aerosol ERF, ERFari and ERFaci as in AR6 WG1
-
-#### GCP_2022 (v1.0.1)
-Same as v1.0, except:
-- CO2 FFI and AFOLU emissions are from Global Carbon Project (Friedlingstein et al. 2022), up to and including 2022 which is an estimate.
-- SSP CO2 emissions are harmonized, with 2021 as the harmonization year. So 2022 is the first year in which scenarios may differ.
-
-#### GCP_2022 (v1.0.2)
-Same as v1.0.1 except:
-- land use forcing from cumulative CO2 emissions was not consistent with the AR6 assessment because of the change in CO2 emissions dataset and has been fixed.
 
 ### References
 - Friedlingstein et al. 2022: https://doi.org/10.5194/essd-14-4811-2022
