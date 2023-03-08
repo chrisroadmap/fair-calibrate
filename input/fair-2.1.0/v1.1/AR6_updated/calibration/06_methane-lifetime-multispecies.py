@@ -24,8 +24,8 @@
 # 1. take AerChemMIP multi-model means from Gill's papers
 # 2. run the lifetime relationship to individual AerChemMIP models in Gill's papers
 # 3. find a least squares fit with reasonable sensitivies across the historical
-# 
-# NOTE: we fix an error with NOx unit conversion in RCMIP here, and scale up biomass 
+#
+# NOTE: we fix an error with NOx unit conversion in RCMIP here, and scale up biomass
 # burning emissions by the NO2/NO molecular weight factor.
 
 import os
@@ -139,7 +139,7 @@ gfed_sectors = [
     "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
     "Emissions|NOx|MAGICC AFOLU|Forest Burning",
     "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning"
+    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
 ]
 input["NOx"] = (
     df_emis.loc[
@@ -147,17 +147,28 @@ input["NOx"] = (
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"].isin(gfed_sectors)),
         "1750":"2100",
-    ].interpolate(axis=1).values.squeeze().sum(axis=0) * 46.006/30.006 + df_emis.loc[
+    ]
+    .interpolate(axis=1)
+    .values.squeeze()
+    .sum(axis=0)
+    * 46.006
+    / 30.006
+    + df_emis.loc[
         (df_emis["Scenario"] == "ssp370")
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
         "1750":"2100",
-    ].interpolate(axis=1).values.squeeze() + df_emis.loc[
+    ]
+    .interpolate(axis=1)
+    .values.squeeze()
+    + df_emis.loc[
         (df_emis["Scenario"] == "ssp370")
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
         "1750":"2100",
-    ].interpolate(axis=1).values.squeeze()
+    ]
+    .interpolate(axis=1)
+    .values.squeeze()
 )
 input["temp"] = gmst
 
@@ -170,7 +181,6 @@ def calculate_eesc(
     br_atoms,
     br_cl_ratio=45,
 ):
-
     # EESC is in terms of CFC11-eq
     eesc_out = (
         cl_atoms * (concentration) * fractional_release / fractional_release_cfc11
@@ -400,8 +410,7 @@ def one_box(
     timestep=1,
     natural_emissions_adjustment=0,
 ):
-
-    effective_lifetime = (alpha_lifetime * lifetime)
+    effective_lifetime = alpha_lifetime * lifetime
     decay_rate = timestep / (effective_lifetime)
     decay_factor = np.exp(-decay_rate)
     gas_boxes_new = (
@@ -415,8 +424,7 @@ def one_box(
     )
     airborne_emissions_new = gas_boxes_new
     concentration_out = (
-        pre_industrial_concentration
-        + burden_per_emission * airborne_emissions_new
+        pre_industrial_concentration + burden_per_emission * airborne_emissions_new
     )
     return concentration_out, gas_boxes_new, airborne_emissions_new
 
@@ -571,7 +579,10 @@ lifetime_scaling["best_fit"] = alpha_scaling_exp(
 # if plots:
 #    pl.plot(np.arange(1750, 2101), lifetime_scaling['best_fit'])
 
-print("methane lifetime 1750:", lifetime_scaling["best_fit"][0] * parameters["best_fit"]["base"])
+print(
+    "methane lifetime 1750:",
+    lifetime_scaling["best_fit"][0] * parameters["best_fit"]["base"],
+)
 print("methane lifetime 1850:", parameters["best_fit"]["base"])
 
 

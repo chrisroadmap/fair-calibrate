@@ -93,7 +93,7 @@ if __name__ == "__main__":
     df_methane = pd.read_csv(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
         "CH4_lifetime.csv",
-        index_col=0
+        index_col=0,
     )
 
     seedgen = 1355763

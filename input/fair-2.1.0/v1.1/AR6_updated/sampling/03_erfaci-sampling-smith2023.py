@@ -10,7 +10,7 @@
 #  et al. 2021: https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2020JD033622.
 #
 # The underlying APRP code was slightly wrong, and has been updated thanks to Mark
-# Zelinka (released as climateforcing v0.3.0). Two more models are now available. 
+# Zelinka (released as climateforcing v0.3.0). Two more models are now available.
 # Actually three are, but EC-Earth3 is unusable due to unphysical values of rsuscs and
 # rsdscs leading to biased ERFaci estimates.
 #
@@ -67,15 +67,15 @@ for file in files:
     if run not in models_runs:
         models_runs[model] = []
     models_runs[model].append(run)
-   
+
 models = list(models_runs.keys())
- 
+
 for model in models:
     nruns = 0
     for run in models_runs[model]:
         file = f"../../../../../data/smith2023aerosol/{model}_{run}_aerosol_forcing.csv"
         df = pd.read_csv(file, index_col=0)
-        if nruns==0:
+        if nruns == 0:
             ari_temp = df["ERFari"].values.squeeze()
             aci_temp = df["ERFaci"].values.squeeze()
         else:
@@ -83,8 +83,8 @@ for model in models:
             aci_temp = aci_temp + df["ERFaci"].values.squeeze()
         years[model] = df.index + 0.5
         nruns = nruns + 1
-    ari[model] = ari_temp/nruns
-    aci[model] = aci_temp/nruns
+    ari[model] = ari_temp / nruns
+    aci[model] = aci_temp / nruns
 
 
 rcmip_emissions_file = pooch.retrieve(
@@ -206,7 +206,7 @@ if plots:
             np.arange(1850, 2015), -10, 10, color="#e0e0e0", zorder=-20
         )
         ax[i, j].get_xticklabels()[-1].set_ha("right")
-        if model ==  "HadGEM3-GC31-LL":
+        if model == "HadGEM3-GC31-LL":
             modlab = "HadGEM3"
         elif model == "MPI-ESM-1-2-HAM":
             modlab = "MPI-ESM1-2"

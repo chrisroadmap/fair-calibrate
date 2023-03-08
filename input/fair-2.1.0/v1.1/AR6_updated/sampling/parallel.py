@@ -84,13 +84,33 @@ def run_fair(cfg):
     fill(f.species_configs["iirf_temperature"], cfg["iirf_temperature"], specie="CO2")
 
     # methane lifetime baseline and sensitivity
-    fill(f.species_configs["unperturbed_lifetime"], cfg['ch4_base'], specie="CH4")
-    fill(f.species_configs["ch4_lifetime_chemical_sensitivity"], cfg['ch4_CH4'], specie="CH4")
-    fill(f.species_configs["ch4_lifetime_chemical_sensitivity"], cfg['ch4_N2O'], specie="N2O")
-    fill(f.species_configs["ch4_lifetime_chemical_sensitivity"], cfg['ch4_VOC'], specie="VOC")
-    fill(f.species_configs["ch4_lifetime_chemical_sensitivity"], cfg['ch4_NOx'], specie="NOx")
-    fill(f.species_configs["ch4_lifetime_chemical_sensitivity"], cfg['ch4_EESC'], specie="Equivalent effective stratospheric chlorine")
-    fill(f.species_configs["lifetime_temperature_sensitivity"], cfg['ch4_temp'])
+    fill(f.species_configs["unperturbed_lifetime"], cfg["ch4_base"], specie="CH4")
+    fill(
+        f.species_configs["ch4_lifetime_chemical_sensitivity"],
+        cfg["ch4_CH4"],
+        specie="CH4",
+    )
+    fill(
+        f.species_configs["ch4_lifetime_chemical_sensitivity"],
+        cfg["ch4_N2O"],
+        specie="N2O",
+    )
+    fill(
+        f.species_configs["ch4_lifetime_chemical_sensitivity"],
+        cfg["ch4_VOC"],
+        specie="VOC",
+    )
+    fill(
+        f.species_configs["ch4_lifetime_chemical_sensitivity"],
+        cfg["ch4_NOx"],
+        specie="NOx",
+    )
+    fill(
+        f.species_configs["ch4_lifetime_chemical_sensitivity"],
+        cfg["ch4_EESC"],
+        specie="Equivalent effective stratospheric chlorine",
+    )
+    fill(f.species_configs["lifetime_temperature_sensitivity"], cfg["ch4_temp"])
 
     # emissions adjustments for N2O and CH4
     fill(f.species_configs["baseline_emissions"], 19.019783117809567, specie="CH4")

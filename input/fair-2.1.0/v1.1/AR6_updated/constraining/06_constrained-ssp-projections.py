@@ -56,10 +56,10 @@ volcanic_forcing[271:281] = np.linspace(1, 0, 10) * volcanic_forcing[270]
 solar_forcing = df_solar["erf"].loc[1750:2300].values
 
 df_methane = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-        "CH4_lifetime.csv",
-        index_col=0
-    )
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+    "CH4_lifetime.csv",
+    index_col=0,
+)
 
 df_configs = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
@@ -91,7 +91,7 @@ gfed_sectors = [
     "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
     "Emissions|NOx|MAGICC AFOLU|Forest Burning",
     "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning"
+    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
 ]
 for scenario in scenarios:
     f.emissions.loc[dict(specie="NOx", scenario=scenario)] = (
@@ -100,17 +100,28 @@ for scenario in scenarios:
             & (df_emis["Region"] == "World")
             & (df_emis["Variable"].isin(gfed_sectors)),
             "1750":"2300",
-        ].interpolate(axis=1).values.squeeze().sum(axis=0) * 46.006/30.006 + df_emis.loc[
+        ]
+        .interpolate(axis=1)
+        .values.squeeze()
+        .sum(axis=0)
+        * 46.006
+        / 30.006
+        + df_emis.loc[
             (df_emis["Scenario"] == scenario)
             & (df_emis["Region"] == "World")
             & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
             "1750":"2300",
-        ].interpolate(axis=1).values.squeeze() + df_emis.loc[
+        ]
+        .interpolate(axis=1)
+        .values.squeeze()
+        + df_emis.loc[
             (df_emis["Scenario"] == scenario)
             & (df_emis["Region"] == "World")
             & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
             "1750":"2300",
-        ].interpolate(axis=1).values.squeeze()
+        ]
+        .interpolate(axis=1)
+        .values.squeeze()
     )[:550][:, None]
 
 
@@ -175,13 +186,40 @@ fill(
 fill(f.species_configs["unperturbed_lifetime"], 10.11702748, specie="CH4")
 
 # methane lifetime baseline and sensitivity
-fill(f.species_configs["unperturbed_lifetime"], df_methane.loc["historical_best", "base"], specie="CH4")
-fill(f.species_configs["ch4_lifetime_chemical_sensitivity"], df_methane.loc["historical_best", "CH4"], specie="CH4")
-fill(f.species_configs["ch4_lifetime_chemical_sensitivity"], df_methane.loc["historical_best", "N2O"], specie="N2O")
-fill(f.species_configs["ch4_lifetime_chemical_sensitivity"], df_methane.loc["historical_best", "VOC"], specie="VOC")
-fill(f.species_configs["ch4_lifetime_chemical_sensitivity"], df_methane.loc["historical_best", "NOx"], specie="NOx")
-fill(f.species_configs["ch4_lifetime_chemical_sensitivity"], df_methane.loc["historical_best", "HC"], specie="Equivalent effective stratospheric chlorine")
-fill(f.species_configs["lifetime_temperature_sensitivity"], df_methane.loc["historical_best", "temp"])
+fill(
+    f.species_configs["unperturbed_lifetime"],
+    df_methane.loc["historical_best", "base"],
+    specie="CH4",
+)
+fill(
+    f.species_configs["ch4_lifetime_chemical_sensitivity"],
+    df_methane.loc["historical_best", "CH4"],
+    specie="CH4",
+)
+fill(
+    f.species_configs["ch4_lifetime_chemical_sensitivity"],
+    df_methane.loc["historical_best", "N2O"],
+    specie="N2O",
+)
+fill(
+    f.species_configs["ch4_lifetime_chemical_sensitivity"],
+    df_methane.loc["historical_best", "VOC"],
+    specie="VOC",
+)
+fill(
+    f.species_configs["ch4_lifetime_chemical_sensitivity"],
+    df_methane.loc["historical_best", "NOx"],
+    specie="NOx",
+)
+fill(
+    f.species_configs["ch4_lifetime_chemical_sensitivity"],
+    df_methane.loc["historical_best", "HC"],
+    specie="Equivalent effective stratospheric chlorine",
+)
+fill(
+    f.species_configs["lifetime_temperature_sensitivity"],
+    df_methane.loc["historical_best", "temp"],
+)
 
 # emissions adjustments for N2O and CH4 (we don't want to make these defaults as people
 # might wanna run pulse expts with these gases)

@@ -130,7 +130,6 @@ def calculate_eesc(
     br_atoms,
     br_cl_ratio=45,
 ):
-
     # EESC is in terms of CFC11-eq
     eesc_out = (
         cl_atoms * (concentration) * fractional_release / fractional_release_cfc11

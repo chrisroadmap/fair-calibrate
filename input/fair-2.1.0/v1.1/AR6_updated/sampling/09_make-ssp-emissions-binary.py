@@ -7,11 +7,11 @@
 
 import os
 
+import pandas as pd
+import pooch
 from dotenv import load_dotenv
 from fair import FAIR, __version__
 from fair.io import read_properties
-import pandas as pd
-import pooch
 
 load_dotenv()
 
@@ -57,7 +57,7 @@ gfed_sectors = [
     "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
     "Emissions|NOx|MAGICC AFOLU|Forest Burning",
     "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning"
+    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
 ]
 print("Don't forget to set NOx baseline emissions to this value!")
 for scenario in scenarios:
@@ -67,26 +67,34 @@ for scenario in scenarios:
             & (df_emis["Region"] == "World")
             & (df_emis["Variable"].isin(gfed_sectors)),
             "1750":"2500",
-        ].interpolate(axis=1).values.squeeze().sum(axis=0) * 46.006/30.006 + df_emis.loc[
+        ]
+        .interpolate(axis=1)
+        .values.squeeze()
+        .sum(axis=0)
+        * 46.006
+        / 30.006
+        + df_emis.loc[
             (df_emis["Scenario"] == scenario)
             & (df_emis["Region"] == "World")
             & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
             "1750":"2500",
-        ].interpolate(axis=1).values.squeeze() + df_emis.loc[
+        ]
+        .interpolate(axis=1)
+        .values.squeeze()
+        + df_emis.loc[
             (df_emis["Scenario"] == scenario)
             & (df_emis["Region"] == "World")
             & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
             "1750":"2500",
-        ].interpolate(axis=1).values.squeeze()
+        ]
+        .interpolate(axis=1)
+        .values.squeeze()
     )[:750]
 
     print(
         f.emissions.loc[
             dict(
-                specie="NOx",
-                scenario=scenario, 
-                config="unspecified",
-                timepoints=1750.5
+                specie="NOx", scenario=scenario, config="unspecified", timepoints=1750.5
             )
         ].data
     )

@@ -92,9 +92,9 @@ for model in models:
         params[model][run] = ebm.__dict__
 
 # reconstruct a data table and save
-#df_out = pd.DataFrame(
+# df_out = pd.DataFrame(
 #    columns=["model", "run", "ecs", "tcr", "tau1", "tau2", "tau3", "q1", "q2", "q3"]
-#)
+# )
 
 rows_to_add = []
 count = 0
@@ -113,7 +113,7 @@ for model in models:
             "q3": params[model][run]["response_coefficients"][2],
         }
         row_to_add = pd.DataFrame(values_to_add, index=[count])
-        #df_out = pd.concat((df_out, row_to_add), axis=1)
+        # df_out = pd.concat((df_out, row_to_add), axis=1)
         rows_to_add.append(row_to_add)
         count = count + 1
 
