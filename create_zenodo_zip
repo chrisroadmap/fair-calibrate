@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+if [ -f .env ]
+then
+  export $(cat .env | xargs)
+fi
+
+> ziplist.txt
+find input/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET}/ -type d -name __pycache__ -prune -o -print >> ziplist.txt
+find output/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET} >> ziplist.txt
+find plots/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET} >> ziplist.txt
+find data >> ziplist.txt
+find r_scripts >> ziplist.txt
+ls -1 *.* >> ziplist.txt
+ls -1 run >> ziplist.txt
+ls -1 .env >> ziplist.txt
+
+zip fair_calibrate.zip -@ < ziplist.txt
