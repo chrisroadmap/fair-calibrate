@@ -144,7 +144,6 @@ def calculate_eesc(
     br_atoms,
     br_cl_ratio=45,
 ):
-
     # EESC is in terms of CFC11-eq
     eesc_out = (
         cl_atoms * (concentration) * fractional_release / fractional_release_cfc11
@@ -377,7 +376,6 @@ def one_box(
     timestep=1,
     natural_emissions_adjustment=0,
 ):
-
     effective_lifetime = 1 / (1 / (alpha_lifetime * lifetime) + 1 / soil_lifetime)
     decay_rate = timestep / (effective_lifetime)
     decay_factor = np.exp(-decay_rate)

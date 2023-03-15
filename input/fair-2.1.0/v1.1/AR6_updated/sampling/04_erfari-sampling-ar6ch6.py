@@ -110,7 +110,7 @@ gfed_sectors = [
     "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
     "Emissions|NOx|MAGICC AFOLU|Forest Burning",
     "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning"
+    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
 ]
 
 species_out["NOx"] = (
@@ -119,17 +119,28 @@ species_out["NOx"] = (
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"].isin(gfed_sectors)),
         "1750":"2100",
-    ].interpolate(axis=1).values.squeeze().sum(axis=0) * 46.006/30.006 + df_emis.loc[
+    ]
+    .interpolate(axis=1)
+    .values.squeeze()
+    .sum(axis=0)
+    * 46.006
+    / 30.006
+    + df_emis.loc[
         (df_emis["Scenario"] == "ssp370")
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
         "1750":"2100",
-    ].interpolate(axis=1).values.squeeze() + df_emis.loc[
+    ]
+    .interpolate(axis=1)
+    .values.squeeze()
+    + df_emis.loc[
         (df_emis["Scenario"] == "ssp370")
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
         "1750":"2100",
-    ].interpolate(axis=1).values.squeeze()
+    ]
+    .interpolate(axis=1)
+    .values.squeeze()
 )
 
 
@@ -158,7 +169,6 @@ def calculate_eesc(
     br_atoms,
     br_cl_ratio=45,
 ):
-
     # EESC is in terms of CFC11-eq
     eesc_out = (
         cl_atoms * (concentration) * fractional_release / fractional_release_cfc11

@@ -9,15 +9,15 @@
 import copy
 import os
 
+import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 import pooch
 import scipy.stats
-from scipy.interpolate import interp1d
-from scipy.optimize import curve_fit
 from dotenv import load_dotenv
 from fair import __version__
-import matplotlib.pyplot as pl
+from scipy.interpolate import interp1d
+from scipy.optimize import curve_fit
 
 load_dotenv()
 
@@ -32,9 +32,9 @@ plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 print("Doing ozone sampling...")
 
 # now include temperature feedback
-Tobs = pd.read_csv('../../../../../data/forcing/AR6_GMST.csv', index_col=0).values
+Tobs = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv", index_col=0).values
 
-delta_gmst=[
+delta_gmst = [
     0,
     Tobs[65:76].mean(),
     Tobs[75:86].mean(),
@@ -48,41 +48,60 @@ delta_gmst=[
     Tobs[152:163].mean(),
     Tobs[155:166].mean(),
     Tobs[159:170].mean(),
-    Tobs[167].mean(),   # we don't use this
-    Tobs[168].mean()
+    Tobs[167].mean(),  # we don't use this
+    Tobs[168].mean(),
 ]
 warming_pi_pd = Tobs[159:170].mean()
 
 assert fair_v == __version__
 
-good_models = ['BCC-ESM1', 'CESM2(WACCM6)', 'GFDL-ESM4', 'GISS-E2-1-H', 'MRI-ESM2-0', 'OsloCTM3']
-skeie_trop = pd.read_csv('../../../../../data/forcing/skeie_ozone_trop.csv', index_col=0)
+good_models = [
+    "BCC-ESM1",
+    "CESM2(WACCM6)",
+    "GFDL-ESM4",
+    "GISS-E2-1-H",
+    "MRI-ESM2-0",
+    "OsloCTM3",
+]
+skeie_trop = pd.read_csv(
+    "../../../../../data/forcing/skeie_ozone_trop.csv", index_col=0
+)
 skeie_trop = skeie_trop.loc[good_models]
 skeie_trop.insert(0, 1850, 0)
 skeie_trop.columns = pd.to_numeric(skeie_trop.columns)
-skeie_trop.interpolate(axis=1, method='values', limit_area='inside', inplace=True)
+skeie_trop.interpolate(axis=1, method="values", limit_area="inside", inplace=True)
 
-skeie_strat = pd.read_csv('../../../../../data/forcing/skeie_ozone_strat.csv', index_col=0)
+skeie_strat = pd.read_csv(
+    "../../../../../data/forcing/skeie_ozone_strat.csv", index_col=0
+)
 skeie_strat = skeie_strat.loc[good_models]
 skeie_strat.insert(0, 1850, 0)
 skeie_strat.columns = pd.to_numeric(skeie_strat.columns)
-skeie_strat.interpolate(axis=1, method='values', limit_area='inside', inplace=True)
+skeie_strat.interpolate(axis=1, method="values", limit_area="inside", inplace=True)
 
 skeie_total = skeie_trop + skeie_strat
 
 coupled_models = copy.deepcopy(good_models)
-coupled_models.remove('OsloCTM3')
+coupled_models.remove("OsloCTM3")
 
-skeie_total.loc[coupled_models] = skeie_total.loc[coupled_models] - (-0.037) * np.array(delta_gmst)
+skeie_total.loc[coupled_models] = skeie_total.loc[coupled_models] - (-0.037) * np.array(
+    delta_gmst
+)
 skeie_ssp245 = skeie_total.mean()
 skeie_ssp245[1750] = -0.03
 skeie_ssp245.sort_index(inplace=True)
 skeie_ssp245 = skeie_ssp245 + 0.03
-skeie_ssp245.drop([2014,2017,2020], inplace=True)
-skeie_ssp245 = skeie_ssp245.append(skeie_total.loc['OsloCTM3',2014:]-skeie_total.loc['OsloCTM3',2010]+skeie_ssp245[2010])
+skeie_ssp245.drop([2014, 2017, 2020], inplace=True)
+skeie_ssp245 = skeie_ssp245.append(
+    skeie_total.loc["OsloCTM3", 2014:]
+    - skeie_total.loc["OsloCTM3", 2010]
+    + skeie_ssp245[2010]
+)
 
-f = interp1d(skeie_ssp245.index, skeie_ssp245, bounds_error=False, fill_value='extrapolate')
-years = np.arange(1750,2021)
+f = interp1d(
+    skeie_ssp245.index, skeie_ssp245, bounds_error=False, fill_value="extrapolate"
+)
+years = np.arange(1750, 2021)
 o3total = f(years)
 
 print("2014-1750 ozone ERF from Skeie:", o3total[264])
@@ -170,7 +189,7 @@ gfed_sectors = [
     "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
     "Emissions|NOx|MAGICC AFOLU|Forest Burning",
     "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning"
+    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
 ]
 species_out["NOx"] = (
     df_emis.loc[
@@ -178,23 +197,34 @@ species_out["NOx"] = (
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"].isin(gfed_sectors)),
         "1750":"2020",
-    ].interpolate(axis=1).values.squeeze().sum(axis=0) * 46.006/30.006 + df_emis.loc[
+    ]
+    .interpolate(axis=1)
+    .values.squeeze()
+    .sum(axis=0)
+    * 46.006
+    / 30.006
+    + df_emis.loc[
         (df_emis["Scenario"] == "ssp245")
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
         "1750":"2020",
-    ].interpolate(axis=1).values.squeeze() + df_emis.loc[
+    ]
+    .interpolate(axis=1)
+    .values.squeeze()
+    + df_emis.loc[
         (df_emis["Scenario"] == "ssp245")
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
         "1750":"2020",
-    ].interpolate(axis=1).values.squeeze()
+    ]
+    .interpolate(axis=1)
+    .values.squeeze()
 )[:-1]
 
 
-#output_years = np.arange(1750, 2020)
-#conc_years = np.concatenate(([1750], np.arange(1850, 2020)))
-#for species in concentration_species:
+# output_years = np.arange(1750, 2020)
+# conc_years = np.concatenate(([1750], np.arange(1850, 2020)))
+# for species in concentration_species:
 #    conc_in = df_conc.loc[:, species].values
 #    f = interp1d(conc_years, conc_in)
 #    species_out[species] = f(output_years)
@@ -217,6 +247,7 @@ print(species_out.keys())
 
 species_df = pd.DataFrame(species_out, index=range(1750, 2020))
 
+
 def calculate_eesc(
     concentration,
     fractional_release,
@@ -225,7 +256,6 @@ def calculate_eesc(
     br_atoms,
     br_cl_ratio=45,
 ):
-
     # EESC is in terms of CFC11-eq
     eesc_out = (
         cl_atoms * (concentration) * fractional_release / fractional_release_cfc11
@@ -313,73 +343,85 @@ for species in hc_species:
 delta_Cch4 = species_out["CH4"][264] - species_out["CH4"][0]
 delta_Cn2o = species_out["N2O"][264] - species_out["N2O"][0]
 delta_Cods = total_eesc[264] - total_eesc[0]
-delta_Eco  = species_out["CO"][264] - species_out["CO"][0]
+delta_Eco = species_out["CO"][264] - species_out["CO"][0]
 delta_Evoc = species_out["VOC"][264] - species_out["VOC"][0]
 delta_Enox = species_out["NOx"][264] - species_out["NOx"][0]
 
 # best estimate radiative efficienices from 2014 - 1850 from AR6 here
-radeff_ch4 = 0.14/delta_Cch4
-radeff_n2o = 0.03/delta_Cn2o
-radeff_ods = -0.11/delta_Cods
-radeff_co  = 0.067/delta_Eco    # stevenson CMIP5 scaled to CO + VOC total
-radeff_voc = 0.043/delta_Evoc   # stevenson CMIP5 scaled to CO + VOC total
-radeff_nox = 0.20/delta_Enox
+radeff_ch4 = 0.14 / delta_Cch4
+radeff_n2o = 0.03 / delta_Cn2o
+radeff_ods = -0.11 / delta_Cods
+radeff_co = 0.067 / delta_Eco  # stevenson CMIP5 scaled to CO + VOC total
+radeff_voc = 0.043 / delta_Evoc  # stevenson CMIP5 scaled to CO + VOC total
+radeff_nox = 0.20 / delta_Enox
 
 
 fac_cmip6_skeie = (
+    radeff_ch4 * delta_Cch4
+    + radeff_n2o * delta_Cn2o
+    + radeff_ods * delta_Cods
+    + radeff_co * delta_Eco
+    + radeff_voc * delta_Evoc
+    + radeff_nox * delta_Enox
+) / (o3total[264] - o3total[0])
+ts = np.vstack(
     (
-    radeff_ch4 * delta_Cch4 +
-    radeff_n2o * delta_Cn2o +
-    radeff_ods * delta_Cods +
-    radeff_co  * delta_Eco +
-    radeff_voc * delta_Evoc +
-    radeff_nox * delta_Enox
-    ) / (o3total[264]-o3total[0])
-)
-ts = np.vstack((species_out["CH4"], species_out["N2O"], total_eesc, species_out["CO"], species_out["VOC"], species_out["NOx"])).T
+        species_out["CH4"],
+        species_out["N2O"],
+        total_eesc,
+        species_out["CO"],
+        species_out["VOC"],
+        species_out["NOx"],
+    )
+).T
+
 
 def fit_precursors(x, rch4, rn2o, rods, rco, rvoc, rnox):
-    return rch4*x[0] + rn2o*x[1] + rods*x[2] + rco*x[3] + rvoc*x[4] + rnox*x[5]
+    return (
+        rch4 * x[0] + rn2o * x[1] + rods * x[2] + rco * x[3] + rvoc * x[4] + rnox * x[5]
+    )
+
 
 p, cov = curve_fit(
     fit_precursors,
-    ts[:270,:].T - ts[0:1, :].T,
-    o3total[:270]-o3total[0],
+    ts[:270, :].T - ts[0:1, :].T,
+    o3total[:270] - o3total[0],
     bounds=(  # assumed likely range from Thornhill - maybe could be wider?
         (
-            0.09/delta_Cch4/fac_cmip6_skeie,
-            0.01/delta_Cn2o/fac_cmip6_skeie,
-            -0.21/delta_Cods/fac_cmip6_skeie,
-            0.010/delta_Eco/fac_cmip6_skeie,
-            0/delta_Evoc/fac_cmip6_skeie,
-            0.09/delta_Enox/fac_cmip6_skeie
-        ), (
-            0.19/delta_Cch4/fac_cmip6_skeie,
-            0.05/delta_Cn2o/fac_cmip6_skeie,
-            -0.01/delta_Cods/fac_cmip6_skeie,
-            0.124/delta_Eco/fac_cmip6_skeie,
-            0.086/delta_Evoc/fac_cmip6_skeie,
-            0.31/delta_Enox/fac_cmip6_skeie
-        )
-    )
+            0.09 / delta_Cch4 / fac_cmip6_skeie,
+            0.01 / delta_Cn2o / fac_cmip6_skeie,
+            -0.21 / delta_Cods / fac_cmip6_skeie,
+            0.010 / delta_Eco / fac_cmip6_skeie,
+            0 / delta_Evoc / fac_cmip6_skeie,
+            0.09 / delta_Enox / fac_cmip6_skeie,
+        ),
+        (
+            0.19 / delta_Cch4 / fac_cmip6_skeie,
+            0.05 / delta_Cn2o / fac_cmip6_skeie,
+            -0.01 / delta_Cods / fac_cmip6_skeie,
+            0.124 / delta_Eco / fac_cmip6_skeie,
+            0.086 / delta_Evoc / fac_cmip6_skeie,
+            0.31 / delta_Enox / fac_cmip6_skeie,
+        ),
+    ),
 )
 
 forcing = (
-    p[0] * (species_out["CH4"] - species_out["CH4"][0]) +
-    p[1] * (species_out["N2O"] - species_out["N2O"][0]) +
-    p[2] * (total_eesc - total_eesc[0]) +
-    p[3] * (species_out["CO"] - species_out["CO"][0]) +
-    p[4] * (species_out["VOC"]  - species_out["VOC"][0]) +
-    p[5] * (species_out["NOx"] - species_out["NOx"][0])
+    p[0] * (species_out["CH4"] - species_out["CH4"][0])
+    + p[1] * (species_out["N2O"] - species_out["N2O"][0])
+    + p[2] * (total_eesc - total_eesc[0])
+    + p[3] * (species_out["CO"] - species_out["CO"][0])
+    + p[4] * (species_out["VOC"] - species_out["VOC"][0])
+    + p[5] * (species_out["NOx"] - species_out["NOx"][0])
 )
 
 if plots:
-    pl.plot(np.arange(1750.5,2020), forcing, label='best estimate fit')
-    pl.plot(np.arange(1750.5,2021), o3total, label='Skeie et al. 2020 mean')
+    pl.plot(np.arange(1750.5, 2020), forcing, label="best estimate fit")
+    pl.plot(np.arange(1750.5, 2021), o3total, label="Skeie et al. 2020 mean")
     pl.legend()
-    pl.title('Ozone forcing calibration to CMIP6 mean')
+    pl.title("Ozone forcing calibration to CMIP6 mean")
     pl.ylabel("W m$^{-2}$")
-    pl.xlim(1750,2020)
+    pl.xlim(1750, 2020)
     pl.tight_layout()
     os.makedirs(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}", exist_ok=True
@@ -391,7 +433,7 @@ if plots:
     pl.close()
 
 print(p)  # these coefficients we export to the ERF time series
-#print(radeff_ch4, radeff_n2o, radeff_ods, radeff_co, radeff_voc, radeff_nox)
+# print(radeff_ch4, radeff_n2o, radeff_ods, radeff_co, radeff_voc, radeff_nox)
 
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 
@@ -399,15 +441,15 @@ scalings = scipy.stats.norm.rvs(
     loc=np.array(p),
     scale=np.array(
         [
-            0.05/delta_Cch4/fac_cmip6_skeie,
-            0.02/delta_Cn2o/fac_cmip6_skeie,
-            0.10/delta_Cods/fac_cmip6_skeie,
-            0.057/delta_Eco/fac_cmip6_skeie,
-            0.043/delta_Evoc/fac_cmip6_skeie,
-            0.11/delta_Enox/fac_cmip6_skeie,
+            0.05 / delta_Cch4 / fac_cmip6_skeie,
+            0.02 / delta_Cn2o / fac_cmip6_skeie,
+            0.10 / delta_Cods / fac_cmip6_skeie,
+            0.057 / delta_Eco / fac_cmip6_skeie,
+            0.043 / delta_Evoc / fac_cmip6_skeie,
+            0.11 / delta_Enox / fac_cmip6_skeie,
         ]
     )
-    #scale=np.array([0.000062, 0.000471, 0.000113, 0.000131, 0.000328, 0.000983])
+    # scale=np.array([0.000062, 0.000471, 0.000113, 0.000131, 0.000328, 0.000983])
     / NINETY_TO_ONESIGMA,
     size=(samples, 6),
     random_state=52,
