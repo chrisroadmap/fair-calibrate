@@ -488,10 +488,46 @@ if plots:
 
 # Find least squares sensible historical fit using best estimate emissions and
 # concentrations (not those from RCMIP)
+df_emis_obs = pd.read_csv('../../../../../data/emissions/slcf_emissions_1750-2022.csv', index_col=0)
+df_conc_obs = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
+for year in range(1751, 1850):
+    df_conc_obs.loc[year, :] = np.nan
+df_conc_obs.sort_index(inplace=True)
+df_conc_obs.interpolate(inplace=True)
+
+input_obs = {}
+input_obs['CH4'] = df_conc_obs['CH4'].values
+input_obs['N2O'] = df_conc_obs['N2O'].values
+input_obs['VOC'] = df_emis_obs['NMVOC'].values
+input_obs['NOx'] = df_emis_obs['NOx'].values
+input_obs['temp'] = gmst
+
+df_primap = pd.read_csv('../../../../../data/emissions/primap-hist-2.4.2_1750-2021.csv', index_col=0)
+emis_ch4_obs = df_primap.loc['CH4', :].values
+emis_ch4_obs = np.append(emis_ch4_obs, emis_ch4_obs[-1])
+
+hc_eesc = {}
+total_eesc = 0
+
+for species in hc_species:
+    hc_eesc[species] = calculate_eesc(
+        df_conc_obs[species].values,
+        fractional_release[species],
+        fractional_release["CFC-11"],
+        cl_atoms[species],
+        br_atoms[species],
+    )
+    total_eesc = total_eesc + hc_eesc[species]
+
+total_eesc_1850 = total_eesc[100]
+input_obs["HC"] = total_eesc
+print(input_obs)
 invect = np.array(
-    [input["CH4"], input["NOx"], input["VOC"], input["HC"], input["N2O"], input["temp"]]
+    [input_obs["CH4"], input_obs["NOx"], input_obs["VOC"], input_obs["HC"], input_obs["N2O"], input_obs["temp"]]
 )
 
+import sys
+sys.exit()
 
 def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
     conc_ch4 = np.zeros(273)
