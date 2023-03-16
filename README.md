@@ -50,6 +50,7 @@ The output will be produced in `output/fair-X.X.X/vY.Y.Y/Z/` where X is the FaIR
 1. Create the `.env` file - see above
 2. Check the recipe inside the `run` bash script
 3. ./run
+4. ./create_zenodo_zip
 
 Scripts can be run individually, but must be run from the directories in which they reside (5 subdirectories deep).
 
@@ -97,6 +98,9 @@ As v1.0 with following fixes and improvements:
 
 ### Constraint sets:
 Tag micro versions here along with descriptions.
+
+#### GCP_2022 (v1.1.1)
+Same as v1.0.2.
 
 #### AR6_updated (v1.1.0)
 Same constraints as v1.0.
