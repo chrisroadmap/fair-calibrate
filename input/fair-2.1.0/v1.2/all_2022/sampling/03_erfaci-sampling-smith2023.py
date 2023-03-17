@@ -49,6 +49,7 @@ constraint_set = os.getenv("CONSTRAINT_SET")
 samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
+datadir = os.getenv("DATADIR")
 
 print("Sampling aerosol cloud interactions...")
 
@@ -90,6 +91,8 @@ for model in models:
 rcmip_emissions_file = pooch.retrieve(
     url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
     known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
+    progressbar=progress,
+    path=datadir
 )
 
 emis_df = pd.read_csv(rcmip_emissions_file)

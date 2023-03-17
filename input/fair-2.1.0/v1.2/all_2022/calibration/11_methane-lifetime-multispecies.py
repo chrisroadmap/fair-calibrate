@@ -36,6 +36,7 @@ import pandas as pd
 import pooch
 import scipy.optimize
 import scipy.stats
+import xarray as xr
 from dotenv import load_dotenv
 from fair import __version__
 
@@ -47,6 +48,9 @@ cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")
 constraint_set = os.getenv("CONSTRAINT_SET")
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
+progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
+datadir = os.getenv("DATADIR")
+
 assert fair_v == __version__
 pl.style.use("../../../../../defaults.mplstyle")
 
@@ -63,11 +67,15 @@ gmst[273:351] = np.linspace(gmst[268:273].mean(), 4, 78)
 rcmip_emissions_file = pooch.retrieve(
     url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
     known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
+    path=datadir,
+    progressbar=progress
 )
 
 rcmip_concentration_file = pooch.retrieve(
     url=("doi:10.5281/zenodo.4589756/" "rcmip-concentrations-annual-means-v5-1-0.csv"),
     known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
+    path=datadir,
+    progressbar=progress
 )
 
 df_emis = pd.read_csv(rcmip_emissions_file)
@@ -334,6 +342,7 @@ parameters["AerChemMIP_mean"] = {
     "HC": -0.037,
     "N2O": -0.02,
     "temp": -0.006,
+    "natural": 200,
 }
 
 parameters["UKESM"] = {
@@ -345,6 +354,7 @@ parameters["UKESM"] = {
     "HC": -0.049,
     "N2O": -0.012,
     "temp": -0.0408,
+    "natural": 250,
 }
 
 # we'll exclude BCC and CESM as they don't have VOC expt and that's important.
@@ -359,6 +369,7 @@ parameters["GFDL"] = {
     "HC": -0.075,
     "N2O": 0,  # missing
     "temp": -0.0205,
+    "natural": 200,
 }
 
 parameters["GISS"] = {
@@ -370,6 +381,7 @@ parameters["GISS"] = {
     "HC": -0.006,
     "N2O": -0.039,
     "temp": -0.0333,
+    "natural": 140,
 }
 
 parameters["MRI"] = {
@@ -381,6 +393,7 @@ parameters["MRI"] = {
     "HC": -0.024,
     "N2O": -0.013,
     "temp": 0,  # missing
+    "natural": 190,
 }
 
 lifetime_scaling = {}
@@ -442,19 +455,19 @@ emis_ch4 = (
 
 burden_per_emission = 1 / (5.1352e18 / 1e18 * 16.043 / 28.97)
 partition_fraction = 1
-pre_industrial_concentration = 729.2
-natural_emissions_adjustment = emis_ch4[0]
+pre_industrial_concentration = 0#729.2
+natural_emissions_adjustment = 0#emis_ch4[0]
 
 conc_ch4 = {}
 
 
 for model in models:
     conc_ch4[model] = np.zeros(351)
-    gas_boxes = 0
-    airborne_emissions = 0
+    gas_boxes = 729.2 / burden_per_emission     # should use correct pi value for CMIP6
+    airborne_emissions = 729.2 / burden_per_emission
     for i in range(351):
         conc_ch4[model][i], gas_boxes, airborne_emissions = one_box(
-            emis_ch4[i],
+            emis_ch4[i] + parameters[model]["natural"],
             gas_boxes,
             airborne_emissions,
             burden_per_emission,
@@ -488,7 +501,7 @@ if plots:
 
 # Find least squares sensible historical fit using best estimate emissions and
 # concentrations (not those from RCMIP)
-df_emis_obs = pd.read_csv('../../../../../data/emissions/slcf_emissions_1750-2022.csv', index_col=0)
+df_emis_obs = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv', index_col=0)
 df_conc_obs = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
 for year in range(1751, 1850):
     df_conc_obs.loc[year, :] = np.nan
@@ -502,9 +515,8 @@ input_obs['VOC'] = df_emis_obs['NMVOC'].values
 input_obs['NOx'] = df_emis_obs['NOx'].values
 input_obs['temp'] = gmst[:273]
 
-df_primap = pd.read_csv('../../../../../data/emissions/primap-hist-2.4.2_1750-2021.csv', index_col=0)
-emis_ch4_obs = df_primap.loc['CH4', :].values
-emis_ch4_obs = np.append(emis_ch4_obs, emis_ch4_obs[-1])
+df_ch4emis_obs = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap_ceds_gfed_1750-2022.csv')
+emis_ch4_obs = df_ch4emis_obs.loc[df_ch4emis_obs['Variable']=='Emissions|CH4', '1750':'2022'].values.squeeze()
 
 hc_eesc = {}
 total_eesc = 0
@@ -529,7 +541,6 @@ invect = np.array(
 normalisation_obs = {}
 for species in ["CH4", "N2O", "VOC", "NOx", "HC"]:
     normalisation_obs[species] = input_obs[species][264] - input_obs[species][100]
-    print(species, normalisation_obs[species])
 normalisation_obs["temp"] = 1
 
 # baselines are 1850! so "base" lifetime out is for 1750!
@@ -537,11 +548,12 @@ baseline_obs = {}
 for species in ["CH4", "N2O", "VOC", "NOx", "HC"]:
     baseline_obs[species] = input_obs[species][100]
 baseline_obs["temp"] = 0
+natural_emissions_adjustment = emis_ch4_obs[0]
 
-def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
+def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase, rnat):
     conc_ch4 = np.zeros(273)
-    gas_boxes = 0
-    airborne_emissions = 0
+    gas_boxes = 729.2 / burden_per_emission     # should use correct pi value for CMIP6
+    airborne_emissions = 729.2 / burden_per_emission
 
     params = {}
     params["CH4"] = rch4
@@ -550,6 +562,7 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
     params["HC"] = rhc
     params["N2O"] = rn2o
     params["temp"] = rtemp
+    params["natural"] = rnat
 
     inp = {}
     inp["CH4"] = x[0]
@@ -568,27 +581,28 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
 
     for i in range(273):
         conc_ch4[i], gas_boxes, airborne_emissions = one_box(
-            emis_ch4_obs[i],
+            emis_ch4_obs[i] + rnat,
             gas_boxes,
             airborne_emissions,
             burden_per_emission,
             rbase,
             lifetime_scaling[i],
             partition_fraction,
-            pre_industrial_concentration,
+            pre_industrial_concentration=0,
             timestep=1,
-            natural_emissions_adjustment=natural_emissions_adjustment,
+            natural_emissions_adjustment=0#natural_emissions_adjustment,
         )
     return conc_ch4
 
 
+# natural bounds from global methane budget (part of GCP)
 p, cov = scipy.optimize.curve_fit(
     fit_precursors,
     invect[:, :273],
     input_obs["CH4"][:273],
     bounds=(  # AerChemMIP min to max range
-        (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3),
-        (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4),
+        (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3, 174),
+        (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4, 258),
     ),
 )
 
@@ -602,22 +616,13 @@ parameters["best_fit"] = {
     "HC": p[3],
     "N2O": p[4],
     "temp": p[5],
+    "nat": p[7]
 }
 
 # these are the feedback values per ppb / per Mt that go into FaIR
+print(parameters["best_fit"])
 for specie in ["CH4", "NOx", "VOC", "HC", "N2O"]:
     print(specie, parameters["best_fit"][specie] / normalisation_obs[specie])
-
-# beta_hc_sum = 0
-#
-# for species in hc_species:
-#     beta_hc = p[3] * (
-#         (hc_eesc[species][264] - hc_eesc[species][100])
-#         / (total_eesc[264] - total_eesc[100])
-#     )
-#     print(species, beta_hc)
-#     beta_hc_sum = beta_hc_sum + beta_hc
-# print(beta_hc_sum)
 
 lifetime_scaling["best_fit"] = alpha_scaling_exp(
     input_obs,
@@ -651,29 +656,34 @@ if plots:
     )
     pl.close()
 
-conc_ch4["best_fit"] = np.zeros(351)
-gas_boxes = 0
-airborne_emissions = 0
+conc_ch4["best_fit"] = np.zeros(273)
+gas_boxes = 729.2 / burden_per_emission
+airborne_emissions = 729.2/burden_per_emission
+
+emis_ch4_obs = df_ch4emis_obs.loc[df_ch4emis_obs['Variable']=='Emissions|CH4', '1750':'2022'].values.squeeze()
+
 for i in range(273):
     conc_ch4["best_fit"][i], gas_boxes, airborne_emissions = one_box(
-        emis_ch4_obs[i],
+        emis_ch4_obs[i] + parameters["best_fit"]["nat"],
         gas_boxes,
         airborne_emissions,
         burden_per_emission,
         parameters["best_fit"]["base"],
         lifetime_scaling["best_fit"][i],
         partition_fraction,
-        pre_industrial_concentration,
+        pre_industrial_concentration=0,
         timestep=1,
-        natural_emissions_adjustment=natural_emissions_adjustment,
+        natural_emissions_adjustment=0#natural_emissions_adjustment,
     )
 
 
 # ### Compare the SSP3-7.0 fit to other SSPs
-#
-# should do something with the temperature projections here
 
 emis_ch4_ssps = {}
+emis_nox_ssps = {}
+emis_voc_ssps = {}
+conc_n2o_ssps = {}
+conc_eesc_ssps = {}
 
 for ssp in [
     "ssp119",
@@ -685,17 +695,46 @@ for ssp in [
     "ssp534-over",
     "ssp585",
 ]:
-    emis_ch4_ssps[ssp] = (
-        df_emis.loc[
-            (df_emis["Scenario"] == ssp)
-            & (df_emis["Variable"].str.endswith("CH4"))
-            & (df_emis["Region"] == "World"),
-            "1750":"2100",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
+    da_emissions = xr.load_dataarray(
+        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+        "ssp_emissions_1750-2500.nc"
     )
 
+    da = da_emissions.loc[dict(config="unspecified", scenario=ssp, specie='CH4')][:351, ...]
+
+    emis_ch4_ssps[ssp] = da_emissions.loc[dict(config="unspecified", scenario=ssp, specie='CH4')].data[:351]
+    emis_nox_ssps[ssp] = da_emissions.loc[dict(config="unspecified", scenario=ssp, specie='NOx')].data[:351]
+    emis_voc_ssps[ssp] = da_emissions.loc[dict(config="unspecified", scenario=ssp, specie='VOC')].data[:351]
+    conc_n2o_ssps[ssp] = df_conc.loc[
+            (df_conc["Scenario"] == ssp)
+            & (df_conc["Variable"].str.endswith("N2O"))
+            & (df_conc["Region"] == "World"),
+            "1750":"2100",
+        ].interpolate(axis=1).values.squeeze()
+    total_eesc=0
+    for species in hc_species:
+        species_rcmip_name = species.replace("-", "")
+        tempinput = (
+            df_conc.loc[
+                (df_conc["Scenario"] == ssp)
+                & (df_conc["Variable"].str.endswith(species_rcmip_name))
+                & (df_conc["Region"] == "World"),
+                "1750":"2100",
+            ]
+            .interpolate(axis=1)
+            .values.squeeze()
+        )
+        tempeesc = calculate_eesc(
+            tempinput,
+            fractional_release[species],
+            fractional_release["CFC-11"],
+            cl_atoms[species],
+            br_atoms[species],
+        )
+        total_eesc = total_eesc + tempeesc
+    
+    conc_eesc_ssps[ssp] = total_eesc
+
 for ssp in [
     "ssp119",
     "ssp126",
@@ -706,21 +745,55 @@ for ssp in [
     "ssp534-over",
     "ssp585",
 ]:
-    conc_ch4[ssp] = np.zeros(273)
-    gas_boxes = 0
-    airborne_emissions = 0
-    for i in range(273):
+
+    
+
+    conc_ch4[ssp] = np.zeros(351)
+    conc_ch4[ssp][0] = 729.2
+    gas_boxes = 729.2/burden_per_emission
+    airborne_emissions = 729.2/burden_per_emission
+    norm = {}       
+    norm['CH4'] = normalisation_obs['CH4']
+    norm['N2O'] = conc_n2o_ssps[ssp][264] - conc_n2o_ssps[ssp][100]
+    norm['VOC'] = normalisation_obs['VOC']
+    norm['NOx'] = normalisation_obs['NOx']
+    norm['HC'] = conc_eesc_ssps[ssp][264] - conc_eesc_ssps[ssp][100]
+    norm["temp"] = 1
+    
+    bl = {}
+    bl['CH4'] = baseline_obs['CH4']
+    bl['VOC'] = baseline_obs['VOC']
+    bl['NOx'] = baseline_obs['NOx']
+    bl['N2O'] = conc_n2o_ssps[ssp][100]
+    bl['HC'] = conc_eesc_ssps[ssp][100]
+    bl['temp'] = 0
+
+    for i in range(351):
+        inp = {}
+        inp["CH4"] = conc_ch4[ssp][i-1]
+        inp["N2O"] = conc_n2o_ssps[ssp][i]
+        inp["HC"] = conc_eesc_ssps[ssp][i]
+        inp["NOx"] = emis_nox_ssps[ssp][i]
+        inp["VOC"] = emis_voc_ssps[ssp][i]
+        inp["temp"] = gmst[i]
+
+        ls = alpha_scaling_exp(
+            inp,
+            bl,
+            norm,
+            parameters["best_fit"],
+        )
         conc_ch4[ssp][i], gas_boxes, airborne_emissions = one_box(
-            emis_ch4_ssps[ssp][i],
+            emis_ch4_ssps[ssp][i]+parameters["best_fit"]["nat"],
             gas_boxes,
             airborne_emissions,
             burden_per_emission,
             parameters["best_fit"]["base"],
-            lifetime_scaling["best_fit"][i],
+            ls,
             partition_fraction,
-            pre_industrial_concentration,
+            pre_industrial_concentration=0,
             timestep=1,
-            natural_emissions_adjustment=natural_emissions_adjustment,
+            natural_emissions_adjustment=0#natural_emissions_adjustment,
         )
 
 # ### Four panel plot
@@ -756,7 +829,7 @@ if plots:
     for model in models:
         ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
     ax[1].plot(
-        np.arange(1750, 2101), conc_ch4["best_fit"], color="0.5", label="Best fit"
+        np.arange(1750, 2023), conc_ch4["best_fit"], color="0.5", label="Best fit"
     )
     ax[1].plot(
         np.arange(1750, 2101), input["CH4"], color="k", label="observations +\nMAGICC6"
@@ -777,7 +850,7 @@ if plots:
         "ssp585",
     ]:
         ax[2].plot(
-            np.arange(1750, 2023), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp]
+            np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp]
         )
     ax[2].set_ylabel("ppb")
     ax[2].set_title("(c) Best fit CH$_4$ projections")

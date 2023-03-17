@@ -5,7 +5,7 @@ channels:
 dependencies:
   - black
   - flake8
-  - iris
+  - h5py
   - isort
   - matplotlib
   - netCDF4

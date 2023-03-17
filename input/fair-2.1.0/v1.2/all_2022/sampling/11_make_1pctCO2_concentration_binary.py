@@ -20,6 +20,8 @@ cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")
 constraint_set = os.getenv("CONSTRAINT_SET")
 samples = int(os.getenv("PRIOR_SAMPLES"))
+progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
+datadir = os.getenv("DATADIR")
 
 assert fair_v == __version__
 
@@ -63,6 +65,8 @@ f.allocate()
 rcmip_concentration_file = pooch.retrieve(
     url=("doi:10.5281/zenodo.4589756/" "rcmip-concentrations-annual-means-v5-1-0.csv"),
     known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
+    progressbar=progress,
+    path=datadir
 )
 
 df_conc = pd.read_csv(rcmip_concentration_file)

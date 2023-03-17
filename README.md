@@ -47,6 +47,7 @@ FRONT_PARALLEL=0             # after serial runs, how many parallel runs to test
 PLOTS=True                   # Produce plots?
 PROGRESS=False               # show progress bar? (good for interactive, bad
                              # on HPC batch jobs)
+DATADIR=/path/to/data        # A location on disk to save downloaded data
 ```
 
 The output will be produced in `output/fair-X.X.X/vY.Y.Y/Z/` where X is the FaIR version, Y is the calibration version and Z is the constraint set used. Multiple constraint philosphies can be applied for the same set of calibrations (e.g. AR6, 2022 observations, etc.). No posterior data will be committed to Git owing to size, but the intention is that the full output data will be on Zenodo.
