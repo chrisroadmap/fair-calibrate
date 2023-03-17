@@ -500,7 +500,7 @@ input_obs['CH4'] = df_conc_obs['CH4'].values
 input_obs['N2O'] = df_conc_obs['N2O'].values
 input_obs['VOC'] = df_emis_obs['NMVOC'].values
 input_obs['NOx'] = df_emis_obs['NOx'].values
-input_obs['temp'] = gmst
+input_obs['temp'] = gmst[:273]
 
 df_primap = pd.read_csv('../../../../../data/emissions/primap-hist-2.4.2_1750-2021.csv', index_col=0)
 emis_ch4_obs = df_primap.loc['CH4', :].values
@@ -521,13 +521,22 @@ for species in hc_species:
 
 total_eesc_1850 = total_eesc[100]
 input_obs["HC"] = total_eesc
-print(input_obs)
 invect = np.array(
     [input_obs["CH4"], input_obs["NOx"], input_obs["VOC"], input_obs["HC"], input_obs["N2O"], input_obs["temp"]]
 )
 
-import sys
-sys.exit()
+# normalisation = ppb / ppt / Mt yr-1 increase from 1850 to 2014
+normalisation_obs = {}
+for species in ["CH4", "N2O", "VOC", "NOx", "HC"]:
+    normalisation_obs[species] = input_obs[species][264] - input_obs[species][100]
+    print(species, normalisation_obs[species])
+normalisation_obs["temp"] = 1
+
+# baselines are 1850! so "base" lifetime out is for 1750!
+baseline_obs = {}
+for species in ["CH4", "N2O", "VOC", "NOx", "HC"]:
+    baseline_obs[species] = input_obs[species][100]
+baseline_obs["temp"] = 0
 
 def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
     conc_ch4 = np.zeros(273)
@@ -552,14 +561,14 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
 
     lifetime_scaling = alpha_scaling_exp(
         inp,
-        baseline,
-        normalisation,
+        baseline_obs,
+        normalisation_obs,
         params,
     )
 
     for i in range(273):
         conc_ch4[i], gas_boxes, airborne_emissions = one_box(
-            emis_ch4[i],
+            emis_ch4_obs[i],
             gas_boxes,
             airborne_emissions,
             burden_per_emission,
@@ -576,7 +585,7 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
 p, cov = scipy.optimize.curve_fit(
     fit_precursors,
     invect[:, :273],
-    input["CH4"][:273],
+    input_obs["CH4"][:273],
     bounds=(  # AerChemMIP min to max range
         (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3),
         (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4),
@@ -597,23 +606,23 @@ parameters["best_fit"] = {
 
 # these are the feedback values per ppb / per Mt that go into FaIR
 for specie in ["CH4", "NOx", "VOC", "HC", "N2O"]:
-    print(specie, parameters["best_fit"][specie] / normalisation[specie])
+    print(specie, parameters["best_fit"][specie] / normalisation_obs[specie])
 
-beta_hc_sum = 0
-
-for species in hc_species:
-    beta_hc = p[3] * (
-        (hc_eesc[species][264] - hc_eesc[species][100])
-        / (total_eesc[264] - total_eesc[100])
-    )
-    print(species, beta_hc)
-    beta_hc_sum = beta_hc_sum + beta_hc
-print(beta_hc_sum)
+# beta_hc_sum = 0
+#
+# for species in hc_species:
+#     beta_hc = p[3] * (
+#         (hc_eesc[species][264] - hc_eesc[species][100])
+#         / (total_eesc[264] - total_eesc[100])
+#     )
+#     print(species, beta_hc)
+#     beta_hc_sum = beta_hc_sum + beta_hc
+# print(beta_hc_sum)
 
 lifetime_scaling["best_fit"] = alpha_scaling_exp(
-    input,
-    baseline,
-    normalisation,
+    input_obs,
+    baseline_obs,
+    normalisation_obs,
     parameters["best_fit"],
 )
 
@@ -626,7 +635,7 @@ print("methane lifetime 1850:", parameters["best_fit"]["base"])
 
 if plots:
     pl.plot(
-        np.arange(1750, 2101),
+        np.arange(1750, 2023),
         lifetime_scaling["best_fit"] * parameters["best_fit"]["base"],
         label="best_fit",
     )
@@ -645,9 +654,9 @@ if plots:
 conc_ch4["best_fit"] = np.zeros(351)
 gas_boxes = 0
 airborne_emissions = 0
-for i in range(351):
+for i in range(273):
     conc_ch4["best_fit"][i], gas_boxes, airborne_emissions = one_box(
-        emis_ch4[i],
+        emis_ch4_obs[i],
         gas_boxes,
         airborne_emissions,
         burden_per_emission,
@@ -697,10 +706,10 @@ for ssp in [
     "ssp534-over",
     "ssp585",
 ]:
-    conc_ch4[ssp] = np.zeros(351)
+    conc_ch4[ssp] = np.zeros(273)
     gas_boxes = 0
     airborne_emissions = 0
-    for i in range(351):
+    for i in range(273):
         conc_ch4[ssp][i], gas_boxes, airborne_emissions = one_box(
             emis_ch4_ssps[ssp][i],
             gas_boxes,
@@ -735,7 +744,7 @@ if plots:
             label=model,
         )
     ax[0].plot(
-        np.arange(1750, 2101),
+        np.arange(1750, 2023),
         lifetime_scaling["best_fit"] * parameters["best_fit"]["base"],
         color="0.5",
         label="Best fit",
@@ -768,7 +777,7 @@ if plots:
         "ssp585",
     ]:
         ax[2].plot(
-            np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp]
+            np.arange(1750, 2023), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp]
         )
     ax[2].set_ylabel("ppb")
     ax[2].set_title("(c) Best fit CH$_4$ projections")
@@ -797,6 +806,10 @@ df = pd.DataFrame(
     out,
     columns=["base", "CH4", "NOx", "VOC", "HC", "N2O", "temp"],
     index=["historical_best"],
+)
+os.makedirs(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
+    exist_ok=True
 )
 df.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
