@@ -732,7 +732,7 @@ for ssp in [
             br_atoms[species],
         )
         total_eesc = total_eesc + tempeesc
-    
+
     conc_eesc_ssps[ssp] = total_eesc
 
 for ssp in [
@@ -746,20 +746,20 @@ for ssp in [
     "ssp585",
 ]:
 
-    
+
 
     conc_ch4[ssp] = np.zeros(351)
     conc_ch4[ssp][0] = 729.2
     gas_boxes = 729.2/burden_per_emission
     airborne_emissions = 729.2/burden_per_emission
-    norm = {}       
+    norm = {}
     norm['CH4'] = normalisation_obs['CH4']
     norm['N2O'] = conc_n2o_ssps[ssp][264] - conc_n2o_ssps[ssp][100]
     norm['VOC'] = normalisation_obs['VOC']
     norm['NOx'] = normalisation_obs['NOx']
     norm['HC'] = conc_eesc_ssps[ssp][264] - conc_eesc_ssps[ssp][100]
     norm["temp"] = 1
-    
+
     bl = {}
     bl['CH4'] = baseline_obs['CH4']
     bl['VOC'] = baseline_obs['VOC']
@@ -869,15 +869,16 @@ if plots:
     pl.close()
 
 # these are the feedback values per ppb / per Mt that go into FaIR
-out = np.empty((1, 7))
+out = np.empty((1, 8))
 out[0, 0] = lifetime_scaling["best_fit"][0] * parameters["best_fit"]["base"]
 for i, specie in enumerate(["CH4", "NOx", "VOC", "HC", "N2O"]):
     out[0, i + 1] = parameters["best_fit"][specie] / normalisation[specie]
 out[0, 6] = parameters["best_fit"]["temp"]
+out[0, 7] = parameters["best_fit"]["nat"]
 
 df = pd.DataFrame(
     out,
-    columns=["base", "CH4", "NOx", "VOC", "HC", "N2O", "temp"],
+    columns=["base", "CH4", "NOx", "VOC", "HC", "N2O", "temp", "natural_emissions"],
     index=["historical_best"],
 )
 os.makedirs(
