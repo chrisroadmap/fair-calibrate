@@ -138,4 +138,4 @@ os.makedirs(
     exist_ok=True,
 )
 
-df_out.to_csv('../../../../../data/emissions/gfed4.1s_1997-2022.csv')
+gfed41s_df.to_csv('../../../../../data/emissions/gfed4.1s_1997-2022.csv')
