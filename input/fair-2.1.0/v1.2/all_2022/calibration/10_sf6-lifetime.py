@@ -3,6 +3,12 @@
 
 """Calibrate SF6 lifetime."""
 
+# Note:
+# there are likely missing sources in PRIMAP, because even with a very long (almost
+# infinite) lifetime we cannot get concentrations to match emissions.
+
+# therefore, use RCMIP emissions.
+
 import os
 
 import matplotlib.pyplot as pl
@@ -14,6 +20,7 @@ import scipy.stats
 import xarray as xr
 from dotenv import load_dotenv
 from fair import __version__
+from scipy.interpolate import interp1d
 
 load_dotenv()
 
@@ -73,6 +80,12 @@ df_conc_obs.interpolate(inplace=True)
 input_obs = {}
 input_obs['SF6'] = df_conc_obs['SF6'].values
 
+x = np.arange(1750.5, 2023)
+y = df_conc_obs['SF6'].values
+f = interp1d(x, y)
+input_obs['SF6'][1:] = f(np.arange(1751, 2023))
+input_obs['SF6'][0] = 0
+
 df_emis_obs = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap_ceds_gfed_1750-2022.csv')
 emis_obs = df_emis_obs.loc[df_emis_obs['Variable']=='Emissions|SF6', '1750':'2022'].values.squeeze()
 
@@ -87,13 +100,13 @@ pre_industrial_concentration = 0#729.2
 natural_emissions_adjustment = 0#emis_ch4[0]
 
 def fit_precursors(x, rbase):
-    conc_sf6 = np.zeros(93)
+    conc_sf6 = np.zeros(273)
     gas_boxes = 0
     airborne_emissions = 0
 
-    for i in range(93):
+    for i in range(273):
         conc_sf6[i], gas_boxes, airborne_emissions = one_box(
-            emis_obs[180+i],
+            emis_obs[i],
             gas_boxes,
             airborne_emissions,
             burden_per_emission,
@@ -110,8 +123,8 @@ def fit_precursors(x, rbase):
 # natural bounds from global methane budget (part of GCP)
 p, cov = scipy.optimize.curve_fit(
     fit_precursors,
-    emis_obs[180:],
-    input_obs["SF6"][180:],
+    emis_obs,
+    input_obs["SF6"],
 )
 
 parameters = {}
@@ -123,13 +136,13 @@ parameters["best_fit"] = {
 # these are the feedback values per ppb / per Mt that go into FaIR
 print(parameters["best_fit"])
 
-conc_sf6 = np.zeros(93)
+conc_sf6 = np.zeros(273)
 gas_boxes = 0
 airborne_emissions = 0
 
-for i in range(93):
+for i in range(273):
     conc_sf6[i], gas_boxes, airborne_emissions = one_box(
-        emis_obs[180+i],
+        emis_obs[i],
         gas_boxes,
         airborne_emissions,
         burden_per_emission,
@@ -145,7 +158,7 @@ if plots:
     fig, ax = pl.subplots(1, 1, figsize=(3.5, 3.5))
 
     ax.plot(
-        np.arange(1930, 2023), conc_sf6[:], color="0.5", label="Best fit"
+        np.arange(1930, 2023), conc_sf6[180:], color="0.5", label="Best fit"
     )
     ax.plot(
         np.arange(1930, 2023), input_obs["SF6"][180:], color="k", label="observations"
@@ -166,20 +179,20 @@ if plots:
     )
     pl.close()
 
-# these are the feedback values that go into FaIR
-out = np.empty((1, 1))
-out[0, 0] = parameters["best_fit"]["base"]
-
-df = pd.DataFrame(
-    out,
-    columns=["base"],
-    index=["historical_best"],
-)
-os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
-    exist_ok=True
-)
-df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-    "SF6_lifetime.csv"
-)
+# # these are the feedback values that go into FaIR
+# out = np.empty((1, 1))
+# out[0, 0] = parameters["best_fit"]["base"]
+#
+# df = pd.DataFrame(
+#     out,
+#     columns=["base"],
+#     index=["historical_best"],
+# )
+# os.makedirs(
+#     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
+#     exist_ok=True
+# )
+# df.to_csv(
+#     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+#     "SF6_lifetime.csv"
+# )
