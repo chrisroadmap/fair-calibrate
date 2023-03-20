@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Calibrate SF6 lifetime."""
+"""Convert concentrations of minor GHGs to equivalent emissions."""
 
-# Note:
-# there are likely missing sources in PRIMAP, because even with a very long (almost
-# infinite) lifetime we cannot get concentrations to match emissions.
+# In this calibration, we'll just take the species that appear in RCMIP otherwise
+# there's nothing to harmonize to.
 
-# therefore, use RCMIP emissions.
+# Lifetime defaults are from RCMIP and in FaIR already.
 
 import os
 
@@ -19,12 +18,12 @@ import scipy.optimize
 import scipy.stats
 import xarray as xr
 from dotenv import load_dotenv
-from fair import __version__
+from fair import FAIR, __version__
 from scipy.interpolate import interp1d
 
 load_dotenv()
 
-print("Calibrating SF6 lifetime...")
+print("Calculating historical equivalent emissions...")
 
 cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")
@@ -37,36 +36,58 @@ assert fair_v == __version__
 pl.style.use("../../../../../defaults.mplstyle")
 
 
-# put this into a simple one box model
-def one_box(
-    emissions,
-    gas_boxes_old,
-    airborne_emissions_old,
-    burden_per_emission,
-    lifetime,
-    alpha_lifetime,
-    partition_fraction,
-    pre_industrial_concentration,
-    timestep=1,
-    natural_emissions_adjustment=0,
-):
-    effective_lifetime = alpha_lifetime * lifetime
-    decay_rate = timestep / (effective_lifetime)
-    decay_factor = np.exp(-decay_rate)
-    gas_boxes_new = (
-        partition_fraction
-        * (emissions - natural_emissions_adjustment)
-        * 1
-        / decay_rate
-        * (1 - decay_factor)
-        * timestep
-        + gas_boxes_old * decay_factor
-    )
-    airborne_emissions_new = gas_boxes_new
-    concentration_out = (
-        pre_industrial_concentration + burden_per_emission * airborne_emissions_new
-    )
-    return concentration_out, gas_boxes_new, airborne_emissions_new
+f = FAIR()
+f.define_time(1750, 2023, 1)
+f.define_scenarios(["historical"])
+f.define_configs(["historical"])
+species = [
+    'CFC-11',
+    'CFC-12',
+    'CFC-113',
+    'CFC-114',
+    'CFC-115',
+    'HCFC-22',
+    'HCFC-141b',
+    'HCFC-142b',
+    'CCl4',
+    'CHCl3',
+    'CH2Cl2',
+    'CH3Cl',
+    'CH3CCl3',
+    'CH3Br',
+    'Halon-1202',
+    'Halon-1211',
+    'Halon-1301',
+    'Halon-2402',
+    'CF4',
+    'C2F6',
+    'C3F8',
+    'c-C4F8',
+    'C4F10',
+    'C5F12',
+    'C6F14',
+    'C7F16',
+    'C8F18',
+    'NF3',
+    'SF6',
+    'SO2F2',
+    'HFC-125',
+    'HFC-134a',
+    'HFC-143a',
+    'HFC-152a',
+    'HFC-227ea',
+    'HFC-23',
+    'HFC-236fa',
+    'HFC-245fa',
+    'HFC-32',
+    'HFC-365mfc',
+    'HFC-4310mee',
+]
+properties = {
+    
+}
+
+
 
 
 # Find least squares sensible historical fit using best estimate emissions and
