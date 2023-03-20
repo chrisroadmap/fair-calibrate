@@ -19,6 +19,7 @@ import scipy.stats
 import xarray as xr
 from dotenv import load_dotenv
 from fair import FAIR, __version__
+from fair.interface import fill
 from scipy.interpolate import interp1d
 
 load_dotenv()
@@ -36,8 +37,8 @@ assert fair_v == __version__
 pl.style.use("../../../../../defaults.mplstyle")
 
 
-f = FAIR()
-f.define_time(1750, 2023, 1)
+f = FAIR(temperature_prescribed=True)
+f.define_time(1750, 2022, 1)
 f.define_scenarios(["historical"])
 f.define_configs(["historical"])
 species = [
@@ -83,20 +84,96 @@ species = [
     'HFC-365mfc',
     'HFC-4310mee',
 ]
+
+# since we only care about back-calculated emissions and not interactions or
+# climate effects, treat everything as an F-gas which is inert
 properties = {
-    
+    specie: {
+        'type' : 'f-gas',
+        'input_mode': 'concentration',
+        'greenhouse_gas': True,
+        'aerosol_chemistry_from_emissions': False,
+        'aerosol_chemistry_from_concentration': False,
+    } for specie in species    
 }
 
+f.define_species(species, properties)
+f.allocate()
 
-
-
-# Find least squares sensible historical fit using best estimate emissions and
-# concentrations (not those from RCMIP)
+# Fill concentration time series with observed concentrations
+# bear in mind AR6 is mid-year, we shift back six months
 df_conc_obs = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
 for year in range(1751, 1850):
     df_conc_obs.loc[year, :] = np.nan
 df_conc_obs.sort_index(inplace=True)
 df_conc_obs.interpolate(inplace=True)
+
+# it's unclear whether the isomer of C6F14 should be included
+# Comparing to Meinshausen et al. 2017, I conclude it should be.
+# treat as a special case below
+obs_species = {specie: specie for specie in species}
+obs_species['C4F10'] = 'n-C4F10'
+obs_species['C5F12'] = 'n-C5F12'
+obs_species['HFC-4310mee'] = 'HFC-43-10mee'
+
+for specie in species:
+    if specie=='Halon-1202':
+        f.concentration.loc[
+            dict(
+                timebounds=slice(1750, 2023),
+                specie=specie,
+                scenario='historical',
+                config='historical',
+            )
+        ] = 0
+        continue
+    elif specie=='C6F14':
+        f.concentration.loc[
+            dict(
+                timebounds=slice(1751, 2023),
+                specie=specie,
+                scenario='historical',
+                config='historical',
+            )
+        ] = 0.5*(df_conc_obs.loc[1750:2021, 'n-C6F14'].values + df_conc_obs.loc[1751:2022, 'n-C6F14'].values + df_conc_obs.loc[1750:2021, 'i-C6F14'].values + df_conc_obs.loc[1751:2022, 'i-C6F14'].values)
+        f.concentration.loc[
+            dict(
+                timebounds=1750,
+                specie=specie,
+                scenario='historical',
+                config='historical',
+            )
+        ] = df_conc_obs.loc[1750, 'n-C6F14'] + df_conc_obs.loc[1750, 'i-C6F14']
+        continue
+
+    f.concentration.loc[
+        dict(
+            timebounds=slice(1751, 2023),
+            specie=specie,
+            scenario='historical',
+            config='historical',
+        )
+    ] = 0.5*(df_conc_obs.loc[1750:2021, obs_species[specie]].values + df_conc_obs.loc[1751:2022, obs_species[specie]].values)
+    f.concentration.loc[
+        dict(
+            timebounds=1750,
+            specie=specie,
+            scenario='historical',
+            config='historical',
+        )
+    ] = df_conc_obs.loc[1750, obs_species[specie]]
+
+print(f.concentration[0, ...])
+
+# default AR6 lifetime etc
+f.fill_species_configs()
+fill(f.temperature, 0)
+f.run(progress=1-progress)
+
+print(f.emissions[0, ...])
+
+import sys
+sys.exit()
 
 input_obs = {}
 input_obs['SF6'] = df_conc_obs['SF6'].values
