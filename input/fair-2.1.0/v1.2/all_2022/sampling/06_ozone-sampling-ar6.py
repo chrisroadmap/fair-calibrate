@@ -110,22 +110,12 @@ print("2014-1750 ozone ERF from Skeie:", o3total[264])
 print("2019-1750 ozone ERF from Skeie:", o3total[269])
 print("2014-1850 ozone ERF from Skeie:", o3total[264] - o3total[100])
 
-rcmip_emissions_file = pooch.retrieve(
-    url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
-    known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
-    progressbar = progress,
-    path = datadir
-)
-
-rcmip_concentration_file = pooch.retrieve(
-    url=("doi:10.5281/zenodo.4589756/" "rcmip-concentrations-annual-means-v5-1-0.csv"),
-    known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
-    progressbar=progress,
-    path=datadir
-)
-
-df_emis = pd.read_csv(rcmip_emissions_file)
-df_conc = pd.read_csv(rcmip_concentration_file)
+df_emis = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv', index_col=0)
+df_conc = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
+for year in range(1751, 1850):
+    df_conc.loc[year, :] = np.nan
+df_conc.sort_index(inplace=True)
+df_conc.interpolate(inplace=True)
 
 emitted_species = [
     "NOx",
@@ -176,82 +166,17 @@ hc_species = [
     "Halon-2402",
 ]
 
+name_conv = {specie: specie for specie in emitted_species}
+name_conv['VOC'] = 'NMVOC'
+
 species_out = {}
 for ispec, species in enumerate(emitted_species):
-    emis_in = (
-        df_emis.loc[
-            (df_emis["Scenario"] == "ssp245")
-            & (df_emis["Variable"].str.endswith("|" + species))
-            & (df_emis["Region"] == "World"),
-            "1750":"2020",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-    )
-    species_out[species] = emis_in[:-1]
-
-# Adjust NOx for units error in BB
-gfed_sectors = [
-    "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
-    "Emissions|NOx|MAGICC AFOLU|Forest Burning",
-    "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
-]
-species_out["NOx"] = (
-    df_emis.loc[
-        (df_emis["Scenario"] == "ssp245")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"].isin(gfed_sectors)),
-        "1750":"2020",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-    .sum(axis=0)
-    * 46.006
-    / 30.006
-    + df_emis.loc[
-        (df_emis["Scenario"] == "ssp245")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
-        "1750":"2020",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-    + df_emis.loc[
-        (df_emis["Scenario"] == "ssp245")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
-        "1750":"2020",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-)[:-1]
-
-
-# output_years = np.arange(1750, 2020)
-# conc_years = np.concatenate(([1750], np.arange(1850, 2020)))
-# for species in concentration_species:
-#    conc_in = df_conc.loc[:, species].values
-#    f = interp1d(conc_years, conc_in)
-#    species_out[species] = f(output_years)
+    species_out[species] = df_emis[name_conv[species]].values
 
 for ispec, species in enumerate(concentration_species):
-    species_rcmip_name = species.replace("-", "")
-    conc_in = (
-        df_conc.loc[
-            (df_conc["Scenario"] == "ssp245")
-            & (df_conc["Variable"].str.endswith("|" + species_rcmip_name))
-            & (df_conc["Region"] == "World"),
-            "1750":"2020",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-    )
-    species_out[species] = conc_in[:-1]
+    species_out[species] = df_conc[species].values
 
-print(species_out.keys())
-
-species_df = pd.DataFrame(species_out, index=range(1750, 2020))
+species_df = pd.DataFrame(species_out, index=range(1750, 2023))
 
 
 def calculate_eesc(
@@ -422,12 +347,12 @@ forcing = (
 )
 
 if plots:
-    pl.plot(np.arange(1750.5, 2020), forcing, label="best estimate fit")
+    pl.plot(np.arange(1750.5, 2023), forcing, label="best estimate fit")
     pl.plot(np.arange(1750.5, 2021), o3total, label="Skeie et al. 2020 mean")
     pl.legend()
     pl.title("Ozone forcing calibration to CMIP6 mean")
     pl.ylabel("W m$^{-2}$")
-    pl.xlim(1750, 2020)
+    pl.xlim(1750, 2023)
     pl.tight_layout()
     os.makedirs(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}", exist_ok=True

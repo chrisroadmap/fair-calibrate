@@ -26,22 +26,12 @@ samples = int(os.getenv("PRIOR_SAMPLES"))
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
-rcmip_emissions_file = pooch.retrieve(
-    url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
-    known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
-    progressbar=progress,
-    path=datadir
-)
-
-rcmip_concentration_file = pooch.retrieve(
-    url=("doi:10.5281/zenodo.4589756/" "rcmip-concentrations-annual-means-v5-1-0.csv"),
-    known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
-    progressbar=progress,
-    path=datadir
-)
-
-df_emis = pd.read_csv(rcmip_emissions_file)
-df_conc = pd.read_csv(rcmip_concentration_file)
+df_emis = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv', index_col=0)
+df_conc = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
+for year in range(1751, 1850):
+    df_conc.loc[year, :] = np.nan
+df_conc.sort_index(inplace=True)
+df_conc.interpolate(inplace=True)
 
 emitted_species = [
     "Sulfur",
@@ -96,76 +86,18 @@ hc_species = [
     "Halon-2402",
 ]
 
+name_conv = {specie: specie for specie in emitted_species}
+name_conv['Sulfur'] = 'SO2'
+name_conv['VOC'] = 'NMVOC'
+
 species_out = {}
 for ispec, species in enumerate(emitted_species):
-    species_rcmip_name = species.replace("-", "")
-    emis_in = (
-        df_emis.loc[
-            (df_emis["Scenario"] == "ssp245")
-            & (df_emis["Variable"].str.endswith("|" + species_rcmip_name))
-            & (df_emis["Region"] == "World"),
-            "1750":"2100",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-    )
-    species_out[species] = emis_in
-
-# Adjust NOx for units error in BB
-gfed_sectors = [
-    "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
-    "Emissions|NOx|MAGICC AFOLU|Forest Burning",
-    "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
-]
-
-species_out["NOx"] = (
-    df_emis.loc[
-        (df_emis["Scenario"] == "ssp370")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"].isin(gfed_sectors)),
-        "1750":"2100",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-    .sum(axis=0)
-    * 46.006
-    / 30.006
-    + df_emis.loc[
-        (df_emis["Scenario"] == "ssp370")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
-        "1750":"2100",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-    + df_emis.loc[
-        (df_emis["Scenario"] == "ssp370")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
-        "1750":"2100",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-)
-
+    species_out[species] = df_emis[name_conv[species]].values
 
 for ispec, species in enumerate(concentration_species):
-    species_rcmip_name = species.replace("-", "")
-    conc_in = (
-        df_conc.loc[
-            (df_conc["Scenario"] == "ssp245")
-            & (df_conc["Variable"].str.endswith("|" + species_rcmip_name))
-            & (df_conc["Region"] == "World"),
-            "1750":"2100",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-    )
-    species_out[species] = conc_in
+    species_out[species] = df_conc[species].values
 
-species_df = pd.DataFrame(species_out, index=range(1750, 2101))
-
+species_df = pd.DataFrame(species_out, index=range(1750, 2023))
 
 def calculate_eesc(
     concentration,

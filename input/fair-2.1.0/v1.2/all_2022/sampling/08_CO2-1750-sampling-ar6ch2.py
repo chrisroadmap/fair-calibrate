@@ -6,8 +6,6 @@
 # 1750 concentration was 278.3 ppm +/- 2.9 ppm (data provided by Jinho Ahn, IPCC AR6 WG1
 # Ch2).
 
-# In[ ]:
-
 import os
 
 import pandas as pd

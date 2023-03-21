@@ -88,6 +88,7 @@ for model in models:
     aci[model] = aci_temp / nruns
 
 
+# Calibrate on RCMIP
 rcmip_emissions_file = pooch.retrieve(
     url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
     known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
@@ -159,18 +160,6 @@ def aci_log1750(x, beta, n0, n1, n2):
     aci_1750 = beta * np.log(1 + so2[0] * n0 + bc[0] * n1 + oc[0] * n2)
     return aci - aci_1750
 
-
-df_ar6 = pd.read_csv(
-    "../../../../../data/forcing/table_A3.3_historical_ERF_1750-2019_best_estimate.csv"
-)
-
-params_ar6, cov = curve_fit(
-    aci_log1750,
-    [so2[:270], bc[:270], oc[:270]],
-    df_ar6["aerosol-cloud_interactions"].values,
-    bounds=((-np.inf, 0, 0, 0), (0, np.inf, np.inf, np.inf)),
-    max_nfev=10000,
-)
 
 if plots:
     colors = {
@@ -275,8 +264,16 @@ erfaci_sample = scipy.stats.uniform.rvs(
     size=samples, loc=-2.0, scale=2.0, random_state=71271
 )
 
+# Sampling with updated emissions.
+df_emis_obs = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv', index_col=0)
+
+# overwrite RCMIP
+so2 = df_emis_obs['SO2'].values
+bc = df_emis_obs['BC'].values
+oc = df_emis_obs['OC'].values
+
 beta = np.zeros(samples)
-erfaci = np.zeros((351, samples))
+#erfaci = np.zeros((273, samples))
 for i in tqdm(range(samples), desc="aci samples", disable=1 - progress):
     ts2010 = np.mean(
         aci_log(
@@ -301,20 +298,20 @@ for i in tqdm(range(samples), desc="aci samples", disable=1 - progress):
         aci_sample[1, i],
         aci_sample[2, i],
     )
-    erfaci[:, i] = (
-        (
-            aci_log(
-                [so2, bc, oc],
-                0.92,
-                aci_sample[0, i],
-                aci_sample[1, i],
-                aci_sample[2, i],
-            )
-            - ts1750
-        )
-        / (ts2010 - ts1850)
-        * (erfaci_sample[i])
-    )
+#    erfaci[:, i] = (
+#        (
+#            aci_log(
+#                [so2, bc, oc],
+#                0.92,
+#                aci_sample[0, i],
+#                aci_sample[1, i],
+#                aci_sample[2, i],
+#            )
+#            - ts1750
+#        )
+#        / (ts2010 - ts1850)
+#        * (erfaci_sample[i])
+#    )
     beta[i] = erfaci_sample[i] / (ts2010 - ts1750)
 
 
@@ -326,6 +323,8 @@ df = pd.DataFrame(
         "beta": beta,
     }
 )
+
+os.makedirs(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/")
 
 df.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
