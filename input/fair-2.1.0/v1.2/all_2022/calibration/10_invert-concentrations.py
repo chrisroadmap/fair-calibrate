@@ -19,7 +19,7 @@ import scipy.stats
 import xarray as xr
 from dotenv import load_dotenv
 from fair import FAIR, __version__
-from fair.interface import fill
+from fair.interface import fill, initialise
 from scipy.interpolate import interp1d
 
 load_dotenv()
@@ -163,21 +163,50 @@ for specie in species:
         )
     ] = df_conc_obs.loc[1750, obs_species[specie]]
 
-print(f.concentration[0, ...])
-
 
 # default AR6 lifetime etc
 
-# TODO: calculate steady state pre-industrial lifetime for each GHG
+# calculate steady state pre-industrial lifetime for each GHG
+# we do this by setting the initial gas box as c0/m, where c0 is the 
+# 1750 concentration and m is the conversion from emissions to concentrations
+# units.
+# We do away with the correction for concentration and emissions.
+
+# these constants are all defined in FaIR. Should probably import them
+m = 1/(5.1352 * f.species_configs['molecular_weight']/28.97)
+c1 = f.concentration[0, ...]
+
 f.fill_species_configs()
 for specie in species:
-    #fill(f.species_configs['baseline_concentration'], f.concentration.loc[dict(timebounds=1750, specie=specie, scenario='historical', config='historical')], specie=specie)
     fill(f.species_configs['baseline_concentration'], 0, specie=specie)
     fill(f.species_configs['baseline_emissions'], 0, specie=specie)
-fill(f.temperature, 0)
-f.run(progress=1-progress)
+    c1 = f.concentration.loc[
+        dict(
+            specie=specie,
+            timebounds=1750,
+            scenario='historical',
+            config='historical',
+        )
+    ]
+    m = 1/(5.1352 * f.species_configs['molecular_weight'].loc[
+        dict(specie=specie)            
+    ]/28.97)
+    initialise(
+        f.airborne_emissions, 
+        c1/m, 
+        specie=specie
+    )
+    initialise(
+        f.gas_partitions, 
+        np.array([c1/m, 0, 0, 0]),
+        specie=specie
+    )
 
-print(f.emissions[0, ...])
+# don't calculate warming; we have to initialise it otherwise FaIR will complain about
+# NaNs
+fill(f.temperature, 0)
+
+f.run(progress=1-progress)
 
 df_out = pd.DataFrame(
     f.emissions[:, 0, 0, :],
@@ -193,17 +222,3 @@ df_out.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
     "minor_ghg_inverse_1750-2021.csv"
 )
-# # these are the feedback values that go into FaIR
-# out = np.empty((1, 1))
-# out[0, 0] = parameters["best_fit"]["base"]
-#
-# df = pd.DataFrame(
-#     out,
-#     columns=["base"],
-#     index=["historical_best"],
-# )
-
-# df.to_csv(
-#     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-#     "SF6_lifetime.csv"
-# )

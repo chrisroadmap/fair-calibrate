@@ -60,8 +60,6 @@ variables = [
     "Emissions|CO2|AFOLU",
     "Emissions|CH4",
     "Emissions|N2O",
-    "Emissions|SF6",
-    "Emissions|NF3",
     "Emissions|Sulfur",
     "Emissions|CO",
     "Emissions|VOC",
@@ -76,8 +74,6 @@ var_units = {
     "Emissions|CO2|AFOLU": "Gt CO2/yr",
     "Emissions|CH4": "Mt CH4/yr",
     "Emissions|N2O": "Mt N2O/yr",
-    "Emissions|SF6": "kt SF6/yr",
-    "Emissions|NF3": "kt NF3/yr",
     "Emissions|Sulfur": "Mt SO2/yr",
     "Emissions|CO": "Mt CO/yr",
     "Emissions|VOC": "Mt VOC/yr",
@@ -95,8 +91,6 @@ rcmip_variables = [
     "Emissions|CO2|MAGICC AFOLU",
     "Emissions|CH4",
     "Emissions|N2O",
-    "Emissions|SF6",
-    "Emissions|NF3",
     "Emissions|Sulfur",
     "Emissions|CO",
     "Emissions|VOC",
@@ -107,13 +101,13 @@ rcmip_variables = [
 ]
 
 times = []
-years = range(1750, 2023)
+years = range(1750, 2022)
 for year in years:
     times.append(datetime.datetime(year, 1, 1))
     # they are really midyears, but we just want this to work
 
 times_future = []
-years_future = range(2022, 2501)
+years_future = range(2021, 2501)
 for year in years_future:
     times_future.append(datetime.datetime(year, 1, 1))
 
@@ -155,8 +149,6 @@ units = [
     "Gt CO2/yr",
     "Mt CH4/yr",
     "Mt N2O/yr",
-    "kt SF6/yr",
-    "kt NF3/yr",
     "Mt SO2/yr",
     "Mt CO/yr",
     "Mt VOC/yr",
@@ -231,17 +223,10 @@ overrides = pd.DataFrame(
             "method": "reduce_ratio_2150_cov",
             "variable": "Emissions|VOC",
         },
-        {
-            "method": "constant_ratio",
-            "variable": "Emissions|SF6",
-        },  # minor f-gas with low model reporting confidence
     ]
 )
 
-harmonisation_year = 2022
-
-pd.options.display.max_rows=4
-pd.options.display.max_columns=1000
+harmonisation_year = 2021
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -263,7 +248,7 @@ os.makedirs(
 )
 
 scenarios_harmonised.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/co2_ch4_n2o_sf6_nf3_slcfs_harmonized.csv", index=False
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/co2_ch4_n2o_slcfs_harmonized.csv", index=False
 )
 
 
@@ -274,8 +259,6 @@ fair_map = {
     "Emissions|CO2|AFOLU": "CO2 AFOLU",
     "Emissions|CH4": "CH4",
     "Emissions|N2O": "N2O",
-    "Emissions|SF6": "SF6",
-    "Emissions|NF3": "NF3",
     "Emissions|Sulfur": "Sulfur",
     "Emissions|CO": "CO",
     "Emissions|VOC": "VOC",
@@ -291,7 +274,7 @@ for scenario in scenarios:
         data_his = history.loc[
             (history["scenario"] == "GCP+PRIMAP+CEDS+GFED")
             & (history["variable"] == specie),
-            1750:2021,
+            1750:2020,
         ].values.squeeze()
         data_fut = scenarios_harmonised.loc[
             (scenarios_harmonised["scenario"] == scenario)
@@ -299,7 +282,7 @@ for scenario in scenarios:
                 scenarios_harmonised["variable"]
                 == specie
             ),
-            2022:2499,
+            2021:2499,
         ].values.squeeze()
         data = np.concatenate((data_his, data_fut))
         fill(
