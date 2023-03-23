@@ -254,7 +254,6 @@ fair_map["Emissions|CO2|AFOLU"] = "CO2 AFOLU"
 # fill emissions
 for scenario in scenarios:
     for specie in fair_map:
-        print(specie)
         data_his = history.loc[
             (history["scenario"] == "GCP+PRIMAP+CEDS+GFED")
             & (history["variable"] == specie),

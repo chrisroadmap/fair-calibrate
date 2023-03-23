@@ -205,6 +205,7 @@ for species in hc_species:
 total_eesc_2019, total_eesc_1750, -0.00808 / (total_eesc_2019 - total_eesc_1750)
 
 # these come from AR6 WG1, yes?
+# Yes! from https://github.com/sarambl/AR6_CH6_RCMIPFIGS/blob/master/ar6_ch6_rcmipfigs/data_out/fig6_12_ts15_historic_delta_GSAT/2019_ERF_est.csv
 erfari_emitted = pd.Series(
     {
         "Sulfur": -0.234228,
@@ -219,6 +220,9 @@ erfari_emitted = pd.Series(
         "Equivalent effective stratospheric chlorine": -0.00808,
     }
 )
+
+# TODO: probablistic based on Sara's data
+# https://github.com/sarambl/AR6_CH6_RCMIPFIGS/blob/master/ar6_ch6_rcmipfigs/data_out/fig6_12_ts15_historic_delta_GSAT/table_std_thornhill_collins_orignames.csv
 
 # erfari radiative efficiency per Mt or ppb or ppt
 re = erfari_emitted / (species_df.loc[2019, :] - species_df.loc[1750, :])

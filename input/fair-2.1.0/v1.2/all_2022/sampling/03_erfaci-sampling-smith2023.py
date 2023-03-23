@@ -155,10 +155,9 @@ for model in models:
     )
 
 
-def aci_log1750(x, beta, n0, n1, n2):
+def aci_log_nocorrect(x, beta, n0, n1, n2):
     aci = beta * np.log(1 + x[0] * n0 + x[1] * n1 + x[2] * n2)
-    aci_1750 = beta * np.log(1 + so2[0] * n0 + bc[0] * n1 + oc[0] * n2)
-    return aci - aci_1750
+    return aci
 
 
 if plots:
@@ -247,17 +246,17 @@ n0_samp = df_params["Sulfur"]
 n1_samp = df_params["BC"]
 n2_samp = df_params["OC"]
 
-kde = scipy.stats.gaussian_kde([n0_samp, n1_samp, n2_samp])
-aci_sample = kde.resample(size=samples * 4, seed=63648708)
+kde = scipy.stats.gaussian_kde(
+    [np.log(n0_samp), np.log(n1_samp), np.log(n2_samp)],
+    bw_method=0.1
+)
+aci_sample = kde.resample(size=samples * 1, seed=63648708)
 
-aci_sample[1, :]
-
-aci_sample[0, aci_sample[0, :] < 0] = np.nan
-aci_sample[1, aci_sample[1, :] < 0] = np.nan
-aci_sample[2, aci_sample[2, :] < 0] = np.nan
-
-mask = np.any(np.isnan(aci_sample), axis=0)
-aci_sample = aci_sample[:, ~mask]
+#aci_sample[0, aci_sample[0, :] < 0] = np.nan
+#aci_sample[1, aci_sample[1, :] < 0] = np.nan
+#aci_sample[2, aci_sample[2, :] < 0] = np.nan
+#mask = np.any(np.isnan(aci_sample), axis=0)
+#aci_sample = aci_sample[:, ~mask]
 
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 erfaci_sample = scipy.stats.uniform.rvs(
@@ -276,50 +275,28 @@ beta = np.zeros(samples)
 #erfaci = np.zeros((273, samples))
 for i in tqdm(range(samples), desc="aci samples", disable=1 - progress):
     ts2010 = np.mean(
-        aci_log(
+        aci_log_nocorrect(
             [so2[255:265], bc[255:265], oc[255:265]],
-            0.92,
-            aci_sample[0, i],
-            aci_sample[1, i],
-            aci_sample[2, i],
+            1.1,
+            np.exp(aci_sample[0, i]),
+            np.exp(aci_sample[1, i]),
+            np.exp(aci_sample[2, i]),
         )
     )
-    ts1850 = aci_log(
-        [so2[100], bc[100], oc[100]],
-        0.92,
-        aci_sample[0, i],
-        aci_sample[1, i],
-        aci_sample[2, i],
-    )
-    ts1750 = aci_log(
+    ts1750 = aci_log_nocorrect(
         [so2[0], bc[0], oc[0]],
-        0.92,
-        aci_sample[0, i],
-        aci_sample[1, i],
-        aci_sample[2, i],
+        1.1,
+        np.exp(aci_sample[0, i]),
+        np.exp(aci_sample[1, i]),
+        np.exp(aci_sample[2, i]),
     )
-#    erfaci[:, i] = (
-#        (
-#            aci_log(
-#                [so2, bc, oc],
-#                0.92,
-#                aci_sample[0, i],
-#                aci_sample[1, i],
-#                aci_sample[2, i],
-#            )
-#            - ts1750
-#        )
-#        / (ts2010 - ts1850)
-#        * (erfaci_sample[i])
-#    )
     beta[i] = erfaci_sample[i] / (ts2010 - ts1750)
-
 
 df = pd.DataFrame(
     {
-        "shape_so2": aci_sample[0, :samples],
-        "shape_bc": aci_sample[1, :samples],
-        "shape_oc": aci_sample[2, :samples],
+        "shape_so2": np.exp(aci_sample[0, :samples]),
+        "shape_bc": np.exp(aci_sample[1, :samples]),
+        "shape_oc": np.exp(aci_sample[2, :samples]),
         "beta": beta,
     }
 )

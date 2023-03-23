@@ -317,7 +317,7 @@ p, cov = curve_fit(
     fit_precursors,
     ts[:270, :].T - ts[0:1, :].T,
     o3total[:270] - o3total[0],
-    bounds=(  # assumed likely range from Thornhill - maybe could be wider?
+    bounds=(  # very likely range from Thornhill - maybe could be wider?
         (
             0.09 / delta_Cch4 / fac_cmip6_skeie,
             0.01 / delta_Cn2o / fac_cmip6_skeie,
