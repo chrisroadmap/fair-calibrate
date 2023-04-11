@@ -5,7 +5,7 @@
 # no longer be current. And it should be a new minor release of the calibration if
 # data is updated.
 
-# Here, we use v2.4.1.
+# Here, we use v2.4.2.
 
 import os
 from pathlib import PurePath
@@ -70,4 +70,3 @@ os.makedirs(
 )
 
 df_out.to_csv('../../../../../data/emissions/primap-hist-2.4.2_1750-2021.csv')
-
