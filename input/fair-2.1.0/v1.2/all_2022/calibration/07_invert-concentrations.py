@@ -102,6 +102,8 @@ f.allocate()
 
 # Fill concentration time series with observed concentrations
 # bear in mind AR6 is mid-year, we shift back six months
+
+# TODO: update with the DOI from Climate Indicator Project
 df_conc_obs = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
 for year in range(1751, 1850):
     df_conc_obs.loc[year, :] = np.nan
@@ -167,7 +169,7 @@ for specie in species:
 # default AR6 lifetime etc
 
 # calculate steady state pre-industrial lifetime for each GHG
-# we do this by setting the initial gas box as c0/m, where c0 is the 
+# we do this by setting the initial gas box as c0/m, where c0 is the
 # 1750 concentration and m is the conversion from emissions to concentrations
 # units.
 # We do away with the correction for concentration and emissions.
@@ -189,15 +191,15 @@ for specie in species:
         )
     ]
     m = 1/(5.1352 * f.species_configs['molecular_weight'].loc[
-        dict(specie=specie)            
+        dict(specie=specie)
     ]/28.97)
     initialise(
-        f.airborne_emissions, 
-        c1/m, 
+        f.airborne_emissions,
+        c1/m,
         specie=specie
     )
     initialise(
-        f.gas_partitions, 
+        f.gas_partitions,
         np.array([c1/m, 0, 0, 0]),
         specie=specie
     )

@@ -2,12 +2,18 @@
 # coding: utf-8
 
 """Aerosol-radiation calibration."""
-#
-# Use the AR6 per-species ERFari calibrations, from Chapter 6 Fig. 6.12. This includes
-# contibutions from CH4, N2O and HCs.
-#
-# The uncertainty is uniform for each specie, a factor of two. This needs to be
-# documented in paper.
+# In AR6, ERFari was based on emissions to forcing coefficients from Myhre et al (2013)
+# https://acp.copernicus.org/articles/13/1853/2013/. At the time, I deemed there not
+# sufficient evidence from CMIP6 AerChemMIP models or any other sources to update these.
+# The uncertainty ranges from each precursor were expanded slightly compared to Myhre et
+# al., in order to reproduce the overall ERFari uncertainty assessment (assumed that
+# uncertainties in individual components are uncorrelated).
+
+# Following AR6 and a re-calibration of FaIR, I now use Bill Collins/Terje Bertnsen/
+# Sara Blichner/Sophie Szopa's chapter 6 correspondences of emissions or concentrations
+# to forcing.
+
+# Rescale to the assessed forcings of -0.3 W/m2 for ERFari 2005-14
 
 import os
 
@@ -32,6 +38,26 @@ for year in range(1751, 1850):
     df_conc.loc[year, :] = np.nan
 df_conc.sort_index(inplace=True)
 df_conc.interpolate(inplace=True)
+
+# these are the present day ERFari which comes from AR6 WG1
+# source: https://github.com/sarambl/AR6_CH6_RCMIPFIGS/blob/master/ar6_ch6_rcmipfigs/
+# data_out/fig6_12_ts15_historic_delta_GSAT/2019_ERF_est.csv
+# they sum to exactly -0.22 W/m2, for 2019
+# Calculate a radiative efficiency for each species from CEDS and updated
+# concentrations.
+df_ari_emitted_mean = pd.read_csv('../../../../../data/forcing/table_mean_thornhill_collins_orignames.csv', index_col=0)
+erfari_emitted = pd.Series(df_ari_emitted_mean['Aerosol'])
+erfari_emitted.rename_axis(None, inplace=True)
+erfari_emitted.rename({'HC': 'EESC', 'SO2': 'Sulfur'}, inplace=True)
+print(erfari_emitted)
+
+df_ari_emitted_std = pd.read_csv('../../../../../data/forcing/table_std_thornhill_collins_orignames.csv', index_col=0)
+erfari_emitted_std = pd.Series(df_ari_emitted_std['Aerosol_sd'])
+erfari_emitted_std.rename_axis(None, inplace=True)
+erfari_emitted_std.rename({'HC': 'EESC', 'SO2': 'Sulfur'}, inplace=True)
+erfari_emitted_std
+print(erfari_emitted_std)
+
 
 emitted_species = [
     "Sulfur",
@@ -179,75 +205,87 @@ br_atoms = {
     "Halon-2402": 2,
 }
 
-
 hc_eesc = {}
-total_eesc_2019 = 0
-total_eesc_1750 = 0
-for species in hc_species:
+total_eesc = np.zeros(273)
+for species in cl_atoms:
     hc_eesc[species] = calculate_eesc(
-        species_df.loc[2019, species],
+        species_df.loc[:, species],
         fractional_release[species],
         fractional_release["CFC-11"],
         cl_atoms[species],
         br_atoms[species],
     )
-    total_eesc_2019 = total_eesc_2019 + hc_eesc[species]
-
-    hc_eesc[species] = calculate_eesc(
-        species_df.loc[1750, species],
-        fractional_release[species],
-        fractional_release["CFC-11"],
-        cl_atoms[species],
-        br_atoms[species],
-    )
-    total_eesc_1750 = total_eesc_1750 + hc_eesc[species]
-
-total_eesc_2019, total_eesc_1750, -0.00808 / (total_eesc_2019 - total_eesc_1750)
-
-# these come from AR6 WG1, yes?
-# Yes! from https://github.com/sarambl/AR6_CH6_RCMIPFIGS/blob/master/ar6_ch6_rcmipfigs/data_out/fig6_12_ts15_historic_delta_GSAT/2019_ERF_est.csv
-erfari_emitted = pd.Series(
-    {
-        "Sulfur": -0.234228,
-        "BC": 0.144702,
-        "OC": -0.072143,
-        "NH3": -0.033769,
-        "NOx": -0.009166,
-        "VOC": -0.002573,
-        "CO": 0,
-        "CH4": -0.002653,
-        "N2O": -0.00209,
-        "Equivalent effective stratospheric chlorine": -0.00808,
-    }
-)
-
-# TODO: probablistic based on Sara's data
-# https://github.com/sarambl/AR6_CH6_RCMIPFIGS/blob/master/ar6_ch6_rcmipfigs/data_out/fig6_12_ts15_historic_delta_GSAT/table_std_thornhill_collins_orignames.csv
+    total_eesc = total_eesc + hc_eesc[species]
 
 # erfari radiative efficiency per Mt or ppb or ppt
 re = erfari_emitted / (species_df.loc[2019, :] - species_df.loc[1750, :])
 re.dropna(inplace=True)
 
-re["Equivalent effective stratospheric chlorine"] = erfari_emitted[
-    "Equivalent effective stratospheric chlorine"
-] / (total_eesc_2019 - total_eesc_1750)
+re['CH4'] = erfari_emitted['CH4'] / (species_df.loc[2019, 'CH4'] - species_df.loc[1750, 'CH4'])
+re['N2O'] = erfari_emitted['N2O'] / (species_df.loc[2019, 'N2O'] - species_df.loc[1750, 'N2O'])
+re['EESC'] = erfari_emitted['EESC'] / (total_eesc.loc[2019] - total_eesc.loc[1750])
 
-scalings = scipy.stats.uniform.rvs(
-    np.minimum(re * 2, 0),
-    np.maximum(re * 2, 0) - np.minimum(re * 2, 0),
-    size=(samples, 10),
-    random_state=3729329,
-)
+re_std = erfari_emitted_std / (species_df.loc[2019, :] - species_df.loc[1750, :])
+re_std.dropna(inplace=True)
+re_std['CH4'] = erfari_emitted_std['CH4'] / (species_df.loc[2019, 'CH4'] - species_df.loc[1750, 'CH4'])
+re_std['N2O'] = erfari_emitted_std['N2O'] / (species_df.loc[2019, 'N2O'] - species_df.loc[1750, 'N2O'])
+re_std['EESC'] = erfari_emitted_std['EESC'] / (total_eesc.loc[2019] - total_eesc.loc[1750])
 
-df = pd.DataFrame(scalings, columns=re.index)
+print(re)
+print(re_std)
+
+erfari_best = pd.concat(
+    (
+        (re * species_df)[['BC', 'OC', 'Sulfur', 'NOx', 'VOC', 'NH3', 'CH4', 'N2O']] - (re * species_df.loc[1750, ['BC', 'OC', 'Sulfur', 'NOx', 'VOC', 'NH3', 'CH4', 'N2O']]),
+        re['EESC'] * (total_eesc - total_eesc.loc[1750])
+    ), axis=1
+).dropna(axis=1).sum(axis=1)
+
+# we need to map the -0.27 +/- 0.57 to -0.3 +/- 0.3 which is the IPCC AR6 assessment
+NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
+best_scale = -0.3 / erfari_best.loc[2005:2014].mean()
+unc_scale = 0.3 / ((erfari_best.loc[2005:2014].mean()/-0.22) * np.sqrt((erfari_emitted_std**2).sum()) * NINETY_TO_ONESIGMA)
+
+# convert to numpy for efficiency
+erfari_re_samples = pd.DataFrame(
+    scipy.stats.norm.rvs(
+        re*best_scale, re_std*unc_scale, size=(samples, 9), random_state=3729329,
+    ),
+    columns = re.index
+)[['BC', 'OC', 'Sulfur', 'NOx', 'VOC', 'NH3', 'CH4', 'N2O', 'EESC']]
+#erfari_re_samples = erfari_re_samples.to_numpy()
+
+print(erfari_re_samples)
+
+# emnump = species_df[['BC', 'OC', 'Sulfur', 'NOx', 'VOC', 'NH3', 'CH4', 'N2O']].to_numpy()
+# forcing_ensemble = np.zeros((273, samples))
+# erfari_re_samples = erfari_re_samples.to_numpy()
+# for i in tqdm(range(samples)):
+#     forcing_ensemble[:, i] = (
+#         (
+#             ((erfari_re_samples[i, :8] * emnump) - (erfari_re_samples[i, :8] * emnump[0, :])).sum(axis=1) +
+#             (erfari_re_samples[i, 8] * (total_eesc.values - total_eesc.loc[1750]))
+#         )
+#     )
+#
+# pl.hist(forcing_ensemble[255:265, :].mean(axis=0))
+# print(np.percentile(forcing_ensemble[255:265, :].mean(axis=0), (5, 50, 95)))
+# pl.show()
+
+
+# scalings = scipy.stats.uniform.rvs(
+#     np.minimum(re * 2, 0),
+#     np.maximum(re * 2, 0) - np.minimum(re * 2, 0),
+#     size=(samples, 10),
+#     random_state=3729329,
+# )
 
 os.makedirs(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/",
     exist_ok=True,
 )
 
-df.to_csv(
+erfari_re_samples.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
     "aerosol_radiation.csv",
-    index=False,
 )

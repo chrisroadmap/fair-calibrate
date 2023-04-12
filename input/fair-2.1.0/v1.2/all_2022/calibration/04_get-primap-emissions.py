@@ -34,6 +34,15 @@ primap24 = pooch.retrieve(
 )
 primap24_df = pd.read_csv(primap24)
 
+# we don't use CO2 from PRIMAP-hist in fair-calibrate, but Will needs it
+# for climate indicator project
+co2 = primap24_df.loc[
+    (primap24_df['scenario (PRIMAP-hist)']=='HISTTP')&
+    (primap24_df['entity']=='CO2')&
+    (primap24_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
+    (primap24_df['area (ISO3)']=='EARTH'),
+'1750':].values.squeeze()
+
 ch4 = primap24_df.loc[
     (primap24_df['scenario (PRIMAP-hist)']=='HISTTP')&
     (primap24_df['entity']=='CH4')&
@@ -48,21 +57,21 @@ n2o = primap24_df.loc[
     (primap24_df['area (ISO3)']=='EARTH'),
 '1750':].values.squeeze()
 
-sf6 = primap24_df.loc[
-    (primap24_df['scenario (PRIMAP-hist)']=='HISTTP')&
-    (primap24_df['entity']=='SF6')&
-    (primap24_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
-    (primap24_df['area (ISO3)']=='EARTH'),
-'1750':].values.squeeze()
+# sf6 = primap24_df.loc[
+#     (primap24_df['scenario (PRIMAP-hist)']=='HISTTP')&
+#     (primap24_df['entity']=='SF6')&
+#     (primap24_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
+#     (primap24_df['area (ISO3)']=='EARTH'),
+# '1750':].values.squeeze()
+#
+# nf3 = primap24_df.loc[
+#     (primap24_df['scenario (PRIMAP-hist)']=='HISTTP')&
+#     (primap24_df['entity']=='NF3')&
+#     (primap24_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
+#     (primap24_df['area (ISO3)']=='EARTH'),
+# '1750':].values.squeeze()
 
-nf3 = primap24_df.loc[
-    (primap24_df['scenario (PRIMAP-hist)']=='HISTTP')&
-    (primap24_df['entity']=='NF3')&
-    (primap24_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
-    (primap24_df['area (ISO3)']=='EARTH'),
-'1750':].values.squeeze()
-
-df_out = pd.DataFrame([ch4/1000, n2o/1000, sf6, nf3], index = ["CH4", "N2O", "SF6", "NF3"], columns=np.arange(1750, 2022))
+df_out = pd.DataFrame([co2/1e6, ch4/1000, n2o/1000], index = ["CO2", "CH4", "N2O"], columns=np.arange(1750, 2022))
 
 os.makedirs(
     f"../../../../../data/emissions/",

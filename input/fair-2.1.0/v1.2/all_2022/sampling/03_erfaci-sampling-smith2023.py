@@ -301,7 +301,7 @@ df = pd.DataFrame(
     }
 )
 
-os.makedirs(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/")
+os.makedirs(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/", exist_ok=True)
 
 df.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"

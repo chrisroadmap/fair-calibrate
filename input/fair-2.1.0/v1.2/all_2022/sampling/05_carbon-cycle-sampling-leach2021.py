@@ -30,9 +30,6 @@ pl.style.use("../../../../../defaults.mplstyle")
 
 print("Making carbon cycle calibrations...")
 
-compound_convert["CO2"]["C"]
-
-
 assert fair_v == __version__
 
 
