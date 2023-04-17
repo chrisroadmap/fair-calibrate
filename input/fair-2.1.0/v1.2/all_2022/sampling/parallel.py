@@ -112,9 +112,11 @@ def run_fair(cfg):
     )
     fill(f.species_configs["lifetime_temperature_sensitivity"], cfg["ch4_temp"])
 
-    # emissions adjustments for N2O and CH4
-    fill(f.species_configs["baseline_emissions"], 19.019783117809567, specie="CH4")
-    fill(f.species_configs["baseline_emissions"], 0.08602230754, specie="N2O")
+    # emissions adjustments for N2O and CH4 (negative as a hack of old code)
+    # override for NOx
+    fill(f.species_configs["baseline_emissions"], -cfg["ch4_natural"], specie="CH4")
+    fill(f.species_configs["baseline_emissions"], -cfg["n2o_natural"], specie="N2O")
+    fill(f.species_configs["unperturbed_lifetime"], cfg["n2o_base"], specie="N2O")
     fill(f.species_configs["baseline_emissions"], 19.423526730206152, specie="NOx")
 
     # aerosol indirect
@@ -191,7 +193,6 @@ def run_fair(cfg):
     # aerosol radiation interactions
     fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_BC"], specie="BC")
     fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_CH4"], specie="CH4")
-    fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_CO"], specie="CO")
     fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_N2O"], specie="N2O")
     fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_NH3"], specie="NH3")
     fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_NOx"], specie="NOx")
@@ -243,14 +244,21 @@ def run_fair(cfg):
 
     # initial conditions
     initialise(f.concentration, f.species_configs["baseline_concentration"])
+    #initialise(f.concentration, 0, specie="CH4")
+    #initialise(f.concentration, 0, specie="N2O")
     initialise(f.forcing, 0)
     initialise(f.temperature, 0)
     initialise(f.cumulative_emissions, 0)
     initialise(f.airborne_emissions, 0)
 
+    #gas_boxes = 270.1 / burden_per_emission
+    #airborne_emissions = 270.1 / burden_per_emission
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         f.run(progress=False)
+
+    print(f.concentration[:5, 0, 0, 3])
 
     return (
         f.temperature[100:, 0, :, 0],

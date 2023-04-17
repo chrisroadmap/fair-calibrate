@@ -11,6 +11,7 @@
 # - ozone relationship from FaIR 1.6 used in AR6.
 # - interactive methane lifetime
 # - internal variability (here included)
+# - NATURAL SOURCES FOR METHANE AND N2O
 #
 # We have to do this slightly differently to the examples so far. 1.5 million ensemble
 # members is going to take up too much memory, so we run in batches of 1000,
@@ -48,17 +49,17 @@ if __name__ == "__main__":
         "../../../../../data/forcing/solar_erf_timebounds.csv", index_col="year"
     )
     df_volcanic = pd.read_csv(
-        "../../../../../data/forcing/volcanic_ERF_monthly_-950001-201912.csv"
+        "../../../../../data/forcing/volcanic_sAOD_ERF_monthly_-950001-202212.csv"
     )
 
     volcanic_forcing = np.zeros(352)
-    for i, year in enumerate(np.arange(1750, 2021)):
+    for i, year in enumerate(np.arange(1750, 2024)):
         volcanic_forcing[i] = np.mean(
             df_volcanic.loc[
                 ((year - 1) <= df_volcanic["year"]) & (df_volcanic["year"] < year)
-            ].erf
+            ].volcanic_ERF
         )
-    volcanic_forcing[271:281] = np.linspace(1, 0, 10) * volcanic_forcing[270]
+    volcanic_forcing[274:284] = np.linspace(1, 0, 10) * volcanic_forcing[273]
 
     solar_forcing = df_solar["erf"].loc[1750:2101].values
 
@@ -93,6 +94,11 @@ if __name__ == "__main__":
     df_methane = pd.read_csv(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
         "CH4_lifetime.csv",
+        index_col=0,
+    )
+    df_nitrous = pd.read_csv(
+        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+        "N2O_lifetime.csv",
         index_col=0,
     )
 
@@ -210,16 +216,13 @@ if __name__ == "__main__":
         ].values.squeeze()
         config[ibatch]["ari_BC"] = df_ari.loc[batch_start : batch_end - 1, "BC"]
         config[ibatch]["ari_CH4"] = df_ari.loc[batch_start : batch_end - 1, "CH4"]
-        config[ibatch]["ari_CO"] = df_ari.loc[batch_start : batch_end - 1, "CO"]
         config[ibatch]["ari_N2O"] = df_ari.loc[batch_start : batch_end - 1, "N2O"]
         config[ibatch]["ari_NH3"] = df_ari.loc[batch_start : batch_end - 1, "NH3"]
         config[ibatch]["ari_NOx"] = df_ari.loc[batch_start : batch_end - 1, "NOx"]
         config[ibatch]["ari_OC"] = df_ari.loc[batch_start : batch_end - 1, "OC"]
         config[ibatch]["ari_Sulfur"] = df_ari.loc[batch_start : batch_end - 1, "Sulfur"]
         config[ibatch]["ari_VOC"] = df_ari.loc[batch_start : batch_end - 1, "VOC"]
-        config[ibatch]["ari_EESC"] = df_ari.loc[
-            batch_start : batch_end - 1, "Equivalent effective stratospheric chlorine"
-        ]
+        config[ibatch]["ari_EESC"] = df_ari.loc[batch_start : batch_end - 1, "EESC"]
         config[ibatch]["ozone_CH4"] = df_ozone.loc[batch_start : batch_end - 1, "CH4"]
         config[ibatch]["ozone_N2O"] = df_ozone.loc[batch_start : batch_end - 1, "N2O"]
         config[ibatch]["ozone_NOx"] = df_ozone.loc[batch_start : batch_end - 1, "NOx"]
@@ -238,6 +241,9 @@ if __name__ == "__main__":
         config[ibatch]["ch4_EESC"] = df_methane.loc["historical_best", "HC"]
         config[ibatch]["ch4_N2O"] = df_methane.loc["historical_best", "N2O"]
         config[ibatch]["ch4_temp"] = df_methane.loc["historical_best", "temp"]
+        config[ibatch]["ch4_natural"] = df_methane.loc["historical_best", "natural_emissions"]
+        config[ibatch]["n2o_base"] = df_nitrous.loc["historical_best", "base"]
+        config[ibatch]["n2o_natural"] = df_nitrous.loc["historical_best", "natural_emissions"]
 
     parallel_process_kwargs = dict(
         func=run_fair,
