@@ -43,6 +43,11 @@ def run_fair(cfg):
     fe = da.expand_dims(dim=["scenario", "config"], axis=(1, 2))
     f.emissions = fe.drop("config") * np.ones((1, 1, batch_size, 1))
 
+    # hacky, but needed: add natural sources to methane and nitrous oxide emissions
+    # need a fair code dev to make this part of the core code
+    f.emissions.loc[dict(specie='CH4')] = f.emissions.loc[dict(specie='CH4')] + cfg["ch4_natural"]
+    f.emissions.loc[dict(specie='N2O')] = f.emissions.loc[dict(specie='N2O')] + cfg["n2o_natural"]
+
     # solar and volcanic forcing
     fill(
         f.forcing,
@@ -77,12 +82,6 @@ def run_fair(cfg):
     # species level
     f.fill_species_configs()
 
-    # carbon cycle
-    fill(f.species_configs["iirf_0"], cfg["iirf_0"], specie="CO2")
-    fill(f.species_configs["iirf_airborne"], cfg["iirf_airborne"], specie="CO2")
-    fill(f.species_configs["iirf_uptake"], cfg["iirf_uptake"], specie="CO2")
-    fill(f.species_configs["iirf_temperature"], cfg["iirf_temperature"], specie="CO2")
-
     # methane lifetime baseline and sensitivity
     fill(f.species_configs["unperturbed_lifetime"], cfg["ch4_base"], specie="CH4")
     fill(
@@ -112,11 +111,10 @@ def run_fair(cfg):
     )
     fill(f.species_configs["lifetime_temperature_sensitivity"], cfg["ch4_temp"])
 
-    # emissions adjustments for N2O and CH4 (negative as a hack of old code)
-    # override for NOx
-    fill(f.species_configs["baseline_emissions"], -cfg["ch4_natural"], specie="CH4")
-    fill(f.species_configs["baseline_emissions"], -cfg["n2o_natural"], specie="N2O")
+    # N2O baseline lifetime
     fill(f.species_configs["unperturbed_lifetime"], cfg["n2o_base"], specie="N2O")
+
+    # override for NOx with corrected emissions
     fill(f.species_configs["baseline_emissions"], 19.423526730206152, specie="NOx")
 
     # aerosol indirect
@@ -241,24 +239,51 @@ def run_fair(cfg):
 
     # CO2 in 1750
     fill(f.species_configs["baseline_concentration"], cfg["CO2_1750"], specie="CO2")
+    fill(f.species_configs["baseline_concentration"], 0, specie="CH4")
+    fill(f.species_configs["baseline_concentration"], 0, specie="N2O")
 
     # initial conditions
     initialise(f.concentration, f.species_configs["baseline_concentration"])
-    #initialise(f.concentration, 0, specie="CH4")
-    #initialise(f.concentration, 0, specie="N2O")
+    initialise(f.concentration, 729.2, specie="CH4")
+    initialise(f.concentration, 270.1, specie="N2O")
     initialise(f.forcing, 0)
     initialise(f.temperature, 0)
     initialise(f.cumulative_emissions, 0)
     initialise(f.airborne_emissions, 0)
 
-    #gas_boxes = 270.1 / burden_per_emission
-    #airborne_emissions = 270.1 / burden_per_emission
+    # hack the methane and nitrous oxide to relax back to zero, not pre-industrial,
+    # in the presence of balancing natural emissions
+    initialise(f.airborne_emissions, 729.2 / (1 / (5.1352e18 / 1e18 * 16.043 / 28.97)), specie="CH4")
+    initialise(f.airborne_emissions, 270.1 / (1 / (5.1352e18 / 1e18 * 44.013 / 28.97)), specie="N2O")
+    initialise(f.gas_partitions, np.array([1,0,0,0]) * 729.2 / (1 / (5.1352e18 / 1e18 * 16.043 / 28.97)), specie="CH4")
+    initialise(f.gas_partitions, np.array([1,0,0,0]) * 270.1 / (1 / (5.1352e18 / 1e18 * 44.013 / 28.97)), specie="N2O")
+
+    # the forcing reference concentration is overwritten to use zero, so we have to
+    # switch it back. Use Meinshausen 1750 or our PI values here?
+    fill(f.species_configs["forcing_reference_concentration"], 273.87, specie="N2O")
+    fill(f.species_configs["forcing_reference_concentration"], 731.41, specie="CH4")
+
+    # recalculate the IIRF parameters for GHGs after changing base lifetimes, and switch
+    # off the self-feedback for N2O which causes alpha_scaling and concentration to
+    # go awry. The self-feedback is small, and a target for future recalibration
+    f.calculate_g()
+    f.calculate_iirf0()
+    fill(f.species_configs["iirf_airborne"], 0, specie="N2O")
+
+    # Then the CO2 parameters need to be overridden
+    fill(f.species_configs["iirf_0"], cfg["iirf_0"], specie="CO2")
+    fill(f.species_configs["iirf_airborne"], cfg["iirf_airborne"], specie="CO2")
+    fill(f.species_configs["iirf_uptake"], cfg["iirf_uptake"], specie="CO2")
+    fill(f.species_configs["iirf_temperature"], cfg["iirf_temperature"], specie="CO2")
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         f.run(progress=False)
 
-    print(f.concentration[:5, 0, 0, 3])
+    import matplotlib.pyplot as pl
+    pl.plot(f.forcing[:273, 0, :, 3])
+    pl.plot(f.forcing[:273, 0, :, 4])
+    pl.show()
 
     return (
         f.temperature[100:, 0, :, 0],

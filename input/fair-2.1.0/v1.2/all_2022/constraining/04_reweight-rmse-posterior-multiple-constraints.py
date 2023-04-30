@@ -770,7 +770,7 @@ if plots:
         color="#000000",
     )
 
-    ax.plot(np.arange(1850.5, 2021), gmst, color="b", label="Observations")
+    ax.plot(np.arange(1850.5, 2023), gmst, color="b", label="Observations")
 
     ax.legend(frameon=False, loc="upper left")
 

@@ -84,22 +84,22 @@ if plots:
         ),
         color="#000000",
     )
-    ax.plot(np.arange(1850.5, 2021), gmst, color="b")
+    ax.plot(np.arange(1850.5, 2023), gmst, color="b")
 
     ax.set_xlim(1850, 2100)
     ax.set_ylim(-1, 5)
     ax.set_ylabel("°C relative to 1850-1900")
     ax.axhline(0, color="k", ls=":", lw=0.5)
-    pl.title("Temperature anomaly: ssp245 prior")
+    pl.title("Temperature anomaly: historical prior")
     pl.tight_layout()
     os.makedirs(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_ssp245.png"
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_historical_gmst.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_ssp245.pdf"
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_historical_gmst.pdf"
     )
     pl.close()
 
@@ -174,21 +174,21 @@ if plots:
         color="#000000",
     )
 
-    ax.plot(np.arange(1850.5, 2021), gmst, color="b")
+    ax.plot(np.arange(1850.5, 2023), gmst, color="b")
 
     ax.set_xlim(1850, 2100)
     ax.set_ylim(-1, 5)
     ax.set_ylabel("°C relative to 1850-1900")
     ax.axhline(0, color="k", ls=":", lw=0.5)
-    pl.title("Temperature anomaly: ssp245 RMSE constraint")
+    pl.title("Temperature anomaly: historical RMSE constraint")
     pl.tight_layout()
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "post_rsme_ssp245.png"
+        "post_rsme_historical.png"
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "post_rsme_ssp245.pdf"
+        "post_rsme_historical.pdf"
     )
     pl.close()
 
