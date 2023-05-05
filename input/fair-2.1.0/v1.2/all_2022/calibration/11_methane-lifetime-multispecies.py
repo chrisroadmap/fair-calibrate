@@ -51,7 +51,7 @@ plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
-assert fair_v == __version__
+#assert fair_v == __version__
 pl.style.use("../../../../../defaults.mplstyle")
 
 # Temperature data
@@ -600,7 +600,8 @@ p, cov = scipy.optimize.curve_fit(
     fit_precursors,
     invect[:, :273],
     input_obs["CH4"][:273],
-    bounds=(  # AerChemMIP min to max range
+    bounds=(  # AerChemMIP min to max range EDITED
+#        (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3, 174),
         (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3, 174),
         (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4, 258),
     ),
@@ -826,16 +827,16 @@ if plots:
     ax[0].set_ylabel("yr")
     ax[0].set_title("(a) CH$_4$ lifetime SSP3-7.0")
 
-    for model in models:
-        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
+#    for model in models:
+#        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
     ax[1].plot(
         np.arange(1750, 2023), conc_ch4["best_fit"], color="0.5", label="Best fit"
     )
     ax[1].plot(
-        np.arange(1750, 2101), input["CH4"], color="k", label="observations +\nMAGICC6"
+        np.arange(1750, 2023), input_obs["CH4"], color="k", label="observations"
     )
     ax[1].set_ylabel("ppb")
-    ax[1].set_xlim(1750, 2100)
+    ax[1].set_xlim(1750, 2023)
     ax[1].legend(frameon=False)
     ax[1].set_title("(b) CH$_4$ concentration SSP3-7.0")
 

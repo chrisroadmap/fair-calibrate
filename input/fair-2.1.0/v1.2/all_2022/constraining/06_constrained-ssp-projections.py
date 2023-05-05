@@ -12,6 +12,7 @@ import pooch
 import xarray as xr
 from dotenv import load_dotenv
 from fair import FAIR
+from fair.forcing.ghg import meinshausen2020
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
@@ -44,23 +45,29 @@ df_solar = pd.read_csv(
     "../../../../../data/forcing/solar_erf_timebounds.csv", index_col="year"
 )
 df_volcanic = pd.read_csv(
-    "../../../../../data/forcing/volcanic_ERF_monthly_-950001-201912.csv"
+    "../../../../../data/forcing/volcanic_sAOD_ERF_monthly_-950001-202212.csv"
 )
 
 solar_forcing = np.zeros(551)
 volcanic_forcing = np.zeros(551)
-for i, year in enumerate(np.arange(1750, 2021)):
+for i, year in enumerate(np.arange(1750, 2024)):
     volcanic_forcing[i] = np.mean(
         df_volcanic.loc[
             ((year - 1) <= df_volcanic["year"]) & (df_volcanic["year"] < year)
-        ].erf
+        ].volcanic_ERF
     )
-volcanic_forcing[271:281] = np.linspace(1, 0, 10) * volcanic_forcing[270]
+volcanic_forcing[274:284] = np.linspace(1, 0, 10) * volcanic_forcing[274]
 solar_forcing = df_solar["erf"].loc[1750:2300].values
 
 df_methane = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
     "CH4_lifetime.csv",
+    index_col=0,
+)
+
+df_nitrous = pd.read_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+    "N2O_lifetime.csv",
     index_col=0,
 )
 
@@ -72,7 +79,7 @@ df_configs = pd.read_csv(
 valid_all = df_configs.index
 
 trend_shape = np.ones(551)
-trend_shape[:271] = np.linspace(0, 1, 271)
+trend_shape[:271] = np.linspace(0, 1, 271)  # keep at 2019; AR6 consistent
 
 f = FAIR(ch4_method="Thornhill2021")
 f.define_time(1750, 2300, 1)
@@ -92,51 +99,11 @@ da = da_emissions.loc[dict(config="unspecified")][:550, ...]
 fe = da.expand_dims(dim=["config"], axis=(2))
 f.emissions = fe.drop("config") * np.ones((1, 1, output_ensemble_size, 1))
 
-# Fix NOx.
-rcmip_emissions_file = pooch.retrieve(
-    url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
-    known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
-    progressbar=progress,
-    path=datadir
-)
-df_emis = pd.read_csv(rcmip_emissions_file)
-gfed_sectors = [
-    "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
-    "Emissions|NOx|MAGICC AFOLU|Forest Burning",
-    "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
-]
-for scenario in scenarios:
-    f.emissions.loc[dict(specie="NOx", scenario=scenario)] = (
-        df_emis.loc[
-            (df_emis["Scenario"] == scenario)
-            & (df_emis["Region"] == "World")
-            & (df_emis["Variable"].isin(gfed_sectors)),
-            "1750":"2300",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-        .sum(axis=0)
-        * 46.006
-        / 30.006
-        + df_emis.loc[
-            (df_emis["Scenario"] == scenario)
-            & (df_emis["Region"] == "World")
-            & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
-            "1750":"2300",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-        + df_emis.loc[
-            (df_emis["Scenario"] == scenario)
-            & (df_emis["Region"] == "World")
-            & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
-            "1750":"2300",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-    )[:550][:, None]
+# Add natural emissions to CH4 and N2O
+f.emissions.loc[dict(specie='CH4')] = f.emissions.loc[dict(specie='CH4')] + df_methane.loc["historical_best", "natural_emissions"]
+f.emissions.loc[dict(specie='N2O')] = f.emissions.loc[dict(specie='N2O')] + df_nitrous.loc["historical_best", "natural_emissions"]
 
+# No fix required to NOx emissions with this corrected dataset.
 
 # solar and volcanic forcing
 fill(
@@ -169,18 +136,6 @@ fill(f.climate_configs["forcing_4co2"], df_configs["F_4xCO2"])
 # species level
 f.fill_species_configs()
 
-# carbon cycle
-fill(f.species_configs["iirf_0"], df_configs["r0"].values.squeeze(), specie="CO2")
-fill(
-    f.species_configs["iirf_airborne"], df_configs["rA"].values.squeeze(), specie="CO2"
-)
-fill(f.species_configs["iirf_uptake"], df_configs["rU"].values.squeeze(), specie="CO2")
-fill(
-    f.species_configs["iirf_temperature"],
-    df_configs["rT"].values.squeeze(),
-    specie="CO2",
-)
-
 # aerosol indirect
 fill(f.species_configs["aci_scale"], df_configs["beta"].values.squeeze())
 fill(
@@ -194,9 +149,6 @@ fill(
 fill(
     f.species_configs["aci_shape"], df_configs["shape OC"].values.squeeze(), specie="OC"
 )
-
-# methane lifetime baseline - should be imported from calibration
-fill(f.species_configs["unperturbed_lifetime"], 10.11702748, specie="CH4")
 
 # methane lifetime baseline and sensitivity
 fill(
@@ -234,10 +186,10 @@ fill(
     df_methane.loc["historical_best", "temp"],
 )
 
-# emissions adjustments for N2O and CH4 (we don't want to make these defaults as people
-# might wanna run pulse expts with these gases)
-fill(f.species_configs["baseline_emissions"], 19.019783117809567, specie="CH4")
-fill(f.species_configs["baseline_emissions"], 0.08602230754, specie="N2O")
+# Nitrous oxide baseline
+fill(f.species_configs["unperturbed_lifetime"], df_nitrous.loc["historical_best", "base"], specie="N2O")
+
+# override for NOx with corrected emissions
 fill(f.species_configs["baseline_emissions"], 19.423526730206152, specie="NOx")
 
 # aerosol direct
@@ -353,13 +305,63 @@ fill(
     df_configs["co2_concentration_1750"].values.squeeze(),
     specie="CO2",
 )
+fill(f.species_configs["baseline_concentration"], 0, specie="CH4")
+fill(f.species_configs["baseline_concentration"], 0, specie="N2O")
 
 # initial conditions
 initialise(f.concentration, f.species_configs["baseline_concentration"])
+initialise(f.concentration, 729.2, specie="CH4")
+initialise(f.concentration, 270.1, specie="N2O")
 initialise(f.forcing, 0)
 initialise(f.temperature, 0)
 initialise(f.cumulative_emissions, 0)
 initialise(f.airborne_emissions, 0)
+
+# hack the methane and nitrous oxide to relax back to zero, not pre-industrial,
+# in the presence of balancing natural emissions
+initialise(f.airborne_emissions, 729.2 / (1 / (5.1352e18 / 1e18 * 16.043 / 28.97)), specie="CH4")
+initialise(f.airborne_emissions, 270.1 / (1 / (5.1352e18 / 1e18 * 44.013 / 28.97)), specie="N2O")
+fill(f.gas_partitions, np.array([1,0,0,0]) * 729.2 / (1 / (5.1352e18 / 1e18 * 16.043 / 28.97)), specie="CH4")
+fill(f.gas_partitions, np.array([1,0,0,0]) * 270.1 / (1 / (5.1352e18 / 1e18 * 44.013 / 28.97)), specie="N2O")
+
+# recalculate the IIRF parameters for GHGs after changing base lifetimes, and switch
+# off the self-feedback for N2O which causes alpha_scaling and concentration to
+# go awry. The self-feedback is small, and a target for future recalibration
+f.calculate_g()
+f.calculate_iirf0()
+fill(f.species_configs["iirf_airborne"], 0, specie="N2O")
+
+# Then the CO2 parameters need to be overridden
+# carbon cycle
+fill(f.species_configs["iirf_0"], df_configs["r0"].values.squeeze(), specie="CO2")
+fill(
+    f.species_configs["iirf_airborne"], df_configs["rA"].values.squeeze(), specie="CO2"
+)
+fill(f.species_configs["iirf_uptake"], df_configs["rU"].values.squeeze(), specie="CO2")
+fill(
+    f.species_configs["iirf_temperature"],
+    df_configs["rT"].values.squeeze(),
+    specie="CO2",
+)
+
+# define zero forcing as pre-industrial concentrations, not zero concentrations
+baseline = f.species_configs["baseline_concentration"][:, [2,3,4]]
+baseline[:, 1] = 729.2
+baseline[:, 2] = 270.1
+ghg_forcing_offset = meinshausen2020(
+    baseline.data[None, None, ...],
+    f.species_configs["forcing_reference_concentration"].data[None, None, :, [2,3,4]],
+    f.species_configs["forcing_scale"].data[None, None, :, [2,3,4]] * (
+        1 + f.species_configs["tropospheric_adjustment"].data[None, None, :, [2,3,4]]
+    ),
+    np.ones((1, 1, 1, 3)),
+    0,
+    1,
+    2,
+    [],
+)
+f.ghg_forcing_offset = np.zeros((1, 1) + f.species_configs["forcing_reference_concentration"].shape)
+f.ghg_forcing_offset[:, :, :, [2, 3, 4]] = ghg_forcing_offset[None, None, ...]
 
 f.run()
 
@@ -449,7 +451,7 @@ if plots:
             ),
             color=ar6_colors[scenarios[i]],
         )
-        ax[i // 4, i % 4].plot(np.arange(1850.5, 2021), gmst, color="k")
+        ax[i // 4, i % 4].plot(np.arange(1850.5, 2023), gmst, color="k")
         ax[i // 4, i % 4].set_xlim(1950, 2200)
         ax[i // 4, i % 4].set_ylim(-1, 10)
         ax[i // 4, i % 4].axhline(0, color="k", ls=":", lw=0.5)
@@ -544,11 +546,22 @@ rcmip_concentration_file = pooch.retrieve(
     path=datadir,
 )
 
-
+# we want to compare obs
 df_conc = pd.read_csv(rcmip_concentration_file)
+conc_n2o = {}
 conc_ch4 = {}
 conc_co2 = {}
 for scenario in scenarios:
+    conc_n2o[scenario] = (
+        df_conc.loc[
+            (df_conc["Scenario"] == scenario)
+            & (df_conc["Variable"].str.endswith("|N2O"))
+            & (df_conc["Region"] == "World"),
+            "1750":"2500",
+        ]
+        .interpolate(axis=1)
+        .values.squeeze()
+    )
     conc_ch4[scenario] = (
         df_conc.loc[
             (df_conc["Scenario"] == scenario)
@@ -572,13 +585,26 @@ for scenario in scenarios:
 
 
 if plots:
-    pl.plot(np.percentile(f.concentration[:, 2, :, 3], (50), axis=1))
-    pl.plot(conc_ch4["ssp245"][:], color="k")
+    df_conc_obs = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
+    pl.plot(f.timebounds, np.percentile(f.concentration[:, 2, :, 3], (50), axis=1))
+    #pl.plot(conc_ch4["ssp245"][:], color="k")
+    conc_years = [1750] + list(np.arange(1850.5, 2023))
+    pl.plot(conc_years, df_conc_obs['CH4'].values, color='k')
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/ch4_ssp245.png"
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/ch4_ssp245.pdf"
+    )
+    pl.close()
+
+    pl.plot(np.percentile(f.concentration[:, 2, :, 4], (50), axis=1))
+    pl.plot(conc_n2o["ssp245"][:], color="k")
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/n2o_ssp245.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/n2o_ssp245.pdf"
     )
     pl.close()
 
@@ -638,6 +664,56 @@ if plots:
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "ghg_forcing_ssp245.pdf"
+    )
+    pl.close()
+
+    pl.fill_between(
+        np.arange(1750, 2101),
+        np.percentile(f.forcing[:351, 2, :, 56], 5, axis=1),
+        np.percentile(f.forcing[:351, 2, :, 56], 95, axis=1),
+        color="k",
+        alpha=0.3,
+    )
+    pl.plot(
+        np.arange(1750, 2101),
+        np.median(
+            f.forcing[:351, 2, :, 56],
+            axis=1,
+        ),
+        color="k",
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "aerosol-radiation_forcing_ssp245.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "aerosol-radiation_forcing_ssp245.pdf"
+    )
+    pl.close()
+
+    pl.fill_between(
+        np.arange(1750, 2101),
+        np.percentile(f.forcing[:351, 2, :, 57], 5, axis=1),
+        np.percentile(f.forcing[:351, 2, :, 57], 95, axis=1),
+        color="k",
+        alpha=0.3,
+    )
+    pl.plot(
+        np.arange(1750, 2101),
+        np.median(
+            f.forcing[:351, 2, :, 57],
+            axis=1,
+        ),
+        color="k",
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "aerosol-cloud_forcing_ssp245.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "aerosol-cloud_forcing_ssp245.pdf"
     )
     pl.close()
 

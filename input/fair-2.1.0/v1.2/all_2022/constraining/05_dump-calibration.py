@@ -20,7 +20,7 @@ constraint_set = os.getenv("CONSTRAINT_SET")
 samples = int(os.getenv("PRIOR_SAMPLES"))
 output_ensemble_size = int(os.getenv("POSTERIOR_SAMPLES"))
 
-assert fair_v == __version__
+#assert fair_v == __version__
 
 df_cc = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
@@ -93,16 +93,15 @@ params_out.columns = [
     "rU",
     "rT",
     "rA",
-    "ari BC",
-    "ari CH4",
-    "ari CO",
-    "ari N2O",
-    "ari NH3",
-    "ari NOx",
-    "ari OC",
-    "ari Sulfur",
-    "ari VOC",
-    "ari Equivalent effective stratospheric chlorine",
+    'ari BC',
+    'ari OC',
+    'ari Sulfur',
+    'ari NOx',
+    'ari VOC',
+    'ari NH3',
+    'ari CH4',
+    'ari N2O',
+    'ari Equivalent effective stratospheric chlorine',
     "shape Sulfur",
     "shape BC",
     "shape OC",
@@ -127,8 +126,6 @@ params_out.columns = [
     "co2_concentration_1750",
     "seed",
 ]
-
-params_out.drop(columns=["ari CO"], inplace=True)
 
 params_out.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"

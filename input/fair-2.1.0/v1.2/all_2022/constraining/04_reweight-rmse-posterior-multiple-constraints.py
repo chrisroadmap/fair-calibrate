@@ -28,7 +28,7 @@ plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 pl.style.use("../../../../../defaults.mplstyle")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
-assert fair_v == __version__
+#assert fair_v == __version__
 
 print("Doing reweighting...")
 

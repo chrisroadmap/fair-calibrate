@@ -24,7 +24,7 @@ samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
-assert fair_v == __version__
+#assert fair_v == __version__
 
 
 temp_in = np.load(

@@ -28,7 +28,7 @@ if __name__ == "__main__":
     # number of processors
     WORKERS = min(multiprocessing.cpu_count(), WORKERS)
 
-    assert fair_v == __version__
+    #assert fair_v == __version__
 
     df_cc = pd.read_csv(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"

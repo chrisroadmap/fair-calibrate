@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
+from fair.forcing.ghg import meinshausen2020
 
 load_dotenv()
 
@@ -237,7 +238,7 @@ def run_fair(cfg):
         specie="CO2 AFOLU",
     )
 
-    # CO2 in 1750
+    # CO2 in 1750, and baselines of zero for CH4 and N2O to take natural emissions
     fill(f.species_configs["baseline_concentration"], cfg["CO2_1750"], specie="CO2")
     fill(f.species_configs["baseline_concentration"], 0, specie="CH4")
     fill(f.species_configs["baseline_concentration"], 0, specie="N2O")
@@ -255,13 +256,13 @@ def run_fair(cfg):
     # in the presence of balancing natural emissions
     initialise(f.airborne_emissions, 729.2 / (1 / (5.1352e18 / 1e18 * 16.043 / 28.97)), specie="CH4")
     initialise(f.airborne_emissions, 270.1 / (1 / (5.1352e18 / 1e18 * 44.013 / 28.97)), specie="N2O")
-    initialise(f.gas_partitions, np.array([1,0,0,0]) * 729.2 / (1 / (5.1352e18 / 1e18 * 16.043 / 28.97)), specie="CH4")
-    initialise(f.gas_partitions, np.array([1,0,0,0]) * 270.1 / (1 / (5.1352e18 / 1e18 * 44.013 / 28.97)), specie="N2O")
+    fill(f.gas_partitions, np.array([1,0,0,0]) * 729.2 / (1 / (5.1352e18 / 1e18 * 16.043 / 28.97)), specie="CH4")
+    fill(f.gas_partitions, np.array([1,0,0,0]) * 270.1 / (1 / (5.1352e18 / 1e18 * 44.013 / 28.97)), specie="N2O")
 
-    # the forcing reference concentration is overwritten to use zero, so we have to
-    # switch it back. Use Meinshausen 1750 or our PI values here?
-    fill(f.species_configs["forcing_reference_concentration"], 273.87, specie="N2O")
-    fill(f.species_configs["forcing_reference_concentration"], 731.41, specie="CH4")
+    # # the forcing reference concentration is overwritten to use zero, so we have to
+    # # switch it back. Use Meinshausen 1750 or our PI values here?
+    # fill(f.species_configs["forcing_reference_concentration"], 273.87, specie="N2O")
+    # fill(f.species_configs["forcing_reference_concentration"], 731.41, specie="CH4")
 
     # recalculate the IIRF parameters for GHGs after changing base lifetimes, and switch
     # off the self-feedback for N2O which causes alpha_scaling and concentration to
@@ -276,13 +277,31 @@ def run_fair(cfg):
     fill(f.species_configs["iirf_uptake"], cfg["iirf_uptake"], specie="CO2")
     fill(f.species_configs["iirf_temperature"], cfg["iirf_temperature"], specie="CO2")
 
+    # define zero forcing as pre-industrial concentrations, not zero concentrations
+    baseline = f.species_configs["baseline_concentration"][:, [2,3,4]]
+    baseline[:, 1] = 729.2
+    baseline[:, 2] = 270.1
+    ghg_forcing_offset = meinshausen2020(
+        baseline.data[None, None, ...],
+        f.species_configs["forcing_reference_concentration"].data[None, None, :, [2,3,4]],
+        f.species_configs["forcing_scale"].data[None, None, :, [2,3,4]] * (
+            1 + f.species_configs["tropospheric_adjustment"].data[None, None, :, [2,3,4]]
+        ),
+        np.ones((1, 1, 1, 3)),
+        0,
+        1,
+        2,
+        [],
+    )
+    f.ghg_forcing_offset = np.zeros((1, 1) + f.species_configs["forcing_reference_concentration"].shape)
+    f.ghg_forcing_offset[:, :, :, [2, 3, 4]] = ghg_forcing_offset[None, None, ...]
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         f.run(progress=False)
 
     import matplotlib.pyplot as pl
-    pl.plot(f.forcing[:273, 0, :, 3])
-    pl.plot(f.forcing[:273, 0, :, 4])
+    pl.plot(f.concentration[:, 0, :, 3])
     pl.show()
 
     return (

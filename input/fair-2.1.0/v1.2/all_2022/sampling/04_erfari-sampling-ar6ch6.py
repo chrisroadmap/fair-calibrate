@@ -288,4 +288,5 @@ os.makedirs(
 erfari_re_samples.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
     "aerosol_radiation.csv",
+    index=False
 )

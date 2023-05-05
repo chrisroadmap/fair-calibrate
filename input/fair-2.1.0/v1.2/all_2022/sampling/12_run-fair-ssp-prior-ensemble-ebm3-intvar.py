@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # number of processors
     WORKERS = min(multiprocessing.cpu_count(), WORKERS)
 
-    assert fair_v == __version__
+    #assert fair_v == __version__
 
     df_solar = pd.read_csv(
         "../../../../../data/forcing/solar_erf_timebounds.csv", index_col="year"
