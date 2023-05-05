@@ -600,7 +600,7 @@ p, cov = scipy.optimize.curve_fit(
     fit_precursors,
     invect[:, :273],
     input_obs["CH4"][:273],
-    bounds=(  # AerChemMIP min to max range EDITED
+    bounds=(  # AerChemMIP min to max range 
 #        (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3, 174),
         (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3, 174),
         (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4, 258),
