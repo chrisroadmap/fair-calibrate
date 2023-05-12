@@ -60,6 +60,7 @@ pl.style.use("../../../../../defaults.mplstyle")
 
 df_temp = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv")
 gmst = np.zeros(351)
+gmst[:101] = np.linspace(-0.1, 0, 101)
 gmst[100:273] = df_temp["gmst"].values
 gmst[273:351] = np.linspace(gmst[268:273].mean(), 4, 78)
 
@@ -342,7 +343,7 @@ parameters["AerChemMIP_mean"] = {
     "HC": -0.037,
     "N2O": -0.02,
     "temp": -0.006,
-    "natural": 200,
+    "natural": 218,
 }
 
 parameters["UKESM"] = {
@@ -354,7 +355,7 @@ parameters["UKESM"] = {
     "HC": -0.049,
     "N2O": -0.012,
     "temp": -0.0408,
-    "natural": 250,
+    "natural": 218,
 }
 
 # we'll exclude BCC and CESM as they don't have VOC expt and that's important.
@@ -369,7 +370,7 @@ parameters["GFDL"] = {
     "HC": -0.075,
     "N2O": 0,  # missing
     "temp": -0.0205,
-    "natural": 200,
+    "natural": 218,
 }
 
 parameters["GISS"] = {
@@ -381,7 +382,7 @@ parameters["GISS"] = {
     "HC": -0.006,
     "N2O": -0.039,
     "temp": -0.0333,
-    "natural": 140,
+    "natural": 218,
 }
 
 parameters["MRI"] = {
@@ -393,7 +394,7 @@ parameters["MRI"] = {
     "HC": -0.024,
     "N2O": -0.013,
     "temp": 0,  # missing
-    "natural": 190,
+    "natural": 218,
 }
 
 lifetime_scaling = {}
@@ -550,7 +551,8 @@ for species in ["CH4", "N2O", "VOC", "NOx", "HC"]:
 baseline_obs["temp"] = 0
 natural_emissions_adjustment = emis_ch4_obs[0]
 
-def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase, rnat):
+#def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase, rnat):
+def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
     conc_ch4 = np.zeros(273)
     gas_boxes = 729.2 / burden_per_emission     # should use correct pi value for CMIP6
     airborne_emissions = 729.2 / burden_per_emission
@@ -562,7 +564,7 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase, rnat):
     params["HC"] = rhc
     params["N2O"] = rn2o
     params["temp"] = rtemp
-    params["natural"] = rnat
+    #params["natural"] = rnat
 
     inp = {}
     inp["CH4"] = x[0]
@@ -581,7 +583,8 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase, rnat):
 
     for i in range(273):
         conc_ch4[i], gas_boxes, airborne_emissions = one_box(
-            emis_ch4_obs[i] + rnat,
+            #emis_ch4_obs[i] + rnat,
+            emis_ch4_obs[i] + 218,
             gas_boxes,
             airborne_emissions,
             burden_per_emission,
@@ -600,11 +603,17 @@ p, cov = scipy.optimize.curve_fit(
     fit_precursors,
     invect[:, :273],
     input_obs["CH4"][:273],
-    bounds=(  # AerChemMIP min to max range 
+#    bounds=(  # AerChemMIP min to max range
 #        (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3, 174),
-        (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3, 174),
-        (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4, 258),
-    ),
+#        (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4, 258),
+#    ),
+    bounds = (
+       (0.18, -0.46, 0.11, -0.075, -0.039, -0.0463, 6.3),
+       (0.26, -0.25, 0.27, -0.006, -0.012, 0, 13.4),
+       # for temperature, we don't include CESM2 and set the upper bound to zero, as
+       # climate-driven increases in methane lifetime are not expected (Thornhill et al
+       # 2021.
+    )
 )
 
 
@@ -617,7 +626,7 @@ parameters["best_fit"] = {
     "HC": p[3],
     "N2O": p[4],
     "temp": p[5],
-    "nat": p[7]
+#    "nat": p[7]
 }
 
 # these are the feedback values per ppb / per Mt that go into FaIR
@@ -665,7 +674,8 @@ emis_ch4_obs = df_ch4emis_obs.loc[df_ch4emis_obs['Variable']=='Emissions|CH4', '
 
 for i in range(273):
     conc_ch4["best_fit"][i], gas_boxes, airborne_emissions = one_box(
-        emis_ch4_obs[i] + parameters["best_fit"]["nat"],
+#        emis_ch4_obs[i] + parameters["best_fit"]["nat"],
+        emis_ch4_obs[i] + 218,
         gas_boxes,
         airborne_emissions,
         burden_per_emission,
@@ -785,7 +795,8 @@ for ssp in [
             parameters["best_fit"],
         )
         conc_ch4[ssp][i], gas_boxes, airborne_emissions = one_box(
-            emis_ch4_ssps[ssp][i]+parameters["best_fit"]["nat"],
+#            emis_ch4_ssps[ssp][i]+parameters["best_fit"]["nat"],
+            emis_ch4_ssps[ssp][i]+218,
             gas_boxes,
             airborne_emissions,
             burden_per_emission,
@@ -875,18 +886,18 @@ out[0, 0] = lifetime_scaling["best_fit"][0] * parameters["best_fit"]["base"]
 for i, specie in enumerate(["CH4", "NOx", "VOC", "HC", "N2O"]):
     out[0, i + 1] = parameters["best_fit"][specie] / normalisation[specie]
 out[0, 6] = parameters["best_fit"]["temp"]
-out[0, 7] = parameters["best_fit"]["nat"]
+#out[0, 7] = parameters["best_fit"]["nat"]
 
-df = pd.DataFrame(
-    out,
-    columns=["base", "CH4", "NOx", "VOC", "HC", "N2O", "temp", "natural_emissions"],
-    index=["historical_best"],
-)
-os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
-    exist_ok=True
-)
-df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-    "CH4_lifetime.csv"
-)
+# df = pd.DataFrame(
+#     out,
+#     columns=["base", "CH4", "NOx", "VOC", "HC", "N2O", "temp", "natural_emissions"],
+#     index=["historical_best"],
+# )
+# os.makedirs(
+#     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
+#     exist_ok=True
+# )
+# df.to_csv(
+#     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+#     "CH4_lifetime.csv"
+# )
