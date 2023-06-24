@@ -75,6 +75,10 @@ af_in = np.load(
     "airborne_fraction_1pctCO2_y70_y140.npy"
 )
 faer_in = fari_in + faci_in
+ssp245_in = np.load(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+    "temperature_ssp245_concdriven_2081-2100_mean.npy"
+)
 
 
 def opt(x, q05_desired, q50_desired, q95_desired):
@@ -114,10 +118,9 @@ samples["ERFaer"] = scipy.stats.norm.rvs(
 samples["CO2 concentration"] = scipy.stats.norm.rvs(
     loc=397.5469792683919, scale=0.36, size=10**5, random_state=81693
 )
-
-#samples["ssp245 2081-2100"] = scipy.stats.skewnorm.rvs(
-#    2.20496701, loc=1.4124379, scale=0.60080822, size=10**5, random_state=801693589
-#)
+samples["ssp245 2081-2100"] = scipy.stats.skewnorm.rvs(
+    2.20496701, loc=1.4124379, scale=0.60080822, size=10**5, random_state=801693589
+)
 
 ar_distributions = {}
 for constraint in [
@@ -129,7 +132,7 @@ for constraint in [
     "ERFaci",
     "ERFaer",
     "CO2 concentration",
-#    "ssp245 2081-2100",
+    "ssp245 2081-2100",
 ]:
     ar_distributions[constraint] = {}
     ar_distributions[constraint]["bins"] = np.histogram(
@@ -157,10 +160,7 @@ accepted = pd.DataFrame(
         "ERFaci": faci_in[valid_temp],
         "ERFaer": faer_in[valid_temp],
         "CO2 concentration": co2_in[valid_temp],
-#        "ssp245 2081-2100": np.average(
-#            temp_in[231:252, valid_temp], weights=weights_20yr, axis=0
-#        )
-#        - np.average(temp_in[145:166, valid_temp], weights=weights_20yr, axis=0),
+        "ssp245 2081-2100": ssp245_in[valid_temp]
     },
     index=valid_temp,
 )
@@ -306,16 +306,10 @@ post1_temp = scipy.stats.gaussian_kde(
 )
 post2_temp = scipy.stats.gaussian_kde(draws[0]["temperature 1995-2014"])
 
-#target_ssp = scipy.stats.gaussian_kde(samples["ssp245 2081-2100"])
-#prior_ssp = scipy.stats.gaussian_kde(
-#    np.average(temp_in[231:252, :], weights=weights_20yr, axis=0)
-#    - np.average(temp_in[145:166, :], weights=weights_20yr, axis=0)
-#)
-#post1_ssp = scipy.stats.gaussian_kde(
-#    np.average(temp_in[231:252, valid_temp], weights=weights_20yr, axis=0)
-#    - np.average(temp_in[145:166, valid_temp], weights=weights_20yr, axis=0)
-#)
-#post2_ssp = scipy.stats.gaussian_kde(draws[0]["ssp245 2081-2100"])
+target_ssp = scipy.stats.gaussian_kde(samples["ssp245 2081-2100"])
+prior_ssp = scipy.stats.gaussian_kde(ssp245_in)
+post1_ssp = scipy.stats.gaussian_kde(ssp245_in[valid_temp])
+post2_ssp = scipy.stats.gaussian_kde(draws[0]["ssp245 2081-2100"])
 
 target_ohc = scipy.stats.gaussian_kde(samples["OHC"])
 prior_ohc = scipy.stats.gaussian_kde(ohc_in / 1e21)
@@ -606,39 +600,39 @@ if plots:
     ax[2, 1].set_yticklabels([])
     ax[2, 1].set_xlabel("ZJ, 2018 minus 1971")
 
-    ax[2, 2].axis('off')
+#    ax[2, 2].axis('off')
 
-#    start = 0.8
-#    stop = 3.2
-#    ax[2, 2].plot(
-#        np.linspace(start, stop, 1000),
-#        target_ssp(np.linspace(start, stop, 1000)),
-#        color=colors["target"],
-#        label="Target",
-#    )
-#    ax[2, 2].plot(
-#        np.linspace(start, stop, 1000),
-#        prior_ssp(np.linspace(start, stop, 1000)),
-#        color=colors["prior"],
-#        label="Prior",
-#    )
-#    ax[2, 2].plot(
-#        np.linspace(start, stop, 1000),
-#        post1_ssp(np.linspace(start, stop, 1000)),
-#        color=colors["post1"],
-#        label="Temperature RMSE",
-#    )
-#    ax[2, 2].plot(
-#        np.linspace(start, stop, 1000),
-#        post2_ssp(np.linspace(start, stop, 1000)),
-#        color=colors["post2"],
-#        label="All constraints",
-#    )
-#    ax[2, 2].set_xlim(start, stop)
-#    ax[2, 2].set_ylim(0, 1.1)
-#    ax[2, 2].set_title("Temperature anomaly")
-#    ax[2, 2].set_yticklabels([])
-#    ax[2, 2].set_xlabel("°C, 2081-2100 minus 1995-2014, ssp245")
+    start = 0.8
+    stop = 3.2
+    ax[2, 2].plot(
+        np.linspace(start, stop, 1000),
+        target_ssp(np.linspace(start, stop, 1000)),
+        color=colors["target"],
+        label="Target",
+    )
+    ax[2, 2].plot(
+        np.linspace(start, stop, 1000),
+        prior_ssp(np.linspace(start, stop, 1000)),
+        color=colors["prior"],
+        label="Prior",
+    )
+    ax[2, 2].plot(
+        np.linspace(start, stop, 1000),
+        post1_ssp(np.linspace(start, stop, 1000)),
+        color=colors["post1"],
+        label="Temperature RMSE",
+    )
+    ax[2, 2].plot(
+        np.linspace(start, stop, 1000),
+        post2_ssp(np.linspace(start, stop, 1000)),
+        color=colors["post2"],
+        label="All constraints",
+    )
+    ax[2, 2].set_xlim(start, stop)
+    ax[2, 2].set_ylim(0, 1.1)
+    ax[2, 2].set_title("Temperature anomaly")
+    ax[2, 2].set_yticklabels([])
+    ax[2, 2].set_xlabel("°C, 2081-2100 minus 1995-2014, ssp245")
 
     fig.tight_layout()
     pl.savefig(
@@ -692,7 +686,7 @@ print(
 print(
     "OHC change 2018 rel. 1971*:", np.percentile(draws[0]["OHC"] * 0.91, (16, 50, 84))
 )
-#print("ssp245 2081-2100:", np.percentile(draws[0]["ssp245 2081-2100"], (5, 50, 95)))
+print("ssp245 2081-2100:", np.percentile(draws[0]["ssp245 2081-2100"], (5, 50, 95)))
 
 print("*likely range")
 
