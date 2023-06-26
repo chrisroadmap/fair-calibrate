@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Run constrained projections for SSPs"""
+"""Run constrained concentration driven projections for SSPs"""
 
 import os
 

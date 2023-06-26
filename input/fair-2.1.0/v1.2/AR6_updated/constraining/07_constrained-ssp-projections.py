@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Run constrained projections for SSPs"""
+"""Run constrained projections for SSPs - for information only"""
 
 import os
 
@@ -488,10 +488,10 @@ for irow in range(15):
         (5, 50, 95),
     )
 
-print("Anomalies rel. 1995-2014:")
+print("Anomalies rel. 1995-2014: NOT ASSESSMENT VERSION: USE C-DRIVEN")
 print((temp_model_19952014))
 print()
-print("Anomalies rel. 1850-1900:")
+print("Anomalies rel. 1850-1900: NOT ASSESSMENT VERSION: USE C-DRIVEN")
 print((temp_model_18501900))
 print()
 print(
