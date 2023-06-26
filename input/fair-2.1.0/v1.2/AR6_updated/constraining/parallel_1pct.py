@@ -92,7 +92,17 @@ def run_fair(cfg):
     fill(f.species_configs["forcing_scale"], cfg["scaling_CH4"], specie="CH4")
     fill(f.species_configs["forcing_scale"], cfg["scaling_N2O"], specie="N2O")
 
+    # initial condition of CO2 concentration (but not baseline for forcing calculations)
+    fill(f.species_configs['baseline_concentration'], 284.3169988, specie='CO2')
+    fill(f.species_configs['baseline_concentration'], 808.2490285, specie='CH4')
+    fill(f.species_configs['baseline_concentration'], 273.021047, specie='N2O')
+    
+    fill(f.species_configs['forcing_reference_concentration'], 284.3169988, specie='CO2')
+    fill(f.species_configs['forcing_reference_concentration'], 808.2490285, specie='CH4')
+    fill(f.species_configs['forcing_reference_concentration'], 273.021047, specie='N2O')
+
     # initial conditions
+    initialise(f.concentration, f.species_configs['baseline_concentration'])
     initialise(f.forcing, 0)
     initialise(f.temperature, 0)
     initialise(f.cumulative_emissions, 0)
