@@ -10,6 +10,7 @@ import os
 
 import numpy as np
 from dotenv import load_dotenv
+from fair.earth_params import mass_atmosphere, molecular_weight_air
 
 load_dotenv()
 
@@ -37,7 +38,14 @@ pass2 = np.loadtxt(
     dtype=int,
 )
 
+co2_1850 = 284.3169988
+co2_1920 = co2_1850*1.01**70  # NOT 2x (69.66 yr), per definition of TCRE
+mass_factor = 12.011 / molecular_weight_air * mass_atmosphere / 1e21
+# mass_factor converts ppm CO2 to (1000 Gt C)
+
 idx = np.in1d(pass1, pass2).nonzero()[0]
+print("temperature 2xCO2:", np.percentile(temp[0, idx], (5, 50, 95)))
+print("temperature 4xCO2:", np.percentile(temp[1, idx], (5, 50, 95)))
 print("AF 2xCO2*:", np.percentile(af[0, idx], (16, 50, 84)))
 print("AF 4xCO2*:", np.percentile(af[1, idx], (16, 50, 84)))
-print("TCRE*:", np.percentile(af[0, idx] * temp[0, idx] / 0.593, (16, 50, 84)))
+print("TCRE*:", np.percentile(af[0, idx] * temp[0, idx] / ((co2_1920-co2_1850)*mass_factor), (16, 50, 84)))
