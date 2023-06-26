@@ -95,8 +95,6 @@ if __name__ == "__main__":
     temp20412060_out = np.ones((samples)) * np.nan
     temp20812100_out = np.ones((samples)) * np.nan
 
-    calibrated_f4co2_mean = df_cr["F_4xCO2"].mean()
-
     config = []
     for ibatch, batch_start in enumerate(range(0, samples, batch_size)):
         config.append({})

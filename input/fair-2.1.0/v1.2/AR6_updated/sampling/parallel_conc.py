@@ -263,10 +263,6 @@ def run_fair(cfg):
     average_20yr[0] = 0.5
     average_20yr[-1] = 0.5
 
-    average_51yr = np.ones(52)
-    average_51yr[0] = 0.5
-    average_51yr[-1] = 0.5
-
     return (
         (
             np.average(
@@ -274,8 +270,8 @@ def run_fair(cfg):
                 weights=average_20yr,
                 axis=0,
             ) - np.average(
-                f.temperature[100:152, 0, :, 0],
-                weights=average_51yr,
+                f.temperature[245:266, 0, :, 0],
+                weights=average_20yr,
                 axis=0,
             )
         ),
@@ -285,8 +281,8 @@ def run_fair(cfg):
                 weights=average_20yr,
                 axis=0,
             ) - np.average(
-                f.temperature[100:152, 0, :, 0],
-                weights=average_51yr,
+                f.temperature[245:266, 0, :, 0],
+                weights=average_20yr,
                 axis=0,
             )
         ),
@@ -296,8 +292,8 @@ def run_fair(cfg):
                 weights=average_20yr,
                 axis=0,
             ) - np.average(
-                f.temperature[100:152, 0, :, 0],
-                weights=average_51yr,
+                f.temperature[245:266, 0, :, 0],
+                weights=average_20yr,
                 axis=0,
             )
         )
