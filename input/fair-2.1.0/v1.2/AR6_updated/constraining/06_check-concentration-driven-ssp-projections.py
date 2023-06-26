@@ -9,6 +9,7 @@ import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 import pooch
+import xarray as xr
 from dotenv import load_dotenv
 from fair import FAIR
 from fair.interface import fill, initialise
@@ -94,17 +95,16 @@ f = FAIR(ch4_method="Thornhill2021")
 f.define_time(1750, 2300, 1)
 f.define_scenarios(scenarios)
 f.define_configs(valid_all)
-species, properties = read_properties()
 f.define_species(species, properties)
 f.allocate()
 
 da = da_emissions.loc[dict(config="unspecified", scenario=scenarios)][:550, ...]
 fe = da.expand_dims(dim=["config"], axis=(2))
-f.emissions = fe.drop("config") * np.ones((1, 1, batch_size, 1))
+f.emissions = fe.drop("config") * np.ones((1, 1, output_ensemble_size, 1))
 
 da = da_concentration.loc[dict(config="unspecified", scenario=scenarios)][:551, ...]
 fc = da.expand_dims(dim=["config"], axis=(2))
-f.concentration = fc.drop("config") * np.ones((1, 1, batch_size, 1))
+f.concentration = fc.drop("config") * np.ones((1, 1, output_ensemble_size, 1))
 
 
 # solar and volcanic forcing
