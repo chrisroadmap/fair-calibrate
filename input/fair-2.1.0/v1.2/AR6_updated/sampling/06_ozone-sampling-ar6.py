@@ -92,10 +92,13 @@ skeie_ssp245[1750] = -0.03
 skeie_ssp245.sort_index(inplace=True)
 skeie_ssp245 = skeie_ssp245 + 0.03
 skeie_ssp245.drop([2014, 2017, 2020], inplace=True)
-skeie_ssp245 = skeie_ssp245.append(
-    skeie_total.loc["OsloCTM3", 2014:]
-    - skeie_total.loc["OsloCTM3", 2010]
-    + skeie_ssp245[2010]
+skeie_ssp245 = pd.concat(
+    [
+        skeie_ssp245,
+        skeie_total.loc["OsloCTM3", 2014:]
+        - skeie_total.loc["OsloCTM3", 2010]
+        + skeie_ssp245[2010]
+    ]
 )
 
 f = interp1d(
