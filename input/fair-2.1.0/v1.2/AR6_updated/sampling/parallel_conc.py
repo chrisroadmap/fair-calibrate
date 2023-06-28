@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
+from scipy.interpolate import interp1d
 
 load_dotenv()
 
@@ -17,59 +18,52 @@ constraint_set = os.getenv("CONSTRAINT_SET")
 
 
 def run_fair(cfg):
-    scenarios = ["ssp245"]
+    scenarios = ["1pctCO2"]
     batch_start = cfg["batch_start"]
     batch_end = cfg["batch_end"]
     batch_size = batch_end - batch_start
 
     species, properties = read_properties()
-    species.remove('Halon-1202')
-    del properties['Halon-1202']
-    for specie in species:
-        if properties[specie]['greenhouse_gas']:
-            properties[specie]['input_mode'] = 'concentration'
-
-    da_emissions = xr.load_dataarray(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-        "ssp_emissions_1750-2500.nc"
-    )
-    da_emissions = da_emissions.drop_sel(specie="Halon-1202")
 
     da_concentration = xr.load_dataarray(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/concentration/"
-        "ssp_concentration_1750-2500.nc"
+        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "concentration/1pctCO2_concentration_1850-1990.nc"
     )
 
-    f = FAIR(ch4_method="Thornhill2021")
-    f.define_time(1750, 2101, 1)
+    f = FAIR()
+    f.define_time(1850, 1990, 1)
     f.define_scenarios(scenarios)
+    species = ["CO2", "CH4", "N2O"]
+    properties = {
+        "CO2": {
+            "type": "co2",
+            "input_mode": "concentration",
+            "greenhouse_gas": True,
+            "aerosol_chemistry_from_emissions": False,
+            "aerosol_chemistry_from_concentration": False,
+        },
+        "CH4": {
+            "type": "ch4",
+            "input_mode": "concentration",
+            "greenhouse_gas": True,
+            "aerosol_chemistry_from_emissions": False,
+            "aerosol_chemistry_from_concentration": False,
+        },
+        "N2O": {
+            "type": "n2o",
+            "input_mode": "concentration",
+            "greenhouse_gas": True,
+            "aerosol_chemistry_from_emissions": False,
+            "aerosol_chemistry_from_concentration": False,
+        },
+    }
     f.define_configs(list(range(batch_start, batch_end)))
     f.define_species(species, properties)
     f.allocate()
 
-    trend_shape = np.ones(352)
-    trend_shape[:271] = np.linspace(0, 1, 271)
-
-    da = da_emissions.loc[dict(config="unspecified", scenario="ssp245")][:351, ...]
+    da = da_concentration.loc[dict(config="unspecified", scenario="1pctCO2")]
     fe = da.expand_dims(dim=["scenario", "config"], axis=(1, 2))
-    f.emissions = fe.drop("config") * np.ones((1, 1, batch_size, 1))
-
-    da = da_concentration.loc[dict(config="unspecified", scenario="ssp245")][:352, ...]
-    fc = da.expand_dims(dim=["scenario", "config"], axis=(1, 2))
-    f.concentration = fc.drop("config") * np.ones((1, 1, batch_size, 1))
-
-    # solar and volcanic forcing
-    fill(
-        f.forcing,
-        cfg["volcanic_forcing"][:, None, None] * cfg["scaling_Volcanic"],
-        specie="Volcanic",
-    )
-    fill(
-        f.forcing,
-        cfg["solar_forcing"][:, None, None] * cfg["scaling_solar_amplitude"]
-        + trend_shape[:, None, None] * cfg["scaling_solar_trend"],
-        specie="Solar",
-    )
+    f.concentration = fe.drop("config") * np.ones((1, 1, batch_size, 1))
 
     # climate response
     fill(
@@ -82,11 +76,7 @@ def run_fair(cfg):
     )
     fill(f.climate_configs["deep_ocean_efficacy"], cfg["epsilon"])
     fill(f.climate_configs["gamma_autocorrelation"], cfg["gamma"])
-    fill(f.climate_configs["sigma_eta"], cfg["sigma_eta"])
-    fill(f.climate_configs["sigma_xi"], cfg["sigma_xi"])
-    fill(f.climate_configs["seed"], cfg["seed"])
-    fill(f.climate_configs["stochastic_run"], True)
-    fill(f.climate_configs["use_seed"], True)
+    fill(f.climate_configs["stochastic_run"], False)
     fill(f.climate_configs["forcing_4co2"], cfg["forcing_4co2"])
 
     # species level
@@ -98,158 +88,22 @@ def run_fair(cfg):
     fill(f.species_configs["iirf_uptake"], cfg["iirf_uptake"], specie="CO2")
     fill(f.species_configs["iirf_temperature"], cfg["iirf_temperature"], specie="CO2")
 
-    # methane lifetime baseline and sensitivity
-    fill(f.species_configs["unperturbed_lifetime"], cfg["ch4_base"], specie="CH4")
-    fill(
-        f.species_configs["ch4_lifetime_chemical_sensitivity"],
-        cfg["ch4_CH4"],
-        specie="CH4",
-    )
-    fill(
-        f.species_configs["ch4_lifetime_chemical_sensitivity"],
-        cfg["ch4_N2O"],
-        specie="N2O",
-    )
-    fill(
-        f.species_configs["ch4_lifetime_chemical_sensitivity"],
-        cfg["ch4_VOC"],
-        specie="VOC",
-    )
-    fill(
-        f.species_configs["ch4_lifetime_chemical_sensitivity"],
-        cfg["ch4_NOx"],
-        specie="NOx",
-    )
-    fill(
-        f.species_configs["ch4_lifetime_chemical_sensitivity"],
-        cfg["ch4_EESC"],
-        specie="Equivalent effective stratospheric chlorine",
-    )
-    fill(f.species_configs["lifetime_temperature_sensitivity"], cfg["ch4_temp"])
-
-    # emissions adjustments for N2O and CH4
-    fill(f.species_configs["baseline_emissions"], 19.019783117809567, specie="CH4")
-    fill(f.species_configs["baseline_emissions"], 0.08602230754, specie="N2O")
-    fill(f.species_configs["baseline_emissions"], 19.423526730206152, specie="NOx")
-
-    # aerosol indirect
-    fill(f.species_configs["aci_scale"], cfg["beta"])
-    fill(f.species_configs["aci_shape"], cfg["shape_so2"], specie="Sulfur")
-    fill(f.species_configs["aci_shape"], cfg["shape_bc"], specie="BC")
-    fill(f.species_configs["aci_shape"], cfg["shape_oc"], specie="OC")
-
     # forcing scaling
     fill(f.species_configs["forcing_scale"], cfg["scaling_CO2"], specie="CO2")
     fill(f.species_configs["forcing_scale"], cfg["scaling_CH4"], specie="CH4")
     fill(f.species_configs["forcing_scale"], cfg["scaling_N2O"], specie="N2O")
-    # fill(f.species_configs['forcing_scale'], cfg['scaling_minorGHG'], specie='CO2')
-    fill(
-        f.species_configs["forcing_scale"],
-        cfg["scaling_stwv"],
-        specie="Stratospheric water vapour",
-    )
-    fill(
-        f.species_configs["forcing_scale"], cfg["scaling_contrails"], specie="Contrails"
-    )
-    fill(
-        f.species_configs["forcing_scale"],
-        cfg["scaling_lapsi"],
-        specie="Light absorbing particles on snow and ice",
-    )
-    fill(f.species_configs["forcing_scale"], cfg["scaling_landuse"], specie="Land use")
 
-    for specie in [
-        "CFC-11",
-        "CFC-12",
-        "CFC-113",
-        "CFC-114",
-        "CFC-115",
-        "HCFC-22",
-        "HCFC-141b",
-        "HCFC-142b",
-        "CCl4",
-        "CHCl3",
-        "CH2Cl2",
-        "CH3Cl",
-        "CH3CCl3",
-        "CH3Br",
-        "Halon-1211",
-        "Halon-1301",
-        "Halon-2402",
-        "CF4",
-        "C2F6",
-        "C3F8",
-        "c-C4F8",
-        "C4F10",
-        "C5F12",
-        "C6F14",
-        "C7F16",
-        "C8F18",
-        "NF3",
-        "SF6",
-        "SO2F2",
-        "HFC-125",
-        "HFC-134a",
-        "HFC-143a",
-        "HFC-152a",
-        "HFC-227ea",
-        "HFC-23",
-        "HFC-236fa",
-        "HFC-245fa",
-        "HFC-32",
-        "HFC-365mfc",
-        "HFC-4310mee",
-    ]:
-        fill(f.species_configs["forcing_scale"], cfg["scaling_minorGHG"], specie=specie)
+    # initial condition of CO2 concentration (but not baseline for forcing calculations)
+    fill(f.species_configs['baseline_concentration'], 284.3169988, specie='CO2')
+    fill(f.species_configs['baseline_concentration'], 808.2490285, specie='CH4')
+    fill(f.species_configs['baseline_concentration'], 273.021047, specie='N2O')
 
-    # aerosol radiation interactions
-    fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_BC"], specie="BC")
-    fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_CH4"], specie="CH4")
-    fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_CO"], specie="CO")
-    fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_N2O"], specie="N2O")
-    fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_NH3"], specie="NH3")
-    fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_NOx"], specie="NOx")
-    fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_OC"], specie="OC")
-    fill(
-        f.species_configs["erfari_radiative_efficiency"],
-        cfg["ari_Sulfur"],
-        specie="Sulfur",
-    )
-    fill(f.species_configs["erfari_radiative_efficiency"], cfg["ari_VOC"], specie="VOC")
-    fill(
-        f.species_configs["erfari_radiative_efficiency"],
-        cfg["ari_EESC"],
-        specie="Equivalent effective stratospheric chlorine",
-    )
-
-    # Ozone
-    fill(
-        f.species_configs["ozone_radiative_efficiency"], cfg["ozone_CH4"], specie="CH4"
-    )
-    fill(
-        f.species_configs["ozone_radiative_efficiency"], cfg["ozone_N2O"], specie="N2O"
-    )
-    fill(f.species_configs["ozone_radiative_efficiency"], cfg["ozone_CO"], specie="CO")
-    fill(
-        f.species_configs["ozone_radiative_efficiency"], cfg["ozone_VOC"], specie="VOC"
-    )
-    fill(
-        f.species_configs["ozone_radiative_efficiency"], cfg["ozone_NOx"], specie="NOx"
-    )
-    fill(
-        f.species_configs["ozone_radiative_efficiency"],
-        cfg["ozone_EESC"],
-        specie="Equivalent effective stratospheric chlorine",
-    )
-
-    # tune down volcanic efficacy
-    fill(f.species_configs["forcing_efficacy"], 0.6, specie="Volcanic")
-
-#    # CO2 in 1750
-#    fill(f.species_configs["baseline_concentration"], cfg["CO2_1750"], specie="CO2")
+    fill(f.species_configs['forcing_reference_concentration'], 284.3169988, specie='CO2')
+    fill(f.species_configs['forcing_reference_concentration'], 808.2490285, specie='CH4')
+    fill(f.species_configs['forcing_reference_concentration'], 273.021047, specie='N2O')
 
     # initial conditions
-#    initialise(f.concentration, f.species_configs["baseline_concentration"])
+    initialise(f.concentration, f.species_configs['baseline_concentration'])
     initialise(f.forcing, 0)
     initialise(f.temperature, 0)
     initialise(f.cumulative_emissions, 0)
@@ -259,42 +113,15 @@ def run_fair(cfg):
         warnings.simplefilter("ignore")
         f.run(progress=False)
 
-    average_20yr = np.ones(21)
-    average_20yr[0] = 0.5
-    average_20yr[-1] = 0.5
+    # interpolate warming at 1000 GtC
+    t1000 = np.ones(batch_size) * np.nan
+    ttco2 = 1000 * 44.009 / 12.011
+    for ibatch in range(batch_size):
+        interpolator = interp1d(f.cumulative_emissions[:, 0, ibatch, 0], f.temperature[:, 0, ibatch, 0])
+        t1000[ibatch] = interpolator(ttco2)
 
     return (
-        (
-            np.average(
-                f.temperature[271:292, 0, :, 0],
-                weights=average_20yr,
-                axis=0,
-            ) - np.average(
-                f.temperature[245:266, 0, :, 0],
-                weights=average_20yr,
-                axis=0,
-            )
-        ),
-        (
-            np.average(
-                f.temperature[291:312, 0, :, 0],
-                weights=average_20yr,
-                axis=0,
-            ) - np.average(
-                f.temperature[245:266, 0, :, 0],
-                weights=average_20yr,
-                axis=0,
-            )
-        ),
-        (
-            np.average(
-                f.temperature[331:352, 0, :, 0],
-                weights=average_20yr,
-                axis=0,
-            ) - np.average(
-                f.temperature[245:266, 0, :, 0],
-                weights=average_20yr,
-                axis=0,
-            )
-        )
+        np.array((f.temperature[70, 0, :, 0], f.temperature[140, 0, :, 0])),
+        np.array((f.airborne_fraction[70, 0, :, 0], f.airborne_fraction[140, 0, :, 0])),
+        np.array(t1000)
     )

@@ -60,7 +60,7 @@ if __name__ == "__main__":
     config = []
     for ibatch, batch_start in enumerate(range(0, samples, batch_size)):
         config.append({})
-        batch_end = min(batch_start + batch_size, len(rmse_pass))
+        batch_end = min(batch_start + batch_size, samples)
         config[ibatch]["batch_start"] = batch_start
         config[ibatch]["batch_end"] = batch_start + batch_size
         config[ibatch]["c1"] = df_cr.loc[batch_start : batch_end - 1, "c1"].values
@@ -117,10 +117,10 @@ if __name__ == "__main__":
         )
 
     for ibatch, batch_start in enumerate(range(0, samples, batch_size)):
-        batch_end = batch_start + batch_size
-        temp20212040_out[batch_start:batch_end] = res[ibatch][0]
-        temp20412060_out[batch_start:batch_end] = res[ibatch][1]
-        temp20812100_out[batch_start:batch_end] = res[ibatch][2]
+        batch_end = min(batch_start + batch_size, samples)
+        temp_2x4x_out[:, batch_start:batch_end] = res[ibatch][0]
+        af_out[:, batch_start:batch_end] = res[ibatch][1]
+        temp_1000_out[batch_start:batch_end] = res[ibatch][2]
 
     os.makedirs(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/",
