@@ -79,7 +79,10 @@ ssp245_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
     "temperature_ssp245_concdriven_2081-2100_mean.npy"
 )
-
+tcre_in = np.load(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+    "temperature_1pctCO2_1000GtC.npy"
+)
 
 def opt(x, q05_desired, q50_desired, q95_desired):
     "x is (a, loc, scale) in that order."
@@ -121,6 +124,15 @@ samples["CO2 concentration"] = scipy.stats.norm.rvs(
 samples["ssp245 2081-2100"] = scipy.stats.skewnorm.rvs(
     2.20496701, loc=1.4124379, scale=0.60080822, size=10**5, random_state=801693589
 )
+samples["TCRE"] = scipy.stats.norm.rvs(
+    loc=1.65, scale=0.65, size=10**5, random_state=198236970
+)
+samples["AF 2xCO2"] = scipy.stats.norm.rvs(
+    loc=0.53, scale=0.06, size=10**5, random_state=198236970
+)
+samples["AF 4xCO2"] = scipy.stats.norm.rvs(
+    loc=0.6, scale=0.1, size=10**5, random_state=3456711
+)
 
 ar_distributions = {}
 for constraint in [
@@ -133,6 +145,9 @@ for constraint in [
     "ERFaer",
     "CO2 concentration",
     "ssp245 2081-2100",
+    "TCRE",
+    "AF 2xCO2",
+    "AF 4xCO2"
 ]:
     ar_distributions[constraint] = {}
     ar_distributions[constraint]["bins"] = np.histogram(
@@ -160,7 +175,10 @@ accepted = pd.DataFrame(
         "ERFaci": faci_in[valid_temp],
         "ERFaer": faer_in[valid_temp],
         "CO2 concentration": co2_in[valid_temp],
-        "ssp245 2081-2100": ssp245_in[valid_temp]
+        "ssp245 2081-2100": ssp245_in[valid_temp],
+        "TCRE": ,
+        "AF 2xCO2": ,
+        "AF 4xCO2": ,
     },
     index=valid_temp,
 )
