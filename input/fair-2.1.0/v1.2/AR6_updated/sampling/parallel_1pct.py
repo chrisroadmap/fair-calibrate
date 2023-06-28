@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
-from scipy.interpolate import interp1d
 
 load_dotenv()
 
@@ -113,15 +112,7 @@ def run_fair(cfg):
         warnings.simplefilter("ignore")
         f.run(progress=False)
 
-    # interpolate warming at 1000 GtC
-    t1000 = np.ones(batch_size) * np.nan
-    ttco2 = 1000 * 44.009 / 12.011
-    for ibatch in range(batch_size):
-        interpolator = interp1d(f.cumulative_emissions[:, 0, ibatch, 0], f.temperature[:, 0, ibatch, 0])
-        t1000[ibatch] = interpolator(ttco2)
-
     return (
         np.array((f.temperature[70, 0, :, 0], f.temperature[140, 0, :, 0])),
         np.array((f.airborne_fraction[70, 0, :, 0], f.airborne_fraction[140, 0, :, 0])),
-        np.array(t1000)
     )
