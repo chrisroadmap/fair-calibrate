@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
+from scipy.interpolate import interp1d
 
 load_dotenv()
 
