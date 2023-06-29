@@ -15,6 +15,8 @@ import scipy.optimize
 import scipy.stats
 from dotenv import load_dotenv
 from fair import __version__
+from fair.constants import DOUBLING_TIME_1PCT
+from fair.earth_params import mass_atmosphere, molecular_weight_air
 from tqdm.auto import tqdm
 
 load_dotenv()
@@ -82,6 +84,10 @@ faer_in = fari_in + faci_in
 tcre_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
     "temperature_1pctCO2_1000GtC.npy"
+)
+tcr1pct_in = np.load(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+    "temperature_1pctCO2_y70_y140.npy"
 )
 
 ## Find NaNs and drop from valid_temp
@@ -154,7 +160,7 @@ for constraint in [
     "ERFaer",
     "CO2 concentration",
     "ssp245 2081-2100",
-    "TCRE",
+#    "TCRE",
 #    "AF 2xCO2",
 #    "AF 4xCO2"
 ]:
@@ -171,10 +177,15 @@ weights_51yr = np.ones(52)
 weights_51yr[0] = 0.5
 weights_51yr[-1] = 0.5
 
+co2_1850 = 284.3169988
+co2_1920 = co2_1850*1.01**70  # NOT 2x (69.66 yr), per definition of TCRE
+mass_factor = 12.011 / molecular_weight_air * mass_atmosphere / 1e21
+
 accepted = pd.DataFrame(
     {
         "ECS": ecs_in[valid_temp],
         "TCR": tcr_in[valid_temp],
+#        "TCR": tcr1pct_in[0, valid_temp] * DOUBLING_TIME_1PCT/70,
         "OHC": ohc_in[valid_temp] / 1e21,
         "temperature 1995-2014": np.average(
             temp_in[145:166, valid_temp], weights=weights_20yr, axis=0
@@ -188,7 +199,8 @@ accepted = pd.DataFrame(
             temp_in[231:252, valid_temp], weights=weights_20yr, axis=0
         )
         - np.average(temp_in[145:166, valid_temp], weights=weights_20yr, axis=0),
-        "TCRE": tcre_in[valid_temp],
+#        "TCRE": tcre_in[valid_temp],
+#        "TCRE": tcr1pct_in[0, valid_temp] * af_in[0, valid_temp] / ((co2_1920-co2_1850)*mass_factor)
 #        "AF 2xCO2": af_in[0, valid_temp],
 #        "AF 4xCO2": af_in[1, valid_temp],
     },
@@ -323,6 +335,8 @@ post2_ecs = scipy.stats.gaussian_kde(draws[0]["ECS"])
 target_tcr = scipy.stats.gaussian_kde(samples["TCR"])
 prior_tcr = scipy.stats.gaussian_kde(tcr_in)
 post1_tcr = scipy.stats.gaussian_kde(tcr_in[valid_temp])
+#prior_tcr = scipy.stats.gaussian_kde(tcr1pct_in * DOUBLING_TIME_1PCT/70)
+#post1_tcr = scipy.stats.gaussian_kde(tcr1pct_in[0, valid_temp] * DOUBLING_TIME_1PCT/70)
 post2_tcr = scipy.stats.gaussian_kde(draws[0]["TCR"])
 
 target_temp = scipy.stats.gaussian_kde(samples["temperature 1995-2014"])
@@ -372,10 +386,12 @@ prior_co2 = scipy.stats.gaussian_kde(co2_in)
 post1_co2 = scipy.stats.gaussian_kde(co2_in[valid_temp])
 post2_co2 = scipy.stats.gaussian_kde(draws[0]["CO2 concentration"])
 
-target_tcre = scipy.stats.gaussian_kde(samples["TCRE"])
-prior_tcre = scipy.stats.gaussian_kde(tcre_in)
-post1_tcre = scipy.stats.gaussian_kde(tcre_in[valid_temp])
-post2_tcre = scipy.stats.gaussian_kde(draws[0]["TCRE"])
+#target_tcre = scipy.stats.gaussian_kde(samples["TCRE"])
+##prior_tcre = scipy.stats.gaussian_kde(tcre_in)
+##post1_tcre = scipy.stats.gaussian_kde(tcre_in[valid_temp])
+#prior_tcre = tcr1pct_in[0, :] * af_in[0, :] / ((co2_1920-co2_1850)*mass_factor)
+#post1_tcre = tcr1pct_in[0, valid_temp] * af_in[0, valid_temp] / ((co2_1920-co2_1850)*mass_factor)
+#post2_tcre = scipy.stats.gaussian_kde(draws[0]["TCRE"])
 
 #target_af2 = scipy.stats.gaussian_kde(samples["AF 2xCO2"])
 #prior_af2 = scipy.stats.gaussian_kde(af_in[0,:])
@@ -653,70 +669,70 @@ if plots:
 
 #    ax[2, 2].axis('off')
 
-#    start = 0.8
-#    stop = 3.2
-#    ax[2, 2].plot(
-#        np.linspace(start, stop, 1000),
-#        target_ssp(np.linspace(start, stop, 1000)),
-#        color=colors["target"],
-#        label="Target",
-#    )
-#    ax[2, 2].plot(
-#        np.linspace(start, stop, 1000),
-#        prior_ssp(np.linspace(start, stop, 1000)),
-#        color=colors["prior"],
-#        label="Prior",
-#    )
-#    ax[2, 2].plot(
-#        np.linspace(start, stop, 1000),
-#        post1_ssp(np.linspace(start, stop, 1000)),
-#        color=colors["post1"],
-#        label="Temperature RMSE",
-#    )
-#    ax[2, 2].plot(
-#        np.linspace(start, stop, 1000),
-#        post2_ssp(np.linspace(start, stop, 1000)),
-#        color=colors["post2"],
-#        label="All constraints",
-#    )
-#    ax[2, 2].set_xlim(start, stop)
-#    ax[2, 2].set_ylim(0, 1.1)
-#    ax[2, 2].set_title("Temperature anomaly")
-#    ax[2, 2].set_yticklabels([])
-#    ax[2, 2].set_xlabel("°C, 2081-2100 minus 1995-2014, ssp245")
-
-    start = 0.0
+    start = 0.8
     stop = 3.2
     ax[2, 2].plot(
         np.linspace(start, stop, 1000),
-        target_tcre(np.linspace(start, stop, 1000)),
+        target_ssp(np.linspace(start, stop, 1000)),
         color=colors["target"],
         label="Target",
     )
     ax[2, 2].plot(
         np.linspace(start, stop, 1000),
-        prior_tcre(np.linspace(start, stop, 1000)),
+        prior_ssp(np.linspace(start, stop, 1000)),
         color=colors["prior"],
         label="Prior",
     )
     ax[2, 2].plot(
         np.linspace(start, stop, 1000),
-        post1_tcre(np.linspace(start, stop, 1000)),
+        post1_ssp(np.linspace(start, stop, 1000)),
         color=colors["post1"],
         label="Temperature RMSE",
     )
     ax[2, 2].plot(
         np.linspace(start, stop, 1000),
-        post2_tcre(np.linspace(start, stop, 1000)),
+        post2_ssp(np.linspace(start, stop, 1000)),
         color=colors["post2"],
         label="All constraints",
     )
     ax[2, 2].set_xlim(start, stop)
-    ax[2, 2].set_ylim(0, 1.2)
-    ax[2, 2].set_title("TCRE")
+    ax[2, 2].set_ylim(0, 1.1)
+    ax[2, 2].set_title("Temperature anomaly")
     ax[2, 2].set_yticklabels([])
-    ax[2, 2].set_xlabel("°C (1000 GtC)$^{-1}$")
+    ax[2, 2].set_xlabel("°C, 2081-2100 minus 1995-2014, ssp245")
 
+#    start = 0.0
+#    stop = 3.2
+#    ax[2, 2].plot(
+#        np.linspace(start, stop, 1000),
+#        target_tcre(np.linspace(start, stop, 1000)),
+#        color=colors["target"],
+#        label="Target",
+#    )
+#    ax[2, 2].plot(
+#        np.linspace(start, stop, 1000),
+#        prior_tcre(np.linspace(start, stop, 1000)),
+#        color=colors["prior"],
+#        label="Prior",
+#    )
+#    ax[2, 2].plot(
+#        np.linspace(start, stop, 1000),
+#        post1_tcre(np.linspace(start, stop, 1000)),
+#        color=colors["post1"],
+#        label="Temperature RMSE",
+#    )
+#    ax[2, 2].plot(
+#        np.linspace(start, stop, 1000),
+#        post2_tcre(np.linspace(start, stop, 1000)),
+#        color=colors["post2"],
+#        label="All constraints",
+#    )
+#    ax[2, 2].set_xlim(start, stop)
+#    ax[2, 2].set_ylim(0, 1.2)
+#    ax[2, 2].set_title("TCRE")
+#    ax[2, 2].set_yticklabels([])
+#    ax[2, 2].set_xlabel("°C (1000 GtC)$^{-1}$")
+#
 #    start = 0.33
 #    stop = 0.73
 #    ax[3, 1].plot(
@@ -833,9 +849,9 @@ print(
     "OHC change 2018 rel. 1971*:", np.percentile(draws[0]["OHC"] * 0.91, (16, 50, 84))
 )
 print("ssp245 2081-2100:", np.percentile(draws[0]["ssp245 2081-2100"], (5, 50, 95)))
-print(
-    "TCRE @1000GtC:", np.percentile(draws[0]["TCRE"], (5, 50, 95))
-)
+#print(
+#    "TCRE from 2xCO2:", np.percentile(draws[0]["TCRE"], (5, 50, 95))
+#)
 #print(
 #    "Airborne fraction 2xCO2*:", np.percentile(draws[0]["AF 2xCO2"], (16, 50, 84))
 #)
