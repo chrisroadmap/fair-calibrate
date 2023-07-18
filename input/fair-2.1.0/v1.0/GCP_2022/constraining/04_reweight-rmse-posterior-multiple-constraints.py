@@ -643,6 +643,10 @@ if plots:
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "constraints.png"
     )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "constraints.pdf"
+    )
     pl.close()
 
 
@@ -771,6 +775,10 @@ if plots:
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "final_reweighted_ssp245.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "final_reweighted_ssp245.pdf"
     )
     pl.close()
 

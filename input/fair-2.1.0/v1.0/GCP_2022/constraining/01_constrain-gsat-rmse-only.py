@@ -98,6 +98,9 @@ if plots:
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_ssp245.png"
     )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_ssp245.pdf"
+    )
     pl.close()
 
 for i in tqdm(range(samples), disable=1 - progress):
@@ -182,6 +185,10 @@ if plots:
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "post_rsme_ssp245.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "post_rsme_ssp245.pdf"
     )
     pl.close()
 
