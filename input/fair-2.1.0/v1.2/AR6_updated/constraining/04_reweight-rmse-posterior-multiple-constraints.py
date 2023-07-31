@@ -77,10 +77,10 @@ af_in = np.load(
     "airborne_fraction_1pctCO2_y70_y140.npy"
 )
 faer_in = fari_in + faci_in
-#ssp245_in = np.load(
-#    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-#    "temperature_ssp245_concdriven_2081-2100_mean.npy"
-#)
+ssp245_in = np.load(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+    "temperature_ssp245_concdriven_2081-2100_mean.npy"
+)
 tcre_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
     "temperature_1pctCO2_1000GtC.npy"
@@ -195,10 +195,11 @@ accepted = pd.DataFrame(
         "ERFaci": faci_in[valid_temp],
         "ERFaer": faer_in[valid_temp],
         "CO2 concentration": co2_in[valid_temp],
-        "ssp245 2081-2100": np.average(
-            temp_in[231:252, valid_temp], weights=weights_20yr, axis=0
-        )
-        - np.average(temp_in[145:166, valid_temp], weights=weights_20yr, axis=0),
+        "ssp245 2081-2100": ssp245_in[valid_temp] 
+#        "ssp245 2081-2100": np.average(
+#            temp_in[231:252, valid_temp], weights=weights_20yr, axis=0
+#        )
+#        - np.average(temp_in[145:166, valid_temp], weights=weights_20yr, axis=0),
 #        "TCRE": tcre_in[valid_temp],
 #        "TCRE": tcr1pct_in[0, valid_temp] * af_in[0, valid_temp] / ((co2_1920-co2_1850)*mass_factor)
 #        "AF 2xCO2": af_in[0, valid_temp],
@@ -351,14 +352,16 @@ post1_temp = scipy.stats.gaussian_kde(
 post2_temp = scipy.stats.gaussian_kde(draws[0]["temperature 1995-2014"])
 
 target_ssp = scipy.stats.gaussian_kde(samples["ssp245 2081-2100"])
-prior_ssp = scipy.stats.gaussian_kde(
-    np.average(temp_in[231:252, :], weights=weights_20yr, axis=0)
-    - np.average(temp_in[145:166, :], weights=weights_20yr, axis=0)
-)
-post1_ssp = scipy.stats.gaussian_kde(
-    np.average(temp_in[231:252, valid_temp], weights=weights_20yr, axis=0)
-    - np.average(temp_in[145:166, valid_temp], weights=weights_20yr, axis=0)
-)
+#prior_ssp = scipy.stats.gaussian_kde(
+#    np.average(temp_in[231:252, :], weights=weights_20yr, axis=0)
+#    - np.average(temp_in[145:166, :], weights=weights_20yr, axis=0)
+#)
+#post1_ssp = scipy.stats.gaussian_kde(
+#    np.average(temp_in[231:252, valid_temp], weights=weights_20yr, axis=0)
+#    - np.average(temp_in[145:166, valid_temp], weights=weights_20yr, axis=0)
+#)
+prior_ssp = scipy.stats.gaussian_kde(ssp245_in)
+post1_ssp = scipy.stats.gaussian_kde(ssp245_in[valid_temp])
 post2_ssp  = scipy.stats.gaussian_kde(draws[0]["ssp245 2081-2100"])
 
 target_ohc = scipy.stats.gaussian_kde(samples["OHC"])
