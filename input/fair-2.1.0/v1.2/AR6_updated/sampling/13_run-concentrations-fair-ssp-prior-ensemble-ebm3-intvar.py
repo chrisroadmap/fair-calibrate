@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Run concentration driven FaIR 2.1 for SSP245"""
+"""Run concentration driven FaIR 2.1 for five SSPs"""
 
 # We have to do this slightly differently to the examples so far. 1.5 million ensemble
 # members is going to take up too much memory, so we run in batches of 1000,
@@ -91,9 +91,9 @@ if __name__ == "__main__":
     seedstep = 399
 
     # we only care about three future time period averages for temperature
-    temp20212040_out = np.ones((samples)) * np.nan
-    temp20412060_out = np.ones((samples)) * np.nan
-    temp20812100_out = np.ones((samples)) * np.nan
+    temp20212040_out = np.ones((samples, 5)) * np.nan
+    temp20412060_out = np.ones((samples, 5)) * np.nan
+    temp20812100_out = np.ones((samples, 5)) * np.nan
 
     config = []
     for ibatch, batch_start in enumerate(range(0, samples, batch_size)):
@@ -236,9 +236,9 @@ if __name__ == "__main__":
 
     for ibatch, batch_start in enumerate(range(0, samples, batch_size)):
         batch_end = batch_start + batch_size
-        temp20212040_out[batch_start:batch_end] = res[ibatch][0]
-        temp20412060_out[batch_start:batch_end] = res[ibatch][1]
-        temp20812100_out[batch_start:batch_end] = res[ibatch][2]
+        temp20212040_out[batch_start:batch_end, :] = res[ibatch][0].T
+        temp20412060_out[batch_start:batch_end, :] = res[ibatch][1].T
+        temp20812100_out[batch_start:batch_end, :] = res[ibatch][2].T
 
     os.makedirs(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/",
@@ -246,19 +246,19 @@ if __name__ == "__main__":
     )
     np.save(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-        "temperature_ssp245_concdriven_2021-2040_mean.npy",
+        "temperature_concdriven_2021-2040_mean.npy",
         temp20212040_out,
         allow_pickle=True,
     )
     np.save(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-        "temperature_ssp245_concdriven_2041-2060_mean.npy",
+        "temperature_concdriven_2041-2060_mean.npy",
         temp20412060_out,
         allow_pickle=True,
     )
     np.save(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-        "temperature_ssp245_concdriven_2081-2100_mean.npy",
+        "temperature_concdriven_2081-2100_mean.npy",
         temp20812100_out,
         allow_pickle=True,
     )
