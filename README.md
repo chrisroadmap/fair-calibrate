@@ -8,7 +8,7 @@ Multiple strategies to calibrate the FaIR model.
 
 ### requirements
 - `anaconda` for `python3`
-- `python>=3.6`
+- `python>=3.7`
 - for the Cummins calibration, `R>=4.1.1` and `cmake>=3.2`
 
 ### set up environments for Python and R
@@ -18,6 +18,12 @@ conda activate fair-calibrate
 cd r_scripts
 R
 > source("setup.r")
+```
+
+### if you need to add a new package
+Edit the `environment.yml` file and add the package you require to the list. If it is conda installable and available under the list of channels provided, it should be picked up. To then update the environment, run
+```
+conda env update -f environment.yml --prune
 ```
 
 ## How to run
@@ -50,7 +56,7 @@ The output will be produced in `output/fair-X.X.X/vY.Y.Y/Z/` where X is the FaIR
 2. Check the recipe inside the `run` bash script
 3. ./run
 
-During diagnosis and debugging, scripts can be run individually, but must be run from the directories in which they reside (5 subdirectories deep).
+During diagnosis and debugging, scripts can be run individually, but must be run from the directories in which they reside (5 subdirectories deep). If you do this, activate your conda environment too (with `conda activate fair-calibrate`).
 
 Under the existing pattern -- which you are free to change in the `run` recipe -- scripts are automatically run in numerical order by the workflow if they are prefixed with a two digit number and an underscore, in this order:
 - `calibration/`
