@@ -13,6 +13,7 @@ dependencies:
   - pandas
   - pooch
   - python-dotenv
+  - scikit-learn
   - scipy
   - scmdata
   - tqdm
