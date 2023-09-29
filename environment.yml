@@ -13,6 +13,7 @@ dependencies:
   - pandas
   - pooch
   - python-dotenv
+  - scikit-learn
   - scipy
   - scmdata
   - tqdm
@@ -20,4 +21,4 @@ dependencies:
   - pip
   - pip:
     - aneris-iamc[units]
-    - fair==2.1.0
+    - fair==2.1.1
