@@ -61,75 +61,23 @@ valid_all
 seed = 1355763 + 399 * valid_all
 seed
 
+# concatenate each param dataframe and prefix with its model element to avoid
+# namespace conflicts (and a bit of user intuivity)
 params_out = pd.concat(
     (
-        df_cr.loc[valid_all, :],
-        df_cc.loc[valid_all, :],
-        df_ari.loc[valid_all, :],
-        df_aci.loc[valid_all, :],
-        df_ozone.loc[valid_all, :],
-        df_scaling.loc[valid_all, :],
-        df_1750co2.loc[valid_all, :],
-        pd.Series(seed, index=valid_all),
+        df_cr.loc[valid_all, :].rename(columns=lambda x: 'clim_' + x),
+        df_cc.loc[valid_all, :].rename(columns=lambda x: 'cc_' + x),
+        df_ari.loc[valid_all, :].rename(columns=lambda x: 'ari_' + x),
+        df_aci.loc[valid_all, :].rename(columns=lambda x: 'aci_' + x),
+        df_ozone.loc[valid_all, :].rename(columns=lambda x: 'o3_' + x),
+        df_scaling.loc[valid_all, :].rename(columns=lambda x: 'fscale_' + x),
+        df_1750co2.loc[valid_all, :].rename(columns={'co2_concentration':'cc_co2_concentration_1750'}),
+        pd.DataFrame(seed, index=valid_all, columns=['seed']),
     ),
     axis=1,
 )
 
-pd.Series(seed, index=valid_all)
-
-params_out.columns = [
-    "gamma",
-    "c1",
-    "c2",
-    "c3",
-    "kappa1",
-    "kappa2",
-    "kappa3",
-    "epsilon",
-    "sigma_eta",
-    "sigma_xi",
-    "F_4xCO2",
-    "r0",
-    "rU",
-    "rT",
-    "rA",
-    "ari BC",
-    "ari CH4",
-    "ari CO",
-    "ari N2O",
-    "ari NH3",
-    "ari NOx",
-    "ari OC",
-    "ari Sulfur",
-    "ari VOC",
-    "ari Equivalent effective stratospheric chlorine",
-    "shape Sulfur",
-    "shape BC",
-    "shape OC",
-    "beta",
-    "o3 CH4",
-    "o3 N2O",
-    "o3 Equivalent effective stratospheric chlorine",
-    "o3 CO",
-    "o3 VOC",
-    "o3 NOx",
-    "scale CH4",
-    "scale N2O",
-    "scale minorGHG",
-    "scale Stratospheric water vapour",
-    "scale Contrails",
-    "scale Light absorbing particles on snow and ice",
-    "scale Land use",
-    "scale Volcanic",
-    "solar_amplitude",
-    "solar_trend",
-    "scale CO2",
-    "co2_concentration_1750",
-    "seed",
-]
-
-params_out.drop(columns=["ari CO"], inplace=True)
-
+params_out.drop(columns=["ari_CO"], inplace=True)  # zero
 params_out.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
     "calibrated_constrained_parameters.csv"

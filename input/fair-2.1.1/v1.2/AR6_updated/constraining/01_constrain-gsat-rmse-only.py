@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""First constraint: RMSE < 0.16 K"""
+"""First constraint: RMSE < 0.17 K"""
 
 import os
 
@@ -11,6 +11,8 @@ import pandas as pd
 from dotenv import load_dotenv
 from fair import __version__
 from tqdm.auto import tqdm
+
+pl.switch_backend('agg')
 
 load_dotenv()
 pl.style.use("../../../../../defaults.mplstyle")
@@ -32,7 +34,7 @@ temp_in = np.load(
     "temperature_1850-2101.npy"
 )
 
-df_gmst = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv")
+df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2022.csv")
 gmst = df_gmst["gmst"].values
 
 
@@ -84,7 +86,7 @@ if plots:
         ),
         color="#000000",
     )
-    ax.plot(np.arange(1850.5, 2021), gmst, color="b")
+    ax.plot(np.arange(1850.5, 2023), gmst, color="b")
 
     ax.set_xlim(1850, 2100)
     ax.set_ylim(-1, 5)
@@ -100,13 +102,22 @@ if plots:
     )
     pl.close()
 
+# temperature is on timebounds, and observations are midyears
+# but, this is OK, since we are subtracting a consistent baseline (1850-1900, weighting the bounding
+# timebounds as 0.5)
+# e.g. 1993.0 timebound has big pinatubo hit, timebound 143
+# in obs this is 1992.5, timepoint 142
+# compare the timebound after the obs, since the forcing has had chance to affect both the obs timepoint
+# and the later timebound.
+# the goal of RMSE is as much to match the shape of warming as the magnitude; we do not want
+# to average out internal variability in the model or the obs.
 for i in tqdm(range(samples), disable=1 - progress):
     rmse_temp[i] = rmse(
-        gmst[:171],
-        temp_in[:171, i] - np.average(temp_in[:52, i], weights=weights, axis=0),
+        gmst[:173],
+        temp_in[1:174, i] - np.average(temp_in[:52, i], weights=weights, axis=0),
     )
 
-accept_temp = rmse_temp < 0.16
+accept_temp = rmse_temp < 0.17
 print("Passing RMSE constraint:", np.sum(accept_temp))
 valid_temp = np.arange(samples, dtype=int)[accept_temp]
 
@@ -171,7 +182,7 @@ if plots:
         color="#000000",
     )
 
-    ax.plot(np.arange(1850.5, 2021), gmst, color="b")
+    ax.plot(np.arange(1850.5, 2023), gmst, color="b")
 
     ax.set_xlim(1850, 2100)
     ax.set_ylim(-1, 5)

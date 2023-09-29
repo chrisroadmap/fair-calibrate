@@ -50,7 +50,7 @@ samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
-print("Sampling aerosol cloud interactions...")
+print("Calibrating aerosol cloud interactions...")
 
 
 files = glob.glob("../../../../../data/smith2023aerosol/*.csv")
@@ -157,18 +157,6 @@ def aci_log1750(x, beta, n0, n1, n2):
     return aci - aci_1750
 
 
-df_ar6 = pd.read_csv(
-    "../../../../../data/forcing/table_A3.3_historical_ERF_1750-2019_best_estimate.csv"
-)
-
-params_ar6, cov = curve_fit(
-    aci_log1750,
-    [so2[:270], bc[:270], oc[:270]],
-    df_ar6["aerosol-cloud_interactions"].values,
-    bounds=((-np.inf, 0, 0, 0), (0, np.inf, np.inf, np.inf)),
-    max_nfev=10000,
-)
-
 if plots:
     colors = {
         "CanESM5": "red",
@@ -243,85 +231,4 @@ df_params.to_csv(
     "aerosol_cloud.csv"
 )
 
-print("Correlation coefficients between aci parameters")
-print(df_params.corr())
-
-beta_samp = df_params["aci_scale"]
-n0_samp = df_params["Sulfur"]
-n1_samp = df_params["BC"]
-n2_samp = df_params["OC"]
-
-kde = scipy.stats.gaussian_kde([n0_samp, n1_samp, n2_samp])
-aci_sample = kde.resample(size=samples * 4, seed=63648708)
-
-aci_sample[1, :]
-
-aci_sample[0, aci_sample[0, :] < 0] = np.nan
-aci_sample[1, aci_sample[1, :] < 0] = np.nan
-aci_sample[2, aci_sample[2, :] < 0] = np.nan
-
-mask = np.any(np.isnan(aci_sample), axis=0)
-aci_sample = aci_sample[:, ~mask]
-
-NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
-erfaci_sample = scipy.stats.uniform.rvs(
-    size=samples, loc=-2.0, scale=2.0, random_state=71271
-)
-
-beta = np.zeros(samples)
-erfaci = np.zeros((351, samples))
-for i in tqdm(range(samples), desc="aci samples", disable=1 - progress):
-    ts2010 = np.mean(
-        aci_log(
-            [so2[255:265], bc[255:265], oc[255:265]],
-            0.92,
-            aci_sample[0, i],
-            aci_sample[1, i],
-            aci_sample[2, i],
-        )
-    )
-    ts1850 = aci_log(
-        [so2[100], bc[100], oc[100]],
-        0.92,
-        aci_sample[0, i],
-        aci_sample[1, i],
-        aci_sample[2, i],
-    )
-    ts1750 = aci_log(
-        [so2[0], bc[0], oc[0]],
-        0.92,
-        aci_sample[0, i],
-        aci_sample[1, i],
-        aci_sample[2, i],
-    )
-    erfaci[:, i] = (
-        (
-            aci_log(
-                [so2, bc, oc],
-                0.92,
-                aci_sample[0, i],
-                aci_sample[1, i],
-                aci_sample[2, i],
-            )
-            - ts1750
-        )
-        / (ts2010 - ts1850)
-        * (erfaci_sample[i])
-    )
-    beta[i] = erfaci_sample[i] / (ts2010 - ts1750)
-
-
-df = pd.DataFrame(
-    {
-        "shape_so2": aci_sample[0, :samples],
-        "shape_bc": aci_sample[1, :samples],
-        "shape_oc": aci_sample[2, :samples],
-        "beta": beta,
-    }
-)
-
-df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
-    "aerosol_cloud.csv",
-    index=False,
-)
+print(df_params)

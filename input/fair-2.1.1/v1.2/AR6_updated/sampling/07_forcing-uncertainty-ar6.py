@@ -13,6 +13,7 @@ import os
 import numpy as np
 import pandas as pd
 import scipy.stats
+from sklearn.preprocessing import QuantileTransformer
 from dotenv import load_dotenv
 from fair import __version__
 
@@ -32,13 +33,10 @@ NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 NINETY_TO_ONESIGMA
 
 forcing_u90 = {
-    #    'CO2': 0.12,      # CO2
     "CH4": 0.20,  # CH4: updated value from etminan 2016
     "N2O": 0.14,  # N2O
     "minorGHG": 0.19,  # other WMGHGs
     "Stratospheric water vapour": 1.00,
-    "Contrails": 0.70,  # contrails approx - half-normal
-    "Light absorbing particles on snow and ice": 1.25,  # bc on snow - half-normal
     "Land use": 0.50,  # land use change
     "Volcanic": 5.0 / 20.0,  # needs to be way bigger?
     "solar_amplitude": 0.50,
@@ -53,40 +51,38 @@ for forcer in forcing_u90:
     )
     seedgen = seedgen + 112
 
-# LAPSI is asymmetric Gaussian. We can just scale the half of the distribution
-# above/below best estimate
-scalings["Light absorbing particles on snow and ice"][
-    scalings["Light absorbing particles on snow and ice"] < 1
-] = (
-    0.08
-    / 0.1
-    * (
-        scalings["Light absorbing particles on snow and ice"][
-            scalings["Light absorbing particles on snow and ice"] < 1
-        ]
-        - 1
+def opt(x, q05_desired, q50_desired, q95_desired):
+    "x is (a, loc, scale) in that order."
+    q05, q50, q95 = scipy.stats.skewnorm.ppf(
+        (0.05, 0.50, 0.95), x[0], loc=x[1], scale=x[2]
     )
-    + 1
-)
+    return (q05 - q05_desired, q50 - q50_desired, q95 - q95_desired)
 
-# so is contrails - the benefits of doing this are tiny :)
-scalings["Contrails"][scalings["Contrails"] < 1] = (
-    0.0384 / 0.0406 * (scalings["Contrails"][scalings["Contrails"] < 1] - 1) + 1
+# Asymmetric distributions we use skew-normal, fitting quantiles
+lapsi_params = scipy.optimize.root(opt, [1, 1, 1], args=(0, 1, 1.25)).x
+contrails_params = scipy.optimize.root(opt, [1, 1, 1], args=(19/57, 1, 98/57)).x
+
+scalings["Light absorbing particles on snow and ice"] = scipy.stats.skewnorm.rvs(
+    lapsi_params[0], loc=lapsi_params[1], scale=lapsi_params[2], size=samples, random_state=3701584
+)
+scalings["Contrails"] = scipy.stats.skewnorm.rvs(
+    contrails_params[0], loc=contrails_params[1], scale=contrails_params[2], size=samples, random_state=91581814
 )
 
 # Solar trend is absolute, not scaled
 scalings["solar_trend"] = scalings["solar_trend"] - 1
 
-# take CO2 scaling from 4xCO2 generated from the EBMs
+# CO2 scaling is quantile mapping from ERF 4xCO2 and +/- 12%
 df_ebm = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
     "climate_response_ebm3.csv"
 )
 
-scalings["CO2"] = np.array(
-    1
-    + 0.563 * (df_ebm["F_4xCO2"].mean() - df_ebm["F_4xCO2"]) / df_ebm["F_4xCO2"].mean()
-)
+qt = QuantileTransformer(output_distribution='normal', random_state=70601701)
+f4xco2 = df_ebm['F_4xCO2'].values.reshape(-1, 1)
+trans = qt.fit(f4xco2).transform(f4xco2)
+trans = 1 + trans * 0.12 / NINETY_TO_ONESIGMA
+scalings["CO2"] = trans.squeeze()
 
 df_out = pd.DataFrame(scalings, columns=scalings.keys())
 

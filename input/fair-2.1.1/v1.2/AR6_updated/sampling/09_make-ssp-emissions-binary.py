@@ -59,7 +59,6 @@ gfed_sectors = [
     "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
     "Emissions|NOx|MAGICC AFOLU|Peat Burning",
 ]
-print("Don't forget to set NOx baseline emissions to this value!")
 for scenario in scenarios:
     f.emissions.loc[dict(specie="NOx", scenario=scenario, config="unspecified")] = (
         df_emis.loc[
@@ -90,14 +89,6 @@ for scenario in scenarios:
         .interpolate(axis=1)
         .values.squeeze()
     )[:750]
-
-    print(
-        f.emissions.loc[
-            dict(
-                specie="NOx", scenario=scenario, config="unspecified", timepoints=1750.5
-            )
-        ].data
-    )
 
 os.makedirs(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/",

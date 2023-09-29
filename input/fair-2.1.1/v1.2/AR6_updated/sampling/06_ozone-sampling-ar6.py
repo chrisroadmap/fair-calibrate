@@ -225,13 +225,6 @@ species_out["NOx"] = (
 )[:-1]
 
 
-# output_years = np.arange(1750, 2020)
-# conc_years = np.concatenate(([1750], np.arange(1850, 2020)))
-# for species in concentration_species:
-#    conc_in = df_conc.loc[:, species].values
-#    f = interp1d(conc_years, conc_in)
-#    species_out[species] = f(output_years)
-
 for ispec, species in enumerate(concentration_species):
     species_rcmip_name = species.replace("-", "")
     conc_in = (

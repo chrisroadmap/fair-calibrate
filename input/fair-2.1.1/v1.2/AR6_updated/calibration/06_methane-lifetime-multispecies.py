@@ -51,13 +51,13 @@ assert fair_v == __version__
 pl.style.use("../../../../../defaults.mplstyle")
 
 # ## Temperature data
-# Use observations 1850-2020, then simulate an SSP3-7.0 climate with a linear warming
+# Use observations 1850-2022, then simulate an SSP3-7.0 climate with a linear warming
 # rate to 4C in 2100.
 
-df_temp = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv")
+df_temp = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2022.csv")
 gmst = np.zeros(351)
-gmst[100:271] = df_temp["gmst"].values
-gmst[271:351] = np.linspace(gmst[270], 4, 80)
+gmst[100:273] = df_temp["gmst"].values
+gmst[273:351] = np.linspace(gmst[272], 4, 78)
 
 # ## Get emissions and concentrations
 rcmip_emissions_file = pooch.retrieve(
@@ -468,15 +468,15 @@ for model in models:
 
 if plots:
     for model in models:
-        pl.plot(np.arange(1750, 2021), conc_ch4[model][:271], label=model)
-    pl.plot(np.arange(1750, 2021), input["CH4"][:271], color="k", label="obs")
+        pl.plot(np.arange(1750, 2023), conc_ch4[model][:273], label=model)
+    pl.plot(np.arange(1750, 2023), input["CH4"][:273], color="k", label="CMIP6")
     pl.legend()
     os.makedirs(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "aerchemmip_tuning_ch4_conc_1750-2020.png"
+        "aerchemmip_tuning_ch4_conc_1750-2022.png"
     )
     pl.close()
 
@@ -489,7 +489,7 @@ invect = np.array(
 
 
 def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
-    conc_ch4 = np.zeros(271)
+    conc_ch4 = np.zeros(273)
     gas_boxes = 0
     airborne_emissions = 0
 
@@ -516,7 +516,7 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
         params,
     )
 
-    for i in range(271):
+    for i in range(273):
         conc_ch4[i], gas_boxes, airborne_emissions = one_box(
             emis_ch4[i],
             gas_boxes,
@@ -534,8 +534,8 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
 
 p, cov = scipy.optimize.curve_fit(
     fit_precursors,
-    invect[:, :271],
-    input["CH4"][:271],
+    invect[:, :273],
+    input["CH4"][:273],
     bounds=(  # AerChemMIP min to max range
         (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3),
         (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4),

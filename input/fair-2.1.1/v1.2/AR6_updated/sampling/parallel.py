@@ -247,9 +247,9 @@ def run_fair(cfg):
 
     return (
         f.temperature[100:, 0, :, 0],
-        f.ocean_heat_content_change[268:270, 0, :].mean(axis=0)
+        f.ocean_heat_content_change[270:272, 0, :].mean(axis=0)
         - f.ocean_heat_content_change[221:223, 0, :].mean(axis=0),
-        f.concentration[264:266, 0, :, 2].mean(axis=0),
+        f.concentration[272:274, 0, :, 2].mean(axis=0),
         np.average(
             f.forcing[255:266, 0, :, 56],
             weights=np.array([0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]),

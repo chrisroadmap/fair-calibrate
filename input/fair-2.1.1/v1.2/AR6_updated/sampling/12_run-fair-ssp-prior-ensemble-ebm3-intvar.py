@@ -11,6 +11,7 @@
 # - ozone relationship from FaIR 1.6 used in AR6.
 # - interactive methane lifetime
 # - internal variability (here included)
+# - NEW: volcanic forcing data from IGCC, updated to end 2022
 #
 # We have to do this slightly differently to the examples so far. 1.5 million ensemble
 # members is going to take up too much memory, so we run in batches of 1000,
@@ -48,18 +49,10 @@ if __name__ == "__main__":
         "../../../../../data/forcing/solar_erf_timebounds.csv", index_col="year"
     )
     df_volcanic = pd.read_csv(
-        "../../../../../data/forcing/volcanic_ERF_monthly_-950001-201912.csv"
+        "../../../../../data/forcing/volcanic_ERF_1750-2101_timebounds.csv"
     )
 
-    volcanic_forcing = np.zeros(352)
-    for i, year in enumerate(np.arange(1750, 2021)):
-        volcanic_forcing[i] = np.mean(
-            df_volcanic.loc[
-                ((year - 1) <= df_volcanic["year"]) & (df_volcanic["year"] < year)
-            ].erf
-        )
-    volcanic_forcing[271:281] = np.linspace(1, 0, 10) * volcanic_forcing[270]
-
+    volcanic_forcing = df_volcanic.erf.values
     solar_forcing = df_solar["erf"].loc[1750:2101].values
 
     df_cc = pd.read_csv(
@@ -273,13 +266,13 @@ if __name__ == "__main__":
     )
     np.save(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-        "ocean_heat_content_2018_minus_1971.npy",
+        "ocean_heat_content_2020_minus_1971.npy",
         ohc_out,
         allow_pickle=True,
     )
     np.save(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-        "concentration_co2_2014.npy",
+        "concentration_co2_2022.npy",
         co2_out,
         allow_pickle=True,
     )
