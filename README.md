@@ -34,8 +34,8 @@ The `.env` file contains environment variables that should be changed in order t
 
 ```
 # example .env
-CALIBRATION_VERSION=1.1
-FAIR_VERSION=2.1.0
+CALIBRATION_VERSION=1.2
+FAIR_VERSION=2.1.1
 CONSTRAINT_SET=AR6_updated
 PRIOR_SAMPLES=1500000        # how many prior samples to draw
 POSTERIOR_SAMPLES=1001       # final posterior ensemble size
@@ -53,8 +53,9 @@ The output will be produced in `output/fair-X.X.X/vY.Y.Y/Z/` where X is the FaIR
 
 ### To run the workflow
 1. Create the `.env` file - see above
-2. Check the recipe inside the `run` bash script
-3. ./run
+2. Set up environments for python and R (see above)
+3. Check the recipe inside the `run` bash script
+4. `./run`
 
 During diagnosis and debugging, scripts can be run individually, but must be run from the directories in which they reside (5 subdirectories deep). If you do this, activate your conda environment too (with `conda activate fair-calibrate`).
 
@@ -65,19 +66,20 @@ Under the existing pattern -- which you are free to change in the `run` recipe -
 
 ### To produce a new calibration
 1. Create your workflow scripts inside `input/fair-X.X.X/vY.Y/Z` (copy an existing calibration to get started)
-2. Update your `.env` file to point to the correct calibration version (vY.Y) and constraint set (Z)
-3. Check the recipe inside the `run` bash script
-4. ./run
-5. Check output. Ensure the performance metrics are documented and diagnostic plots look sensible.
-6. If releasing a new calibration: update the relevant sections of the [Wiki](https://github.com/chrisroadmap/fair-calibrate/wiki)
-7. ./create_zenodo_zip
-8. Upload to Zenodo
+2. Set up environments for python and R (see above)
+3. Update your `.env` file to point to the correct fair version (X.X.X), calibration version (vY.Y) and constraint set (Z)
+4. Check the recipe inside the `run` bash script
+5. `./run`
+6. Check output. Ensure the performance metrics are documented and diagnostic plots look sensible.
+7. If releasing a new calibration: update the relevant sections of the [Wiki](https://github.com/chrisroadmap/fair-calibrate/wiki)
+8. `./create_zenodo_zip`
+9. Upload to Zenodo
 
 ## Notes
 1. I get different results from the 3-layer model calibration between using pre-compiled R binary for for Mac compared to building the R binary from source on CentOS7; both using R-4.1.1, and again using the Arc4 HPC. The Arc4 results are used. A future **TODO** would be to switch to ``py-bobyqa`` which is the optimizer used in the R code, and remove dependence on R, which *may* improve performace.
 2. Related to above, scipy's multivariate normal and sparse matrix algebra routines seem fragile, and change between scipy versions (1.8, 1.9, 1.10). If anyone trying to reproduce this runs into "positive semidefinite" errors, raise an issue.
 
-## Documentation:
+## Documentation
 More details on each calibration version are in the [Wiki](https://github.com/chrisroadmap/fair-calibrate/wiki).
 
 It is critical that each calibration version and calibration set is well documented, as they may be used by others: often, differences in the responses in climate emulators are more a function of calibration than of model structural differences (I don't have a single good reference to prove this yet, but trust me). New calibrations will not be accepted without a Wiki entry.
