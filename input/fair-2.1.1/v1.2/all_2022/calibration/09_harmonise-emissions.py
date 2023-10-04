@@ -88,19 +88,6 @@ for idx in range(0, len(history.index)):
     arrays.append(list(history.index[idx]))
     arrays[-1][2] = "GCP+PRIMAP+CEDS+GFED"
 
-#units = [
-#    "Gt CO2/yr",
-#    "Gt CO2/yr",
-#    "Mt CH4/yr",
-#    "Mt N2O/yr",
-#    "Mt SO2/yr",
-#    "Mt CO/yr",
-#    "Mt VOC/yr",
-#    "Mt NO2/yr",
-#    "Mt BC/yr",
-#    "Mt OC/yr",
-#    "Mt NH3/yr"
-#]
 for iu, unit in enumerate(units):
     arrays[iu][3] = unit
 
@@ -139,6 +126,9 @@ new_index = pd.MultiIndex.from_tuples(
     list(zip(*list(map(list, zip(*arrays))))), names=future.index.names
 )
 future.index = new_index
+
+history = history.reorder_levels(['model','scenario','region','variable','unit']).sort_index()
+future = future.reorder_levels(['model','scenario','region','variable','unit']).sort_index()
 
 # Harmonization overrides - use same as RCMIP
 overrides = pd.DataFrame(
@@ -229,9 +219,11 @@ with warnings.catch_warnings():
             history=history,
             harmonisation_year=harmonisation_year,
             overrides=overrides,
-        )
+        ).reset_index(level=(5,6,7,8,9), drop=True)
         for _, msdf in tqdm(future.groupby(["model", "scenario"]), disable=1-progress)
     ]
+# reset_index is needed above because aneris for some reason gives us two copies of
+# the MultiIndex
 
 scenarios_harmonised = pd.concat(scenarios_harmonised).reset_index()
 

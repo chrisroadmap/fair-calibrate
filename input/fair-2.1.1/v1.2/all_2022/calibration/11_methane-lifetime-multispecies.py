@@ -55,14 +55,9 @@ datadir = os.getenv("DATADIR")
 pl.style.use("../../../../../defaults.mplstyle")
 
 # Temperature data
-# Use observations 1850-2022, then simulate an SSP3-7.0 climate with a linear warming
-# rate to 4C in 2100.
-
-df_temp = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv")
-gmst = np.zeros(351)
-gmst[:101] = np.linspace(-0.1, 0, 101)
-gmst[100:273] = df_temp["gmst"].values
-gmst[273:351] = np.linspace(gmst[268:273].mean(), 4, 78)
+# Use observations 1850-2022, then use ssp370 projections from IPCC
+df_temp = pd.read_csv("../../../../../data/forcing/ssp_strawman_warming.csv")
+gmst = df_temp["ssp370"].values
 
 # Get emissions and concentrations: from RCMIP for model tuning stage
 rcmip_emissions_file = pooch.retrieve(
@@ -516,8 +511,8 @@ input_obs['VOC'] = df_emis_obs['NMVOC'].values
 input_obs['NOx'] = df_emis_obs['NOx'].values
 input_obs['temp'] = gmst[:273]
 
-df_ch4emis_obs = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap_ceds_gfed_1750-2022.csv')
-emis_ch4_obs = df_ch4emis_obs.loc[df_ch4emis_obs['Variable']=='Emissions|CH4', '1750':'2022'].values.squeeze()
+df_ch4emis_obs = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap_ceds_gfed_inv_1750-2021.csv')
+emis_ch4_obs = df_ch4emis_obs.loc[df_ch4emis_obs['Variable']=='Emissions|CH4', '1750':'2021'].values.squeeze()
 
 hc_eesc = {}
 total_eesc = 0
@@ -553,7 +548,7 @@ natural_emissions_adjustment = emis_ch4_obs[0]
 
 #def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase, rnat):
 def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
-    conc_ch4 = np.zeros(273)
+    conc_ch4 = np.zeros(272)
     gas_boxes = 729.2 / burden_per_emission     # should use correct pi value for CMIP6
     airborne_emissions = 729.2 / burden_per_emission
 
@@ -581,7 +576,7 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
         params,
     )
 
-    for i in range(273):
+    for i in range(272):
         conc_ch4[i], gas_boxes, airborne_emissions = one_box(
             #emis_ch4_obs[i] + rnat,
             emis_ch4_obs[i] + 218,
@@ -601,8 +596,8 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
 # natural bounds from global methane budget (part of GCP)
 p, cov = scipy.optimize.curve_fit(
     fit_precursors,
-    invect[:, :273],
-    input_obs["CH4"][:273],
+    invect[:, :272],
+    input_obs["CH4"][:272],
 #    bounds=(  # AerChemMIP min to max range
 #        (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3, 174),
 #        (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4, 258),
@@ -666,13 +661,13 @@ if plots:
     )
     pl.close()
 
-conc_ch4["best_fit"] = np.zeros(273)
+conc_ch4["best_fit"] = np.zeros(272)
 gas_boxes = 729.2 / burden_per_emission
 airborne_emissions = 729.2/burden_per_emission
 
-emis_ch4_obs = df_ch4emis_obs.loc[df_ch4emis_obs['Variable']=='Emissions|CH4', '1750':'2022'].values.squeeze()
+emis_ch4_obs = df_ch4emis_obs.loc[df_ch4emis_obs['Variable']=='Emissions|CH4', '1750':'2021'].values.squeeze()
 
-for i in range(273):
+for i in range(272):
     conc_ch4["best_fit"][i], gas_boxes, airborne_emissions = one_box(
 #        emis_ch4_obs[i] + parameters["best_fit"]["nat"],
         emis_ch4_obs[i] + 218,
@@ -841,7 +836,7 @@ if plots:
 #    for model in models:
 #        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
     ax[1].plot(
-        np.arange(1750, 2023), conc_ch4["best_fit"], color="0.5", label="Best fit"
+        np.arange(1750, 2022), conc_ch4["best_fit"], color="0.5", label="Best fit"
     )
     ax[1].plot(
         np.arange(1750, 2023), input_obs["CH4"], color="k", label="observations"

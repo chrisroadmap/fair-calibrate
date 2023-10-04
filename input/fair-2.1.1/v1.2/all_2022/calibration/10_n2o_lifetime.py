@@ -30,14 +30,9 @@ assert fair_v == __version__
 pl.style.use("../../../../../defaults.mplstyle")
 
 # Temperature data
-# Use observations 1850-2022, then simulate an SSP3-7.0 climate with a linear warming
-# rate to 4C in 2100.
-
-df_temp = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv")
-gmst = np.zeros(351)
-gmst[100:273] = df_temp["gmst"].values
-gmst[273:351] = np.linspace(gmst[268:273].mean(), 4, 78)
-
+# Use observations 1850-2022, then use ssp370 projections from IPCC
+df_temp = pd.read_csv("../../../../../data/forcing/ssp_strawman_warming.csv")
+gmst = df_temp["ssp370"].values
 
 # put this into a simple one box model
 def one_box(
@@ -83,8 +78,10 @@ input_obs = {}
 input_obs['N2O'] = df_conc_obs['N2O'].values
 input_obs['temp'] = gmst[:273]
 
-df_emis_obs = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap_ceds_gfed_1750-2022.csv')
-emis_obs = df_emis_obs.loc[df_emis_obs['Variable']=='Emissions|N2O', '1750':'2022'].values.squeeze()
+df_emis_obs = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap_ceds_gfed_inv_1750-2021.csv')
+emis_obs = df_emis_obs.loc[df_emis_obs['Variable']=='Emissions|N2O', '1750':'2021'].values.squeeze()
+
+df_emis_ssp = pd.read_csv(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/ssps_harmonized.csv")
 
 invect = np.array(
     [input_obs["N2O"], input_obs["temp"]]
@@ -106,7 +103,7 @@ def fit_precursors(x, rbase, rnat):
     gas_boxes = 270.1 / burden_per_emission
     airborne_emissions = 270.1 / burden_per_emission
 
-    for i in range(273):
+    for i in range(272):
         conc_n2o[i], gas_boxes, airborne_emissions = one_box(
             emis_obs[i] + rnat,
             gas_boxes,
@@ -143,12 +140,12 @@ parameters["best_fit"] = {
 # these are the feedback values per ppb / per Mt that go into FaIR
 print(parameters["best_fit"])
 
-conc_n2o = np.zeros(273)
+conc_n2o_obs = np.zeros(272)
 gas_boxes = 270.1 / burden_per_emission
 airborne_emissions = 270.1 / burden_per_emission
 
-for i in range(273):
-    conc_n2o[i], gas_boxes, airborne_emissions = one_box(
+for i in range(272):
+    conc_n2o_obs[i], gas_boxes, airborne_emissions = one_box(
         emis_obs[i] + parameters["best_fit"]["nat"],
         gas_boxes,
         airborne_emissions,
@@ -162,50 +159,78 @@ for i in range(273):
     )
 
 
-# ### Four panel plot
+
+conc_n2o = {}
+for ssp in ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']:
+    conc_n2o[ssp] = np.zeros(351)
+    emis_ssp = np.zeros(351)
+    emis_ssp[:272] = emis_obs
+    emis_ssp[272:] = df_emis_ssp.loc[(df_emis_ssp['variable']=='Emissions|N2O')&(df_emis_ssp['scenario']==ssp), '2022':'2100'].values.squeeze()
+    gas_boxes = 270.1 / burden_per_emission
+    airborne_emissions = 270.1 / burden_per_emission
+    print(emis_ssp)
+    for i in range(351):
+        conc_n2o[ssp][i], gas_boxes, airborne_emissions = one_box(
+            emis_ssp[i] + parameters["best_fit"]["nat"],
+            gas_boxes,
+            airborne_emissions,
+            burden_per_emission,
+            parameters["best_fit"]["base"],
+            1,#lifetime_scaling["best_fit"][i],
+            partition_fraction,
+            pre_industrial_concentration=0,
+            timestep=1,
+            natural_emissions_adjustment=0#natural_emissions_adjustment,
+        )
+
+# Two panel plot
 if plots:
-    # ar6_colors = {
-    #     "ssp119": "#00a9cf",
-    #     "ssp126": "#003466",
-    #     "ssp245": "#f69320",
-    #     "ssp370": "#df0000",
-    #     "ssp434": "#2274ae",
-    #     "ssp460": "#b0724e",
-    #     "ssp534-over": "#92397a",
-    #     "ssp585": "#980002",
-    # }
-
-    fig, ax = pl.subplots(1, 1, figsize=(3.5, 3.5))
-#    fig, ax = pl.subplots(1, 3, figsize=(12, 3.5))
-
-    ax.plot(
-        np.arange(1750, 2023), conc_n2o, color="0.5", label="Best fit"
+    os.makedirs(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/",
+        exist_ok=True,
     )
-    ax.plot(
+    ar6_colors = {
+        "ssp119": "#00a9cf",
+        "ssp126": "#003466",
+        "ssp245": "#f69320",
+        "ssp370": "#df0000",
+        "ssp434": "#2274ae",
+        "ssp460": "#b0724e",
+        "ssp534-over": "#92397a",
+        "ssp585": "#980002",
+    }
+
+#    fig, ax = pl.subplots(1, 1, figsize=(3.5, 3.5))
+    fig, ax = pl.subplots(1, 2, figsize=(7.5, 3.5))
+
+    ax[0].plot(
+        np.arange(1750, 2022), conc_n2o_obs, color="0.5", label="Best fit"
+    )
+    ax[0].plot(
         np.arange(1750, 2023), input_obs["N2O"], color="k", label="observations"
     )
-    ax.set_ylabel("ppb")
-    ax.set_xlim(1750, 2023)
-    ax.legend(frameon=False)
-    ax.set_title("N$_2$O concentration")
+    ax[0].set_ylabel("ppb")
+    ax[0].set_xlim(1750, 2022)
+    ax[0].legend(frameon=False)
+    ax[0].set_title("N$_2$O concentration")
 
-    # for ssp in [
-    #     "ssp119",
-    #     "ssp126",
-    #     "ssp434",
-    #     "ssp534-over",
-    #     "ssp245",
-    #     "ssp460",
-    #     "ssp370",
-    #     "ssp585",
-    # ]:
-    #     ax[2].plot(
-    #         np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp]
-    #     )
-    # ax[2].set_ylabel("ppb")
-    # ax[2].set_title("(c) Best fit CH$_4$ projections")
-    # ax[2].set_xlim(1750, 2100)
-    # ax[2].legend(frameon=False)
+    for ssp in [
+        "ssp119",
+        "ssp126",
+        "ssp434",
+        "ssp534-over",
+        "ssp245",
+        "ssp460",
+        "ssp370",
+        "ssp585",
+    ]:
+        ax[1].plot(
+            np.arange(1750, 2101), conc_n2o[ssp], label=ssp, color=ar6_colors[ssp]
+        )
+    ax[1].set_ylabel("ppb")
+    ax[1].set_title("(b) Best fit N$_2$O projections")
+    ax[1].set_xlim(1750, 2100)
+    ax[1].legend(frameon=False)
 
     fig.tight_layout()
     pl.savefig(
