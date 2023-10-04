@@ -47,7 +47,7 @@ for specie in species:
     ) + bb_df.loc[1750:1996, specie].values.squeeze() * gfed_convert[specie]
 
     slcf_df.loc[1997:2019, specie] = (
-        ceds_df.loc[1997:2019, specie] 
+        ceds_df.loc[1997:2019, specie]
     ) + gfed41s_df.loc[1997:2019, specie].values.squeeze() * gfed_convert[specie]
 
     slcf_df.loc[2020:2022, specie] = (
@@ -57,4 +57,3 @@ for specie in species:
 
 os.makedirs(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions', exist_ok=True)
 slcf_df.to_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv')
-
