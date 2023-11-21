@@ -1,11 +1,13 @@
 name: fair-calibrate
 channels:
+  - chrisroadmap
   - conda-forge
   - defaults
 dependencies:
   - black
+  - fair==2.1.2
   - flake8
-  - iris
+  - h5py
   - isort
   - matplotlib
   - netCDF4
@@ -13,6 +15,8 @@ dependencies:
   - pandas
   - pooch
   - python-dotenv
+  - r-base
+  - r-devtools
   - scikit-learn
   - scipy
   - scmdata
@@ -21,4 +25,3 @@ dependencies:
   - pip
   - pip:
     - aneris-iamc[units]
-    - fair==2.1.1
