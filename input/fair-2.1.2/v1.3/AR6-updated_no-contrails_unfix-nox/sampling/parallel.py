@@ -117,7 +117,6 @@ def run_fair(cfg):
     # emissions adjustments for N2O and CH4
     fill(f.species_configs["baseline_emissions"], 19.019783117809567, specie="CH4")
     fill(f.species_configs["baseline_emissions"], 0.08602230754, specie="N2O")
-    fill(f.species_configs["baseline_emissions"], 19.423526730206152, specie="NOx")
 
     # aerosol indirect
     fill(f.species_configs["aci_scale"], cfg["beta"])

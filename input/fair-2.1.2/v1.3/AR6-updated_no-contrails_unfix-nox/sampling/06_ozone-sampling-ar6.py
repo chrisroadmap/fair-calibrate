@@ -186,43 +186,6 @@ for ispec, species in enumerate(emitted_species):
     )
     species_out[species] = emis_in[:-1]
 
-# Adjust NOx for units error in BB
-gfed_sectors = [
-    "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
-    "Emissions|NOx|MAGICC AFOLU|Forest Burning",
-    "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
-]
-species_out["NOx"] = (
-    df_emis.loc[
-        (df_emis["Scenario"] == "ssp245")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"].isin(gfed_sectors)),
-        "1750":"2020",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-    .sum(axis=0)
-    * 46.006
-    / 30.006
-    + df_emis.loc[
-        (df_emis["Scenario"] == "ssp245")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
-        "1750":"2020",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-    + df_emis.loc[
-        (df_emis["Scenario"] == "ssp245")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
-        "1750":"2020",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-)[:-1]
-
 
 for ispec, species in enumerate(concentration_species):
     species_rcmip_name = species.replace("-", "")

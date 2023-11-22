@@ -24,9 +24,6 @@
 # 1. take AerChemMIP multi-model means from Gill's papers
 # 2. run the lifetime relationship to individual AerChemMIP models in Gill's papers
 # 3. find a least squares fit with reasonable sensitivies across the historical
-#
-# NOTE: we fix an error with NOx unit conversion in RCMIP here, and scale up biomass
-# burning emissions by the NO2/NO molecular weight factor.
 
 import os
 
@@ -134,42 +131,6 @@ for species in emis_species_units_ok:
         .values.squeeze()
     )
 
-# NOx emissions: scale up biomass burning
-gfed_sectors = [
-    "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
-    "Emissions|NOx|MAGICC AFOLU|Forest Burning",
-    "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
-]
-input["NOx"] = (
-    df_emis.loc[
-        (df_emis["Scenario"] == "ssp370")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"].isin(gfed_sectors)),
-        "1750":"2100",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-    .sum(axis=0)
-    * 46.006
-    / 30.006
-    + df_emis.loc[
-        (df_emis["Scenario"] == "ssp370")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
-        "1750":"2100",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-    + df_emis.loc[
-        (df_emis["Scenario"] == "ssp370")
-        & (df_emis["Region"] == "World")
-        & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
-        "1750":"2100",
-    ]
-    .interpolate(axis=1)
-    .values.squeeze()
-)
 input["temp"] = gmst
 
 

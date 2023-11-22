@@ -81,49 +81,6 @@ f.allocate()
 
 f.fill_from_rcmip()
 
-# Fix NOx.
-rcmip_emissions_file = pooch.retrieve(
-    url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
-    known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
-)
-df_emis = pd.read_csv(rcmip_emissions_file)
-gfed_sectors = [
-    "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
-    "Emissions|NOx|MAGICC AFOLU|Forest Burning",
-    "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
-]
-for scenario in scenarios:
-    f.emissions.loc[dict(specie="NOx", scenario=scenario)] = (
-        df_emis.loc[
-            (df_emis["Scenario"] == scenario)
-            & (df_emis["Region"] == "World")
-            & (df_emis["Variable"].isin(gfed_sectors)),
-            "1750":"2300",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-        .sum(axis=0)
-        * 46.006
-        / 30.006
-        + df_emis.loc[
-            (df_emis["Scenario"] == scenario)
-            & (df_emis["Region"] == "World")
-            & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
-            "1750":"2300",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-        + df_emis.loc[
-            (df_emis["Scenario"] == scenario)
-            & (df_emis["Region"] == "World")
-            & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
-            "1750":"2300",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-    )[:550][:, None]
-
 
 # solar and volcanic forcing
 fill(
@@ -222,7 +179,6 @@ fill(
 # might wanna run pulse expts with these gases)
 fill(f.species_configs["baseline_emissions"], 19.019783117809567, specie="CH4")
 fill(f.species_configs["baseline_emissions"], 0.08602230754, specie="N2O")
-fill(f.species_configs["baseline_emissions"], 19.4168329194106, specie="NOx")
 
 # aerosol direct
 for specie in [
