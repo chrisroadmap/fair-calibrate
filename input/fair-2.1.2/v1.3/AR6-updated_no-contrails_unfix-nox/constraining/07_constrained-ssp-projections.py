@@ -294,7 +294,7 @@ initialise(f.temperature, 0)
 initialise(f.cumulative_emissions, 0)
 initialise(f.airborne_emissions, 0)
 
-f.run()
+f.run(progress=progress)
 
 fancy_titles = {
     "ssp119": "SSP1-1.9",
