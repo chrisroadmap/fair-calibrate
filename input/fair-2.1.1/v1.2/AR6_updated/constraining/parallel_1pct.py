@@ -94,16 +94,20 @@ def run_fair(cfg):
     fill(f.species_configs["forcing_scale"], cfg["scaling_N2O"], specie="N2O")
 
     # initial condition of CO2 concentration (but not baseline for forcing calculations)
-    fill(f.species_configs['baseline_concentration'], 284.3169988, specie='CO2')
-    fill(f.species_configs['baseline_concentration'], 808.2490285, specie='CH4')
-    fill(f.species_configs['baseline_concentration'], 273.021047, specie='N2O')
-    
-    fill(f.species_configs['forcing_reference_concentration'], 284.3169988, specie='CO2')
-    fill(f.species_configs['forcing_reference_concentration'], 808.2490285, specie='CH4')
-    fill(f.species_configs['forcing_reference_concentration'], 273.021047, specie='N2O')
+    fill(f.species_configs["baseline_concentration"], 284.3169988, specie="CO2")
+    fill(f.species_configs["baseline_concentration"], 808.2490285, specie="CH4")
+    fill(f.species_configs["baseline_concentration"], 273.021047, specie="N2O")
+
+    fill(
+        f.species_configs["forcing_reference_concentration"], 284.3169988, specie="CO2"
+    )
+    fill(
+        f.species_configs["forcing_reference_concentration"], 808.2490285, specie="CH4"
+    )
+    fill(f.species_configs["forcing_reference_concentration"], 273.021047, specie="N2O")
 
     # initial conditions
-    initialise(f.concentration, f.species_configs['baseline_concentration'])
+    initialise(f.concentration, f.species_configs["baseline_concentration"])
     initialise(f.forcing, 0)
     initialise(f.temperature, 0)
     initialise(f.cumulative_emissions, 0)
@@ -117,11 +121,13 @@ def run_fair(cfg):
     t1000 = np.ones(batch_size) * np.nan
     ttco2 = 1000 * 44.009 / 12.011
     for ibatch in range(batch_size):
-        interpolator = interp1d(f.cumulative_emissions[:, 0, ibatch, 0], f.temperature[:, 0, ibatch, 0])
+        interpolator = interp1d(
+            f.cumulative_emissions[:, 0, ibatch, 0], f.temperature[:, 0, ibatch, 0]
+        )
         t1000[ibatch] = interpolator(ttco2)
 
     return (
         np.array((f.temperature[70, 0, :, 0], f.temperature[140, 0, :, 0])),
         np.array((f.airborne_fraction[70, 0, :, 0], f.airborne_fraction[140, 0, :, 0])),
-        np.array(t1000)
+        np.array(t1000),
     )

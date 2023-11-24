@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from fair import __version__
 from tqdm.auto import tqdm
 
-pl.switch_backend('agg')
+pl.switch_backend("agg")
 
 load_dotenv()
 pl.style.use("../../../../../defaults.mplstyle")
@@ -106,14 +106,14 @@ if plots:
     pl.close()
 
 # temperature is on timebounds, and observations are midyears
-# but, this is OK, since we are subtracting a consistent baseline (1850-1900, weighting the bounding
-# timebounds as 0.5)
+# but, this is OK, since we are subtracting a consistent baseline (1850-1900, weighting
+# the bounding timebounds as 0.5)
 # e.g. 1993.0 timebound has big pinatubo hit, timebound 143
 # in obs this is 1992.5, timepoint 142
-# compare the timebound after the obs, since the forcing has had chance to affect both the obs timepoint
-# and the later timebound.
-# the goal of RMSE is as much to match the shape of warming as the magnitude; we do not want
-# to average out internal variability in the model or the obs.
+# compare the timebound after the obs, since the forcing has had chance to affect both
+# the obs timepoint and the later timebound.
+# the goal of RMSE is as much to match the shape of warming as the magnitude; we do not
+# want to average out internal variability in the model or the obs.
 for i in tqdm(range(samples), disable=1 - progress):
     rmse_temp[i] = rmse(
         gmst[:173],

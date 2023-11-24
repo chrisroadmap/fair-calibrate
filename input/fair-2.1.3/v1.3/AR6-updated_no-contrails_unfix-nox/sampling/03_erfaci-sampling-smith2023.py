@@ -70,10 +70,13 @@ for model in models:
 
 # Calibrate on RCMIP
 rcmip_emissions_file = pooch.retrieve(
-    url="https://zenodo.org/records/4589756/files/rcmip-emissions-annual-means-v5-1-0.csv",
+    url=(
+        "https://zenodo.org/records/4589756/files/"
+        "rcmip-emissions-annual-means-v5-1-0.csv"
+    ),
     known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
     progressbar=progress,
-    path=datadir
+    path=datadir,
 )
 
 emis_df = pd.read_csv(rcmip_emissions_file)
@@ -227,8 +230,7 @@ n1_samp = df_params["BC"]
 n2_samp = df_params["OC"]
 
 kde = scipy.stats.gaussian_kde(
-    [np.log(n0_samp), np.log(n1_samp), np.log(n2_samp)],
-    bw_method=0.1
+    [np.log(n0_samp), np.log(n1_samp), np.log(n2_samp)], bw_method=0.1
 )
 aci_sample = kde.resample(size=samples * 1, seed=63648708)
 
@@ -268,7 +270,10 @@ df = pd.DataFrame(
     }
 )
 
-os.makedirs(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/", exist_ok=True)
+os.makedirs(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/",
+    exist_ok=True,
+)
 
 df.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"

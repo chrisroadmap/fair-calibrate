@@ -63,10 +63,13 @@ f.define_species(species, properties)
 f.allocate()
 
 rcmip_concentration_file = pooch.retrieve(
-    url=("https://zenodo.org/records/4589756/files/rcmip-concentrations-annual-means-v5-1-0.csv"),
+    url=(
+        "https://zenodo.org/records/4589756/files/"
+        "rcmip-concentrations-annual-means-v5-1-0.csv"
+    ),
     known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
     progressbar=progress,
-    path=datadir
+    path=datadir,
 )
 
 df_conc = pd.read_csv(rcmip_concentration_file)

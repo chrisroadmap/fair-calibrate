@@ -33,7 +33,7 @@ format:  ## re-format files
 
 .PHONY: black
 black:  ## use black to autoformat code
-	black --target-version py37 $(FILES_TO_FORMAT_PYTHON)
+	black --target-version py311 $(FILES_TO_FORMAT_PYTHON)
 
 isort: $(VENV_DIR)  ## format the code
 	isort $(FILES_TO_FORMAT_PYTHON)

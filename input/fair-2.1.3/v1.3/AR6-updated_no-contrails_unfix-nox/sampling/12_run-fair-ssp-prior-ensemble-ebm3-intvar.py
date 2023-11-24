@@ -49,7 +49,8 @@ if __name__ == "__main__":
         "../../../../../data/forcing/solar_erf_timebounds.csv", index_col="year"
     )
     df_volcanic = pd.read_csv(
-        "../../../../../data/forcing/volcanic_ERF_1750-2101_timebounds.csv", index_col="timebounds"
+        "../../../../../data/forcing/volcanic_ERF_1750-2101_timebounds.csv",
+        index_col="timebounds",
     )
 
     volcanic_forcing = df_volcanic["erf"].loc[1750:2101].values

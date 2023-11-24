@@ -14,7 +14,7 @@ from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
-pl.switch_backend('agg')
+pl.switch_backend("agg")
 
 load_dotenv()
 
@@ -45,7 +45,8 @@ df_solar = pd.read_csv(
     "../../../../../data/forcing/solar_erf_timebounds.csv", index_col="year"
 )
 df_volcanic = pd.read_csv(
-    "../../../../../data/forcing/volcanic_ERF_1750-2101_timebounds.csv", index_col='timebounds'
+    "../../../../../data/forcing/volcanic_ERF_1750-2101_timebounds.csv",
+    index_col="timebounds",
 )
 
 solar_forcing = np.zeros(551)
@@ -96,13 +97,22 @@ fill(
 )
 
 # climate response
-fill(f.climate_configs["ocean_heat_capacity"], df_configs.loc[:, "clim_c1":"clim_c3"].values)
+fill(
+    f.climate_configs["ocean_heat_capacity"],
+    df_configs.loc[:, "clim_c1":"clim_c3"].values,
+)
 fill(
     f.climate_configs["ocean_heat_transfer"],
     df_configs.loc[:, "clim_kappa1":"clim_kappa3"].values,
-)  # not massively robust, since relies on kappa1, kappa2, kappa3 being in adjacent columns
-fill(f.climate_configs["deep_ocean_efficacy"], df_configs["clim_epsilon"].values.squeeze())
-fill(f.climate_configs["gamma_autocorrelation"], df_configs["clim_gamma"].values.squeeze())
+)  # not massively robust, since relies on kappa1, kappa2, kappa3 being in adjacent cols
+fill(
+    f.climate_configs["deep_ocean_efficacy"],
+    df_configs["clim_epsilon"].values.squeeze(),
+)
+fill(
+    f.climate_configs["gamma_autocorrelation"],
+    df_configs["clim_gamma"].values.squeeze(),
+)
 fill(f.climate_configs["sigma_eta"], df_configs["clim_sigma_eta"].values.squeeze())
 fill(f.climate_configs["sigma_xi"], df_configs["clim_sigma_xi"].values.squeeze())
 fill(f.climate_configs["seed"], df_configs["seed"])
@@ -116,9 +126,13 @@ f.fill_species_configs()
 # carbon cycle
 fill(f.species_configs["iirf_0"], df_configs["cc_r0"].values.squeeze(), specie="CO2")
 fill(
-    f.species_configs["iirf_airborne"], df_configs["cc_rA"].values.squeeze(), specie="CO2"
+    f.species_configs["iirf_airborne"],
+    df_configs["cc_rA"].values.squeeze(),
+    specie="CO2",
 )
-fill(f.species_configs["iirf_uptake"], df_configs["cc_rU"].values.squeeze(), specie="CO2")
+fill(
+    f.species_configs["iirf_uptake"], df_configs["cc_rU"].values.squeeze(), specie="CO2"
+)
 fill(
     f.species_configs["iirf_temperature"],
     df_configs["cc_rT"].values.squeeze(),
@@ -133,10 +147,14 @@ fill(
     specie="Sulfur",
 )
 fill(
-    f.species_configs["aci_shape"], df_configs["aci_shape_bc"].values.squeeze(), specie="BC"
+    f.species_configs["aci_shape"],
+    df_configs["aci_shape_bc"].values.squeeze(),
+    specie="BC",
 )
 fill(
-    f.species_configs["aci_shape"], df_configs["aci_shape_oc"].values.squeeze(), specie="OC"
+    f.species_configs["aci_shape"],
+    df_configs["aci_shape_oc"].values.squeeze(),
+    specie="OC",
 )
 
 # methane lifetime baseline and sensitivity

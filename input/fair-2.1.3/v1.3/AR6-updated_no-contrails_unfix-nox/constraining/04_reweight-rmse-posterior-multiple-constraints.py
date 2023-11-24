@@ -15,11 +15,10 @@ import scipy.optimize
 import scipy.stats
 from dotenv import load_dotenv
 from fair import __version__
-from fair.constants import DOUBLING_TIME_1PCT
 from fair.earth_params import mass_atmosphere, molecular_weight_air
 from tqdm.auto import tqdm
 
-pl.switch_backend('agg')
+pl.switch_backend("agg")
 
 load_dotenv()
 
@@ -88,12 +87,17 @@ def opt(x, q05_desired, q50_desired, q95_desired):
     )
     return (q05 - q05_desired, q50 - q50_desired, q95 - q95_desired)
 
+
 ecs_params = scipy.optimize.root(opt, [1, 1, 1], args=(2, 3, 5)).x
 gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(0.87, 1.03, 1.13)).x
 
 samples = {}
 samples["ECS"] = scipy.stats.skewnorm.rvs(
-    ecs_params[0], loc=ecs_params[1], scale=ecs_params[2], size=10**5, random_state=91603
+    ecs_params[0],
+    loc=ecs_params[1],
+    scale=ecs_params[2],
+    size=10**5,
+    random_state=91603,
 )
 samples["TCR"] = scipy.stats.norm.rvs(
     loc=1.8, scale=0.6 / NINETY_TO_ONESIGMA, size=10**5, random_state=18196
@@ -105,7 +109,11 @@ samples["OHC"] = scipy.stats.norm.rvs(
     loc=465.3, scale=108.5 / NINETY_TO_ONESIGMA, size=10**5, random_state=43178
 )
 samples["temperature 2003-2022"] = scipy.stats.skewnorm.rvs(
-    gsat_params[0], loc=gsat_params[1], scale=gsat_params[2], size=10**5, random_state=19387
+    gsat_params[0],
+    loc=gsat_params[1],
+    scale=gsat_params[2],
+    size=10**5,
+    random_state=19387,
 )
 samples["ERFari"] = scipy.stats.norm.rvs(
     loc=-0.3, scale=0.3 / NINETY_TO_ONESIGMA, size=10**5, random_state=70173
@@ -151,7 +159,7 @@ weights_51yr[0] = 0.5
 weights_51yr[-1] = 0.5
 
 co2_1850 = 284.3169988
-co2_1920 = co2_1850*1.01**70  # NOT 2x (69.66 yr), per definition of TCRE
+co2_1920 = co2_1850 * 1.01**70  # NOT 2x (69.66 yr), per definition of TCRE
 mass_factor = 12.011 / molecular_weight_air * mass_atmosphere / 1e21
 
 accepted = pd.DataFrame(
@@ -601,7 +609,7 @@ if plots:
     ax[2, 1].set_yticklabels([])
     ax[2, 1].set_xlabel("ZJ, 2020 minus 1971")
 
-    ax[2, 2].axis('off')
+    ax[2, 2].axis("off")
 
     fig.tight_layout()
     pl.savefig(
@@ -662,9 +670,7 @@ print(
     "Aerosol ERF 2005-2014 rel. 1750:",
     np.percentile(draws[0]["ERFaci"] + draws[0]["ERFari"], (5, 50, 95)),
 )
-print(
-    "OHC change 2020 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95))
-)
+print("OHC change 2020 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95)))
 
 print("*likely range")
 

@@ -7,8 +7,6 @@
 
 import os
 
-import pandas as pd
-import pooch
 from dotenv import load_dotenv
 from fair import FAIR, __version__
 from fair.io import read_properties

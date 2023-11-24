@@ -65,14 +65,16 @@ seed
 # namespace conflicts (and a bit of user intuivity)
 params_out = pd.concat(
     (
-        df_cr.loc[valid_all, :].rename(columns=lambda x: 'clim_' + x),
-        df_cc.loc[valid_all, :].rename(columns=lambda x: 'cc_' + x),
-        df_ari.loc[valid_all, :].rename(columns=lambda x: 'ari_' + x),
-        df_aci.loc[valid_all, :].rename(columns=lambda x: 'aci_' + x),
-        df_ozone.loc[valid_all, :].rename(columns=lambda x: 'o3_' + x),
-        df_scaling.loc[valid_all, :].rename(columns=lambda x: 'fscale_' + x),
-        df_1750co2.loc[valid_all, :].rename(columns={'co2_concentration':'cc_co2_concentration_1750'}),
-        pd.DataFrame(seed, index=valid_all, columns=['seed']),
+        df_cr.loc[valid_all, :].rename(columns=lambda x: "clim_" + x),
+        df_cc.loc[valid_all, :].rename(columns=lambda x: "cc_" + x),
+        df_ari.loc[valid_all, :].rename(columns=lambda x: "ari_" + x),
+        df_aci.loc[valid_all, :].rename(columns=lambda x: "aci_" + x),
+        df_ozone.loc[valid_all, :].rename(columns=lambda x: "o3_" + x),
+        df_scaling.loc[valid_all, :].rename(columns=lambda x: "fscale_" + x),
+        df_1750co2.loc[valid_all, :].rename(
+            columns={"co2_concentration": "cc_co2_concentration_1750"}
+        ),
+        pd.DataFrame(seed, index=valid_all, columns=["seed"]),
     ),
     axis=1,
 )

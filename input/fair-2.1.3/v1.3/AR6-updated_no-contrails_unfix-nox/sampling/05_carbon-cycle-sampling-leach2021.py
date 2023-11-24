@@ -14,8 +14,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats
 from dotenv import load_dotenv
-from fair import FAIR, __version__
-from fair.interface import fill, initialise
+from fair import __version__
 from fair.structure.units import compound_convert
 
 load_dotenv()

@@ -15,11 +15,10 @@ import scipy.optimize
 import scipy.stats
 from dotenv import load_dotenv
 from fair import __version__
-from fair.constants import DOUBLING_TIME_1PCT
 from fair.earth_params import mass_atmosphere, molecular_weight_air
 from tqdm.auto import tqdm
 
-pl.switch_backend('agg')
+pl.switch_backend("agg")
 
 load_dotenv()
 
@@ -88,12 +87,17 @@ def opt(x, q05_desired, q50_desired, q95_desired):
     )
     return (q05 - q05_desired, q50 - q50_desired, q95 - q95_desired)
 
+
 ecs_params = scipy.optimize.root(opt, [1, 1, 1], args=(2, 3, 5)).x
 gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(0.87, 1.03, 1.13)).x
 
 samples = {}
 samples["ECS"] = scipy.stats.skewnorm.rvs(
-    ecs_params[0], loc=ecs_params[1], scale=ecs_params[2], size=10**5, random_state=91603
+    ecs_params[0],
+    loc=ecs_params[1],
+    scale=ecs_params[2],
+    size=10**5,
+    random_state=91603,
 )
 samples["TCR"] = scipy.stats.norm.rvs(
     loc=1.8, scale=0.6 / NINETY_TO_ONESIGMA, size=10**5, random_state=18196
@@ -105,7 +109,11 @@ samples["OHC"] = scipy.stats.norm.rvs(
     loc=465.3, scale=108.5 / NINETY_TO_ONESIGMA, size=10**5, random_state=43178
 )
 samples["temperature 2003-2022"] = scipy.stats.skewnorm.rvs(
-    gsat_params[0], loc=gsat_params[1], scale=gsat_params[2], size=10**5, random_state=19387
+    gsat_params[0],
+    loc=gsat_params[1],
+    scale=gsat_params[2],
+    size=10**5,
+    random_state=19387,
 )
 samples["ERFari"] = scipy.stats.norm.rvs(
     loc=-0.3, scale=0.3 / NINETY_TO_ONESIGMA, size=10**5, random_state=70173
@@ -125,15 +133,15 @@ samples["ERFaer"] = scipy.stats.norm.rvs(
 samples["CO2 concentration"] = scipy.stats.norm.rvs(
     loc=417.0, scale=0.5, size=10**5, random_state=81693
 )
-#samples["TCRE"] = scipy.stats.norm.rvs(
+# samples["TCRE"] = scipy.stats.norm.rvs(
 #    loc=1.65, scale=0.65 / NINETY_TO_ONESIGMA, size=10**5, random_state=198236970
-#)
-#samples["AF 2xCO2"] = scipy.stats.norm.rvs(
+# )
+# samples["AF 2xCO2"] = scipy.stats.norm.rvs(
 #    loc=0.53, scale=0.06, size=10**5, random_state=198236970
-#)
-#samples["AF 4xCO2"] = scipy.stats.norm.rvs(
+# )
+# samples["AF 4xCO2"] = scipy.stats.norm.rvs(
 #    loc=0.6, scale=0.1, size=10**5, random_state=3456711
-#)
+# )
 
 ar_distributions = {}
 for constraint in [
@@ -145,9 +153,9 @@ for constraint in [
     "ERFaci",
     "ERFaer",
     "CO2 concentration",
-#    "TCRE",
-#    "AF 2xCO2",
-#    "AF 4xCO2"
+    #    "TCRE",
+    #    "AF 2xCO2",
+    #    "AF 4xCO2"
 ]:
     ar_distributions[constraint] = {}
     ar_distributions[constraint]["bins"] = np.histogram(
@@ -163,14 +171,14 @@ weights_51yr[0] = 0.5
 weights_51yr[-1] = 0.5
 
 co2_1850 = 284.3169988
-co2_1920 = co2_1850*1.01**70  # NOT 2x (69.66 yr), per definition of TCRE
+co2_1920 = co2_1850 * 1.01**70  # NOT 2x (69.66 yr), per definition of TCRE
 mass_factor = 12.011 / molecular_weight_air * mass_atmosphere / 1e21
 
 accepted = pd.DataFrame(
     {
         "ECS": ecs_in[valid_temp],
         "TCR": tcr_in[valid_temp],
-#        "TCR": tcr1pct_in[0, valid_temp] * DOUBLING_TIME_1PCT/70,
+        #        "TCR": tcr1pct_in[0, valid_temp] * DOUBLING_TIME_1PCT/70,
         "OHC": ohc_in[valid_temp] / 1e21,
         "temperature 2003-2022": np.average(
             temp_in[153:174, valid_temp], weights=weights_20yr, axis=0
@@ -180,14 +188,6 @@ accepted = pd.DataFrame(
         "ERFaci": faci_in[valid_temp],
         "ERFaer": faer_in[valid_temp],
         "CO2 concentration": co2_in[valid_temp],
-#        "ssp245 2081-2100": np.average(
-#            temp_in[231:252, valid_temp], weights=weights_20yr, axis=0
-#        )
-#        - np.average(temp_in[145:166, valid_temp], weights=weights_20yr, axis=0),
-#        "TCRE": tcre_in[valid_temp],
-#        "TCRE": tcr1pct_in[0, valid_temp] * af_in[0, valid_temp] / ((co2_1920-co2_1850)*mass_factor)
-#        "AF 2xCO2": af_in[0, valid_temp],
-#        "AF 4xCO2": af_in[1, valid_temp],
     },
     index=valid_temp,
 )
@@ -320,8 +320,6 @@ post2_ecs = scipy.stats.gaussian_kde(draws[0]["ECS"])
 target_tcr = scipy.stats.gaussian_kde(samples["TCR"])
 prior_tcr = scipy.stats.gaussian_kde(tcr_in)
 post1_tcr = scipy.stats.gaussian_kde(tcr_in[valid_temp])
-#prior_tcr = scipy.stats.gaussian_kde(tcr1pct_in * DOUBLING_TIME_1PCT/70)
-#post1_tcr = scipy.stats.gaussian_kde(tcr1pct_in[0, valid_temp] * DOUBLING_TIME_1PCT/70)
 post2_tcr = scipy.stats.gaussian_kde(draws[0]["TCR"])
 
 target_temp = scipy.stats.gaussian_kde(samples["temperature 2003-2022"])
@@ -359,23 +357,6 @@ target_co2 = scipy.stats.gaussian_kde(samples["CO2 concentration"])
 prior_co2 = scipy.stats.gaussian_kde(co2_in)
 post1_co2 = scipy.stats.gaussian_kde(co2_in[valid_temp])
 post2_co2 = scipy.stats.gaussian_kde(draws[0]["CO2 concentration"])
-
-#target_tcre = scipy.stats.gaussian_kde(samples["TCRE"])
-##prior_tcre = scipy.stats.gaussian_kde(tcre_in)
-##post1_tcre = scipy.stats.gaussian_kde(tcre_in[valid_temp])
-#prior_tcre = tcr1pct_in[0, :] * af_in[0, :] / ((co2_1920-co2_1850)*mass_factor)
-#post1_tcre = tcr1pct_in[0, valid_temp] * af_in[0, valid_temp] / ((co2_1920-co2_1850)*mass_factor)
-#post2_tcre = scipy.stats.gaussian_kde(draws[0]["TCRE"])
-
-#target_af2 = scipy.stats.gaussian_kde(samples["AF 2xCO2"])
-#prior_af2 = scipy.stats.gaussian_kde(af_in[0,:])
-#post1_af2 = scipy.stats.gaussian_kde(af_in[0,valid_temp])
-#post2_af2 = scipy.stats.gaussian_kde(draws[0]["AF 2xCO2"])
-
-#target_af4 = scipy.stats.gaussian_kde(samples["AF 4xCO2"])
-#prior_af4 = scipy.stats.gaussian_kde(af_in[1,goodrun])
-#post1_af4 = scipy.stats.gaussian_kde(af_in[1,valid_temp])
-#post2_af4 = scipy.stats.gaussian_kde(draws[0]["AF 4xCO2"])
 
 colors = {"prior": "#207F6E", "post1": "#684C94", "post2": "#EE696B", "target": "black"}
 
@@ -641,7 +622,7 @@ if plots:
     ax[2, 1].set_yticklabels([])
     ax[2, 1].set_xlabel("ZJ, 2018 minus 1971")
 
-    ax[2, 2].axis('off')
+    ax[2, 2].axis("off")
 
     fig.tight_layout()
     pl.savefig(
@@ -698,18 +679,7 @@ print(
     "Aerosol ERF 2005-2014 rel. 1750:",
     np.percentile(draws[0]["ERFaci"] + draws[0]["ERFari"], (5, 50, 95)),
 )
-print(
-    "OHC change 2020 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95))
-)
-#print(
-#    "TCRE from 2xCO2:", np.percentile(draws[0]["TCRE"], (5, 50, 95))
-#)
-#print(
-#    "Airborne fraction 2xCO2*:", np.percentile(draws[0]["AF 2xCO2"], (16, 50, 84))
-#)
-#print(
-#    "Airborne fraction 4xCO2*:", np.percentile(draws[0]["AF 4xCO2"], (16, 50, 84))
-#)
+print("OHC change 2020 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95)))
 
 print("*likely range")
 

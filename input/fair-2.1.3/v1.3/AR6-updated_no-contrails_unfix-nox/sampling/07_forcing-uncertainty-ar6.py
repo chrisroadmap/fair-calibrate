@@ -10,12 +10,11 @@
 
 import os
 
-import numpy as np
 import pandas as pd
 import scipy.stats
-from sklearn.preprocessing import QuantileTransformer
 from dotenv import load_dotenv
 from fair import __version__
+from sklearn.preprocessing import QuantileTransformer
 
 load_dotenv()
 
@@ -51,6 +50,7 @@ for forcer in forcing_u90:
     )
     seedgen = seedgen + 112
 
+
 def opt(x, q05_desired, q50_desired, q95_desired):
     "x is (a, loc, scale) in that order."
     q05, q50, q95 = scipy.stats.skewnorm.ppf(
@@ -58,11 +58,16 @@ def opt(x, q05_desired, q50_desired, q95_desired):
     )
     return (q05 - q05_desired, q50 - q50_desired, q95 - q95_desired)
 
+
 # Asymmetric distributions we use skew-normal, fitting quantiles
 lapsi_params = scipy.optimize.root(opt, [1, 1, 1], args=(0, 1, 2.25)).x
 
 scalings["Light absorbing particles on snow and ice"] = scipy.stats.skewnorm.rvs(
-    lapsi_params[0], loc=lapsi_params[1], scale=lapsi_params[2], size=samples, random_state=3701584
+    lapsi_params[0],
+    loc=lapsi_params[1],
+    scale=lapsi_params[2],
+    size=samples,
+    random_state=3701584,
 )
 
 # Solar trend is absolute, not scaled
@@ -74,8 +79,8 @@ df_ebm = pd.read_csv(
     "climate_response_ebm3.csv"
 )
 
-qt = QuantileTransformer(output_distribution='normal', random_state=70601701)
-f4xco2 = df_ebm['F_4xCO2'].values.reshape(-1, 1)
+qt = QuantileTransformer(output_distribution="normal", random_state=70601701)
+f4xco2 = df_ebm["F_4xCO2"].values.reshape(-1, 1)
 trans = qt.fit(f4xco2).transform(f4xco2)
 trans = 1 + trans * 0.12 / NINETY_TO_ONESIGMA
 scalings["CO2"] = trans.squeeze()

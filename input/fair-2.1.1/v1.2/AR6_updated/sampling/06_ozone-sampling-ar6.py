@@ -97,7 +97,7 @@ skeie_ssp245 = pd.concat(
         skeie_ssp245,
         skeie_total.loc["OsloCTM3", 2014:]
         - skeie_total.loc["OsloCTM3", 2010]
-        + skeie_ssp245[2010]
+        + skeie_ssp245[2010],
     ]
 )
 
