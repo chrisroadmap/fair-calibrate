@@ -60,8 +60,7 @@ def opt(x, q05_desired, q50_desired, q95_desired):
 
 
 # Asymmetric distributions we use skew-normal, fitting quantiles
-lapsi_params = scipy.optimize.root(opt, [1, 1, 1], args=(0, 1, 1.25)).x
-contrails_params = scipy.optimize.root(opt, [1, 1, 1], args=(19 / 57, 1, 98 / 57)).x
+lapsi_params = scipy.optimize.root(opt, [1, 1, 1], args=(0, 1, 2.25)).x
 
 scalings["Light absorbing particles on snow and ice"] = scipy.stats.skewnorm.rvs(
     lapsi_params[0],
@@ -69,13 +68,6 @@ scalings["Light absorbing particles on snow and ice"] = scipy.stats.skewnorm.rvs
     scale=lapsi_params[2],
     size=samples,
     random_state=3701584,
-)
-scalings["Contrails"] = scipy.stats.skewnorm.rvs(
-    contrails_params[0],
-    loc=contrails_params[1],
-    scale=contrails_params[2],
-    size=samples,
-    random_state=91581814,
 )
 
 # Solar trend is absolute, not scaled

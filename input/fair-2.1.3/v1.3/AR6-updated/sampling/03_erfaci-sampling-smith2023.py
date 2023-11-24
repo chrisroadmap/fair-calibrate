@@ -3,26 +3,6 @@
 
 """Sample aerosol indirect."""
 
-# # Using the fair-2.1 pure log formula
-#
-# **Note**
-# Estimating aerosol cloud interactions from 11 CMIP6 models was performed in Smith
-#  et al. 2021: https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2020JD033622.
-#
-# The underlying APRP code was slightly wrong, and has been updated thanks to Mark
-# Zelinka (released as climateforcing v0.3.0). Two more models are now available.
-# Actually three are, but EC-Earth3 is unusable due to unphysical values of rsuscs and
-# rsdscs leading to biased ERFaci estimates.
-#
-# \begin{equation}
-# F = \beta \log \left( 1 + \sum_{i} n_i A_i \right)
-# \end{equation}
-#
-# where
-# - $A_i$ is the atmospheric input (concentrations or emissions of a specie),
-# - $\beta_i$ is a scale factor,
-# - $n_i$ dictates how much emissions of a specie contributes to CDNC.
-#
 # **Note also** the uniform prior from -2 to 0. A lot of the sublteties here might also
 # want to go into the paper.
 
@@ -34,8 +14,10 @@ import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 import pooch
+import scipy.stats
 from dotenv import load_dotenv
 from scipy.optimize import curve_fit
+from tqdm import tqdm
 
 load_dotenv()
 
@@ -47,8 +29,9 @@ constraint_set = os.getenv("CONSTRAINT_SET")
 samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
+datadir = os.getenv("DATADIR")
 
-print("Calibrating aerosol cloud interactions...")
+print("Sampling aerosol cloud interactions...")
 
 
 files = glob.glob("../../../../../data/smith2023aerosol/*.csv")
@@ -85,9 +68,15 @@ for model in models:
     aci[model] = aci_temp / nruns
 
 
+# Calibrate on RCMIP
 rcmip_emissions_file = pooch.retrieve(
-    url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
+    url=(
+        "https://zenodo.org/records/4589756/files/"
+        "rcmip-emissions-annual-means-v5-1-0.csv"
+    ),
     known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
+    progressbar=progress,
+    path=datadir,
 )
 
 emis_df = pd.read_csv(rcmip_emissions_file)
@@ -149,10 +138,9 @@ for model in models:
     )
 
 
-def aci_log1750(x, beta, n0, n1, n2):
+def aci_log_nocorrect(x, beta, n0, n1, n2):
     aci = beta * np.log(1 + x[0] * n0 + x[1] * n1 + x[2] * n2)
-    aci_1750 = beta * np.log(1 + so2[0] * n0 + bc[0] * n1 + oc[0] * n2)
-    return aci - aci_1750
+    return aci
 
 
 if plots:
@@ -220,6 +208,10 @@ if plots:
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "aci_calibration.png"
     )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "aci_calibration.pdf"
+    )
     pl.close()
 
 df_params = pd.DataFrame(param_fits, index=["aci_scale", "Sulfur", "BC", "OC"]).T
@@ -229,4 +221,62 @@ df_params.to_csv(
     "aerosol_cloud.csv"
 )
 
-print(df_params)
+print("Correlation coefficients between aci parameters")
+print(df_params.corr())
+
+beta_samp = df_params["aci_scale"]
+n0_samp = df_params["Sulfur"]
+n1_samp = df_params["BC"]
+n2_samp = df_params["OC"]
+
+kde = scipy.stats.gaussian_kde(
+    [np.log(n0_samp), np.log(n1_samp), np.log(n2_samp)], bw_method=0.1
+)
+aci_sample = kde.resample(size=samples * 1, seed=63648708)
+
+
+NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
+erfaci_sample = scipy.stats.uniform.rvs(
+    size=samples, loc=-2.0, scale=2.0, random_state=71271
+)
+
+
+beta = np.zeros(samples)
+for i in tqdm(range(samples), desc="aci samples", disable=1 - progress):
+    ts2010 = np.mean(
+        aci_log_nocorrect(
+            [so2[255:265], bc[255:265], oc[255:265]],
+            1,
+            np.exp(aci_sample[0, i]),
+            np.exp(aci_sample[1, i]),
+            np.exp(aci_sample[2, i]),
+        )
+    )
+    ts1750 = aci_log_nocorrect(
+        [so2[0], bc[0], oc[0]],
+        1,
+        np.exp(aci_sample[0, i]),
+        np.exp(aci_sample[1, i]),
+        np.exp(aci_sample[2, i]),
+    )
+    beta[i] = erfaci_sample[i] / (ts2010 - ts1750)
+
+df = pd.DataFrame(
+    {
+        "shape_so2": np.exp(aci_sample[0, :samples]),
+        "shape_bc": np.exp(aci_sample[1, :samples]),
+        "shape_oc": np.exp(aci_sample[2, :samples]),
+        "beta": beta,
+    }
+)
+
+os.makedirs(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/",
+    exist_ok=True,
+)
+
+df.to_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    "aerosol_cloud.csv",
+    index=False,
+)

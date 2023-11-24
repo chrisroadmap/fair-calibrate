@@ -4,7 +4,6 @@
 """Sample aerosol indirect."""
 
 
-import glob
 import os
 
 import matplotlib.pyplot as pl
@@ -13,7 +12,6 @@ import pandas as pd
 import pooch
 import scipy.stats
 from dotenv import load_dotenv
-from scipy.optimize import curve_fit
 from tqdm import tqdm
 
 load_dotenv()
@@ -34,6 +32,7 @@ def aci_log(x, beta, n0, n1, n2):
     aci = beta * np.log(1 + x[0] * n0 + x[1] * n1 + x[2] * n2)
     aci_1850 = beta * np.log(1 + so2[100] * n0 + bc[100] * n1 + oc[100] * n2)
     return aci - aci_1850
+
 
 rcmip_emissions_file = pooch.retrieve(
     url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
@@ -81,7 +80,8 @@ so2 = (
 
 df_params = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-    "aerosol_cloud.csv", index_col=0
+    "aerosol_cloud.csv",
+    index_col=0,
 )
 
 print("Correlation coefficients between aci parameters")

@@ -133,15 +133,6 @@ samples["ERFaer"] = scipy.stats.norm.rvs(
 samples["CO2 concentration"] = scipy.stats.norm.rvs(
     loc=417.0, scale=0.5, size=10**5, random_state=81693
 )
-# samples["TCRE"] = scipy.stats.norm.rvs(
-#    loc=1.65, scale=0.65 / NINETY_TO_ONESIGMA, size=10**5, random_state=198236970
-# )
-# samples["AF 2xCO2"] = scipy.stats.norm.rvs(
-#    loc=0.53, scale=0.06, size=10**5, random_state=198236970
-# )
-# samples["AF 4xCO2"] = scipy.stats.norm.rvs(
-#    loc=0.6, scale=0.1, size=10**5, random_state=3456711
-# )
 
 ar_distributions = {}
 for constraint in [
@@ -153,9 +144,6 @@ for constraint in [
     "ERFaci",
     "ERFaer",
     "CO2 concentration",
-    #    "TCRE",
-    #    "AF 2xCO2",
-    #    "AF 4xCO2"
 ]:
     ar_distributions[constraint] = {}
     ar_distributions[constraint]["bins"] = np.histogram(
@@ -178,7 +166,6 @@ accepted = pd.DataFrame(
     {
         "ECS": ecs_in[valid_temp],
         "TCR": tcr_in[valid_temp],
-        #        "TCR": tcr1pct_in[0, valid_temp] * DOUBLING_TIME_1PCT/70,
         "OHC": ohc_in[valid_temp] / 1e21,
         "temperature 2003-2022": np.average(
             temp_in[153:174, valid_temp], weights=weights_20yr, axis=0
@@ -459,7 +446,7 @@ if plots:
     ax[0, 2].set_ylim(0, 6)
     ax[0, 2].set_title("Temperature anomaly")
     ax[0, 2].set_yticklabels([])
-    ax[0, 2].set_xlabel("°C, 1995-2014 minus 1850-1900")
+    ax[0, 2].set_xlabel("°C, 2003-2022 minus 1850-1900")
 
     start = -1.0
     stop = 0.3
@@ -588,7 +575,7 @@ if plots:
     ax[2, 0].set_ylim(0, 1.2)
     ax[2, 0].set_title("CO$_2$ concentration")
     ax[2, 0].set_yticklabels([])
-    ax[2, 0].set_xlabel("ppm, 2014")
+    ax[2, 0].set_xlabel("ppm, 2022")
 
     start = 100
     stop = 900
@@ -620,7 +607,7 @@ if plots:
     ax[2, 1].set_ylim(0, 0.007)
     ax[2, 1].set_title("Ocean heat content change")
     ax[2, 1].set_yticklabels([])
-    ax[2, 1].set_xlabel("ZJ, 2018 minus 1971")
+    ax[2, 1].set_xlabel("ZJ, 2020 minus 1971")
 
     ax[2, 2].axis("off")
 
@@ -628,6 +615,10 @@ if plots:
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "constraints.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "constraints.pdf"
     )
     pl.close()
 
@@ -661,10 +652,10 @@ print("Constrained, reweighted parameters:")
 print("ECS:", np.percentile(draws[0]["ECS"], (5, 50, 95)))
 print("TCR:", np.percentile(draws[0]["TCR"], (5, 50, 95)))
 print(
-    "CO2 concentration 2014:", np.percentile(draws[0]["CO2 concentration"], (5, 50, 95))
+    "CO2 concentration 2022:", np.percentile(draws[0]["CO2 concentration"], (5, 50, 95))
 )
 print(
-    "Temperature 1995-2014 rel. 1850-1900:",
+    "Temperature 2003-2022 rel. 1850-1900:",
     np.percentile(draws[0]["temperature 2003-2022"], (5, 50, 95)),
 )
 print(
@@ -760,6 +751,10 @@ if plots:
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "final_reweighted_ssp245.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "final_reweighted_ssp245.pdf"
     )
     pl.close()
 

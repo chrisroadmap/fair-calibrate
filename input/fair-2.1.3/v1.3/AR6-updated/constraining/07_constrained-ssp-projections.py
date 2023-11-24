@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Run constrained projections for SSPs - for information only"""
+"""Run constrained projections for SSPs"""
 
 import os
 
@@ -27,6 +27,8 @@ fair_v = os.getenv("FAIR_VERSION")
 constraint_set = os.getenv("CONSTRAINT_SET")
 output_ensemble_size = int(os.getenv("POSTERIOR_SAMPLES"))
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
+progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
+datadir = os.getenv("DATADIR")
 
 scenarios = [
     "ssp119",
@@ -43,12 +45,13 @@ df_solar = pd.read_csv(
     "../../../../../data/forcing/solar_erf_timebounds.csv", index_col="year"
 )
 df_volcanic = pd.read_csv(
-    "../../../../../data/forcing/volcanic_ERF_1750-2101_timebounds.csv"
+    "../../../../../data/forcing/volcanic_ERF_1750-2101_timebounds.csv",
+    index_col="timebounds",
 )
 
 solar_forcing = np.zeros(551)
 volcanic_forcing = np.zeros(551)
-volcanic_forcing[:352] = df_volcanic.erf.values
+volcanic_forcing[:352] = df_volcanic["erf"].loc[1750:2101].values
 solar_forcing = df_solar["erf"].loc[1750:2300].values
 
 df_methane = pd.read_csv(
@@ -119,7 +122,6 @@ for scenario in scenarios:
         .interpolate(axis=1)
         .values.squeeze()
     )[:550][:, None]
-
 
 # solar and volcanic forcing
 fill(
@@ -352,7 +354,7 @@ initialise(f.temperature, 0)
 initialise(f.cumulative_emissions, 0)
 initialise(f.airborne_emissions, 0)
 
-f.run()
+f.run(progress=progress)
 
 fancy_titles = {
     "ssp119": "SSP1-1.9",
@@ -376,7 +378,7 @@ ar6_colors = {
     "ssp585": "#980002",
 }
 
-df_gmst = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv")
+df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2022.csv")
 gmst = df_gmst["gmst"].values
 
 if plots:
@@ -440,7 +442,7 @@ if plots:
             ),
             color=ar6_colors[scenarios[i]],
         )
-        ax[i // 4, i % 4].plot(np.arange(1850.5, 2021), gmst, color="k")
+        ax[i // 4, i % 4].plot(np.arange(1850.5, 2023), gmst, color="k")
         ax[i // 4, i % 4].set_xlim(1950, 2200)
         ax[i // 4, i % 4].set_ylim(-1, 10)
         ax[i // 4, i % 4].axhline(0, color="k", ls=":", lw=0.5)
@@ -782,19 +784,3 @@ if plots:
         "specie62_ssp245.png"
     )
     pl.close()
-
-# ## Dump out
-
-# 13 GB file, which we probably don't want
-# f.to_netcdf(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/'
-# 'posteriors/ssp_emissions_driven.nc')
-
-# for scen_idx in [('ssp126', 1), ('ssp245', 2), ('ssp370', 3)]:
-#    df_dump = pd.DataFrame(
-#        f.temperature[:, scen_idx[1], :, 0]-
-#        f.temperature[100:151, scen_idx[1], :, 0].mean(axis=0),
-#        index = f.timebounds,
-#        columns = valid_all,
-#    )
-#    df_dump.index.rename('year', inplace=True)
-#    df_dump.to_csv(f'../data/output/temperature_full_ens_{scen_idx[0]}.csv')

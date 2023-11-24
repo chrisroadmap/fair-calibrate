@@ -79,7 +79,6 @@ params_out = pd.concat(
     axis=1,
 )
 
-params_out.drop(columns=["ari_CO"], inplace=True)  # zero
 params_out.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
     "calibrated_constrained_parameters.csv"

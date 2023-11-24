@@ -60,7 +60,7 @@ def opt(x, q05_desired, q50_desired, q95_desired):
 
 
 # Asymmetric distributions we use skew-normal, fitting quantiles
-lapsi_params = scipy.optimize.root(opt, [1, 1, 1], args=(0, 1, 1.25)).x
+lapsi_params = scipy.optimize.root(opt, [1, 1, 1], args=(0, 1, 2.25)).x
 contrails_params = scipy.optimize.root(opt, [1, 1, 1], args=(19 / 57, 1, 98 / 57)).x
 
 scalings["Light absorbing particles on snow and ice"] = scipy.stats.skewnorm.rvs(

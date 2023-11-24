@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Run constrained projections for SSPs - for information only"""
+"""Run constrained projections for SSPs"""
 
 import os
 
@@ -27,6 +27,8 @@ fair_v = os.getenv("FAIR_VERSION")
 constraint_set = os.getenv("CONSTRAINT_SET")
 output_ensemble_size = int(os.getenv("POSTERIOR_SAMPLES"))
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
+progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
+datadir = os.getenv("DATADIR")
 
 scenarios = [
     "ssp119",
@@ -43,12 +45,13 @@ df_solar = pd.read_csv(
     "../../../../../data/forcing/solar_erf_timebounds.csv", index_col="year"
 )
 df_volcanic = pd.read_csv(
-    "../../../../../data/forcing/volcanic_ERF_1750-2101_timebounds.csv"
+    "../../../../../data/forcing/volcanic_ERF_1750-2101_timebounds.csv",
+    index_col="timebounds",
 )
 
 solar_forcing = np.zeros(551)
 volcanic_forcing = np.zeros(551)
-volcanic_forcing[:352] = df_volcanic.erf.values
+volcanic_forcing[:352] = df_volcanic["erf"].loc[1750:2101].values
 solar_forcing = df_solar["erf"].loc[1750:2300].values
 
 df_methane = pd.read_csv(
@@ -72,53 +75,12 @@ f.define_time(1750, 2300, 1)
 f.define_scenarios(scenarios)
 f.define_configs(valid_all)
 species, properties = read_properties()
+species.remove("NOx aviation")
+species.remove("Contrails")
 f.define_species(species, properties)
 f.allocate()
 
 f.fill_from_rcmip()
-
-# Fix NOx.
-rcmip_emissions_file = pooch.retrieve(
-    url="doi:10.5281/zenodo.4589756/rcmip-emissions-annual-means-v5-1-0.csv",
-    known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
-)
-df_emis = pd.read_csv(rcmip_emissions_file)
-gfed_sectors = [
-    "Emissions|NOx|MAGICC AFOLU|Agricultural Waste Burning",
-    "Emissions|NOx|MAGICC AFOLU|Forest Burning",
-    "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
-    "Emissions|NOx|MAGICC AFOLU|Peat Burning",
-]
-for scenario in scenarios:
-    f.emissions.loc[dict(specie="NOx", scenario=scenario)] = (
-        df_emis.loc[
-            (df_emis["Scenario"] == scenario)
-            & (df_emis["Region"] == "World")
-            & (df_emis["Variable"].isin(gfed_sectors)),
-            "1750":"2300",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-        .sum(axis=0)
-        * 46.006
-        / 30.006
-        + df_emis.loc[
-            (df_emis["Scenario"] == scenario)
-            & (df_emis["Region"] == "World")
-            & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
-            "1750":"2300",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-        + df_emis.loc[
-            (df_emis["Scenario"] == scenario)
-            & (df_emis["Region"] == "World")
-            & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
-            "1750":"2300",
-        ]
-        .interpolate(axis=1)
-        .values.squeeze()
-    )[:550][:, None]
 
 
 # solar and volcanic forcing
@@ -235,7 +197,6 @@ fill(
 # might wanna run pulse expts with these gases)
 fill(f.species_configs["baseline_emissions"], 19.019783117809567, specie="CH4")
 fill(f.species_configs["baseline_emissions"], 0.08602230754, specie="N2O")
-fill(f.species_configs["baseline_emissions"], 19.423526730206152, specie="NOx")
 
 # aerosol direct
 for specie in [
@@ -261,7 +222,6 @@ for specie in [
     "CH4",
     "N2O",
     "Stratospheric water vapour",
-    "Contrails",
     "Light absorbing particles on snow and ice",
     "Land use",
 ]:
@@ -352,7 +312,7 @@ initialise(f.temperature, 0)
 initialise(f.cumulative_emissions, 0)
 initialise(f.airborne_emissions, 0)
 
-f.run()
+f.run(progress=progress)
 
 fancy_titles = {
     "ssp119": "SSP1-1.9",
@@ -376,7 +336,7 @@ ar6_colors = {
     "ssp585": "#980002",
 }
 
-df_gmst = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv")
+df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2022.csv")
 gmst = df_gmst["gmst"].values
 
 if plots:
@@ -440,7 +400,7 @@ if plots:
             ),
             color=ar6_colors[scenarios[i]],
         )
-        ax[i // 4, i % 4].plot(np.arange(1850.5, 2021), gmst, color="k")
+        ax[i // 4, i % 4].plot(np.arange(1850.5, 2023), gmst, color="k")
         ax[i // 4, i % 4].set_xlim(1950, 2200)
         ax[i // 4, i % 4].set_ylim(-1, 10)
         ax[i // 4, i % 4].axhline(0, color="k", ls=":", lw=0.5)
@@ -587,13 +547,13 @@ if plots:
         np.arange(1750, 2101),
         np.percentile(
             f.forcing[:351, 2, :, 2:5].sum(axis=2)
-            + f.forcing[:351, 2, :, 11:51].sum(axis=2),
+            + f.forcing[:351, 2, :, 12:53].sum(axis=2),
             5,
             axis=1,
         ),
         np.percentile(
             f.forcing[:351, 2, :, 2:5].sum(axis=2)
-            + f.forcing[:351, 2, :, 11:51].sum(axis=2),
+            + f.forcing[:351, 2, :, 12:53].sum(axis=2),
             95,
             axis=1,
         ),
@@ -604,7 +564,7 @@ if plots:
         np.arange(1750, 2101),
         np.median(
             f.forcing[:351, 2, :, 2:5].sum(axis=2)
-            + f.forcing[:351, 2, :, 11:51].sum(axis=2),
+            + f.forcing[:351, 2, :, 12:53].sum(axis=2),
             axis=1,
         ),
         color="k",
@@ -617,15 +577,15 @@ if plots:
 
     pl.fill_between(
         np.arange(1750, 2101),
-        np.percentile(f.forcing[:351, 2, :, 56:58].sum(axis=2), 5, axis=1),
-        np.percentile(f.forcing[:351, 2, :, 56:58].sum(axis=2), 95, axis=1),
+        np.percentile(f.forcing[:351, 2, :, 55:57].sum(axis=2), 5, axis=1),
+        np.percentile(f.forcing[:351, 2, :, 55:57].sum(axis=2), 95, axis=1),
         color="k",
         alpha=0.3,
     )
     pl.plot(
         np.arange(1750, 2101),
         np.median(
-            f.forcing[:351, 2, :, 56:58].sum(axis=2),
+            f.forcing[:351, 2, :, 55:57].sum(axis=2),
             axis=1,
         ),
         color="k",
@@ -659,22 +619,22 @@ if plots:
 
     pl.fill_between(
         np.arange(1750, 2101),
-        np.percentile(f.forcing[:351, 2, :, 54], 5, axis=1),
-        np.percentile(f.forcing[:351, 2, :, 54], 95, axis=1),
+        np.percentile(f.forcing[:351, 2, :, 57], 5, axis=1),
+        np.percentile(f.forcing[:351, 2, :, 57], 95, axis=1),
         color="k",
         alpha=0.3,
     )
     pl.plot(
         np.arange(1750, 2101),
         np.median(
-            f.forcing[:351, 2, :, 54],
+            f.forcing[:351, 2, :, 57],
             axis=1,
         ),
         color="k",
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "specie54_ssp245.png"
+        "ozone_ssp245.png"
     )
     pl.close()
 
@@ -695,7 +655,7 @@ if plots:
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "specie58_ssp245.png"
+        "lapsi_ssp245.png"
     )
     pl.close()
 
@@ -716,7 +676,7 @@ if plots:
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "specie59_ssp245.png"
+        "stratH2O_ssp245.png"
     )
     pl.close()
 
@@ -737,64 +697,6 @@ if plots:
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "specie60_ssp245.png"
+        "landuse_ssp245.png"
     )
     pl.close()
-
-    pl.fill_between(
-        np.arange(1750, 2101),
-        np.percentile(f.forcing[:351, 2, :, 61], 5, axis=1),
-        np.percentile(f.forcing[:351, 2, :, 61], 95, axis=1),
-        color="k",
-        alpha=0.3,
-    )
-    pl.plot(
-        np.arange(1750, 2101),
-        np.median(
-            f.forcing[:351, 2, :, 61],
-            axis=1,
-        ),
-        color="k",
-    )
-    pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "specie61_ssp245.png"
-    )
-    pl.close()
-
-    pl.fill_between(
-        np.arange(1750, 2101),
-        np.percentile(f.forcing[:351, 2, :, 62], 5, axis=1),
-        np.percentile(f.forcing[:351, 2, :, 62], 95, axis=1),
-        color="k",
-        alpha=0.3,
-    )
-    pl.plot(
-        np.arange(1750, 2101),
-        np.median(
-            f.forcing[:351, 2, :, 62],
-            axis=1,
-        ),
-        color="k",
-    )
-    pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "specie62_ssp245.png"
-    )
-    pl.close()
-
-# ## Dump out
-
-# 13 GB file, which we probably don't want
-# f.to_netcdf(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/'
-# 'posteriors/ssp_emissions_driven.nc')
-
-# for scen_idx in [('ssp126', 1), ('ssp245', 2), ('ssp370', 3)]:
-#    df_dump = pd.DataFrame(
-#        f.temperature[:, scen_idx[1], :, 0]-
-#        f.temperature[100:151, scen_idx[1], :, 0].mean(axis=0),
-#        index = f.timebounds,
-#        columns = valid_all,
-#    )
-#    df_dump.index.rename('year', inplace=True)
-#    df_dump.to_csv(f'../data/output/temperature_full_ens_{scen_idx[0]}.csv')

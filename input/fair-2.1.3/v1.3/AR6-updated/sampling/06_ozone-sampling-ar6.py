@@ -28,11 +28,15 @@ fair_v = os.getenv("FAIR_VERSION")
 constraint_set = os.getenv("CONSTRAINT_SET")
 samples = int(os.getenv("PRIOR_SAMPLES"))
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
+progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
+datadir = os.getenv("DATADIR")
 
 print("Doing ozone sampling...")
 
 # now include temperature feedback
-Tobs = pd.read_csv("../../../../../data/forcing/AR6_GMST.csv", index_col=0).values
+Tobs = pd.read_csv(
+    "../../../../../data/forcing/IGCC_GMST_1850-2022.csv", index_col=0
+).values
 
 delta_gmst = [
     0,
@@ -93,12 +97,12 @@ skeie_ssp245.sort_index(inplace=True)
 skeie_ssp245 = skeie_ssp245 + 0.03
 skeie_ssp245.drop([2014, 2017, 2020], inplace=True)
 skeie_ssp245 = pd.concat(
-    [
+    (
         skeie_ssp245,
         skeie_total.loc["OsloCTM3", 2014:]
         - skeie_total.loc["OsloCTM3", 2010]
         + skeie_ssp245[2010],
-    ]
+    )
 )
 
 f = interp1d(
@@ -194,12 +198,13 @@ gfed_sectors = [
     "Emissions|NOx|MAGICC AFOLU|Grassland Burning",
     "Emissions|NOx|MAGICC AFOLU|Peat Burning",
 ]
+
 species_out["NOx"] = (
     df_emis.loc[
         (df_emis["Scenario"] == "ssp245")
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"].isin(gfed_sectors)),
-        "1750":"2020",
+        "1750":"2100",
     ]
     .interpolate(axis=1)
     .values.squeeze()
@@ -210,7 +215,7 @@ species_out["NOx"] = (
         (df_emis["Scenario"] == "ssp245")
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"] == "Emissions|NOx|MAGICC AFOLU|Agriculture"),
-        "1750":"2020",
+        "1750":"2100",
     ]
     .interpolate(axis=1)
     .values.squeeze()
@@ -218,12 +223,11 @@ species_out["NOx"] = (
         (df_emis["Scenario"] == "ssp245")
         & (df_emis["Region"] == "World")
         & (df_emis["Variable"] == "Emissions|NOx|MAGICC Fossil and Industrial"),
-        "1750":"2020",
+        "1750":"2100",
     ]
     .interpolate(axis=1)
     .values.squeeze()
-)[:-1]
-
+)
 
 for ispec, species in enumerate(concentration_species):
     species_rcmip_name = species.replace("-", "")
@@ -425,6 +429,10 @@ if plots:
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "ozone_calibration.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "ozone_calibration.pdf"
     )
     pl.close()
 
