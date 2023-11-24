@@ -519,7 +519,7 @@ print(
     np.percentile(
         (
             f.forcing[269:271, 2, :, 2:5].sum(axis=2)
-            + f.forcing[269:271, 2, :, 11:51].sum(axis=2)
+            + f.forcing[269:271, 2, :, 12:53].sum(axis=2)
         ).mean(axis=0),
         (5, 50, 95),
     ),
@@ -589,13 +589,13 @@ if plots:
         np.arange(1750, 2101),
         np.percentile(
             f.forcing[:351, 2, :, 2:5].sum(axis=2)
-            + f.forcing[:351, 2, :, 11:51].sum(axis=2),
+            + f.forcing[:351, 2, :, 12:53].sum(axis=2),
             5,
             axis=1,
         ),
         np.percentile(
             f.forcing[:351, 2, :, 2:5].sum(axis=2)
-            + f.forcing[:351, 2, :, 11:51].sum(axis=2),
+            + f.forcing[:351, 2, :, 12:53].sum(axis=2),
             95,
             axis=1,
         ),
@@ -606,7 +606,7 @@ if plots:
         np.arange(1750, 2101),
         np.median(
             f.forcing[:351, 2, :, 2:5].sum(axis=2)
-            + f.forcing[:351, 2, :, 11:51].sum(axis=2),
+            + f.forcing[:351, 2, :, 12:53].sum(axis=2),
             axis=1,
         ),
         color="k",
