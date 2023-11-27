@@ -227,7 +227,7 @@ species_out["NOx"] = (
     ]
     .interpolate(axis=1)
     .values.squeeze()
-)
+)[:270]
 
 for ispec, species in enumerate(concentration_species):
     species_rcmip_name = species.replace("-", "")

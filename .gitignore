@@ -1,5 +1,6 @@
 # zenodo dump
 fair_calibrate.zip
+zenodo_upload.sh
 
 # wget status
 *.status
