@@ -121,6 +121,11 @@ NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 kde = scipy.stats.gaussian_kde(params.T)
 ebm_sample = kde.resample(size=int(samples * 4), seed=2181882)
 
+# Completely overwrite the kappa1 distribution to try and get better N
+# for want of anything better, use Hansen's ECS, but with wider uncertainties
+ecs = scipy.stats.norm.rvs(loc=4.8, scale=1.2, size=int(samples * 4), random_state=1078610)
+ebm_sample[4, :] = 3.93 / ecs
+
 # remove unphysical combinations
 for col in range(10):
     ebm_sample[:, ebm_sample[col, :] <= 0] = np.nan
@@ -128,7 +133,7 @@ ebm_sample[:, ebm_sample[0, :] <= 0.8] = np.nan  # gamma
 ebm_sample[:, ebm_sample[1, :] <= 2] = np.nan  # C1
 ebm_sample[:, ebm_sample[2, :] <= ebm_sample[1, :]] = np.nan  # C2
 ebm_sample[:, ebm_sample[3, :] <= ebm_sample[2, :]] = np.nan  # C3
-ebm_sample[:, ebm_sample[4, :] <= 0.3] = np.nan  # kappa1 = lambda
+ebm_sample[:, ebm_sample[4, :] <= 0.1] = np.nan  # kappa1 = lambda
 
 mask = np.all(np.isnan(ebm_sample), axis=0)
 ebm_sample = ebm_sample[:, ~mask]

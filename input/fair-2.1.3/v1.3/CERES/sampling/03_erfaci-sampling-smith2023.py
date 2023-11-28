@@ -3,8 +3,8 @@
 
 """Sample aerosol indirect."""
 
-# **Note also** the uniform prior from -2 to 0. A lot of the sublteties here might also
-# want to go into the paper.
+# **Note also** the uniform prior from -4 to 0.
+# this is to try and sample a large range of ERFaci
 
 
 import glob
@@ -237,7 +237,7 @@ aci_sample = kde.resample(size=samples * 1, seed=63648708)
 
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 erfaci_sample = scipy.stats.uniform.rvs(
-    size=samples, loc=-2.0, scale=2.0, random_state=71271
+    size=samples, loc=-4.0, scale=4.0, random_state=71271
 )
 
 

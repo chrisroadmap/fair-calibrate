@@ -55,14 +55,14 @@ ohc_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
     "ocean_heat_content_2020_minus_1971.npy"
 )
-fari_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-    "forcing_ari_2005-2014_mean.npy"
-)
-faci_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-    "forcing_aci_2005-2014_mean.npy"
-)
+# fari_in = np.load(
+#     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+#     "forcing_ari_2005-2014_mean.npy"
+# )
+# faci_in = np.load(
+#     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+#     "forcing_aci_2005-2014_mean.npy"
+# )
 co2_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
     "concentration_co2_2022.npy"
@@ -70,18 +70,18 @@ co2_in = np.load(
 # ecs_in = np.load(
 #     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/ecs.npy"
 # )
-tcr_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/tcr.npy"
-)
+# tcr_in = np.load(
+#     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/tcr.npy"
+# )
 eei_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
     "toa_imbalance_2013-2022_mean.npy"
 )
-af_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-    "airborne_fraction_1pctCO2_y70_y140.npy"
-)
-faer_in = fari_in + faci_in
+# af_in = np.load(
+#     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+#     "airborne_fraction_1pctCO2_y70_y140.npy"
+# )
+# faer_in = fari_in + faci_in
 
 
 def opt(x, q05_desired, q50_desired, q95_desired):
@@ -103,9 +103,9 @@ samples = {}
 #     size=10**5,
 #     random_state=91603,
 # )
-samples["TCR"] = scipy.stats.norm.rvs(
-    loc=1.8, scale=0.6 / NINETY_TO_ONESIGMA, size=10**5, random_state=18196
-)
+# samples["TCR"] = scipy.stats.norm.rvs(
+#     loc=1.8, scale=0.6 / NINETY_TO_ONESIGMA, size=10**5, random_state=18196
+# )
 samples["EEI"] = scipy.stats.norm.rvs(
     loc=1.7, scale=0.8 / NINETY_TO_ONESIGMA, size=10**5, random_state=18196
 )
@@ -122,18 +122,18 @@ samples["temperature 2003-2022"] = scipy.stats.skewnorm.rvs(
     size=10**5,
     random_state=19387,
 )
-samples["ERFari"] = scipy.stats.norm.rvs(
-    loc=-0.3, scale=0.3 / NINETY_TO_ONESIGMA, size=10**5, random_state=70173
-)
-samples["ERFaci"] = scipy.stats.norm.rvs(
-    loc=-1.0, scale=0.7 / NINETY_TO_ONESIGMA, size=10**5, random_state=91123
-)
-samples["ERFaer"] = scipy.stats.norm.rvs(
-    loc=-1.3,
-    scale=np.sqrt(0.7**2 + 0.3**2) / NINETY_TO_ONESIGMA,
-    size=10**5,
-    random_state=3916153,
-)
+# samples["ERFari"] = scipy.stats.norm.rvs(
+#     loc=-0.3, scale=0.3 / NINETY_TO_ONESIGMA, size=10**5, random_state=70173
+# )
+# samples["ERFaci"] = scipy.stats.norm.rvs(
+#     loc=-1.0, scale=0.7 / NINETY_TO_ONESIGMA, size=10**5, random_state=91123
+# )
+# samples["ERFaer"] = scipy.stats.norm.rvs(
+#     loc=-1.3,
+#     scale=np.sqrt(0.7**2 + 0.3**2) / NINETY_TO_ONESIGMA,
+#     size=10**5,
+#     random_state=3916153,
+# )
 # IGCC paper: 417.1 +/- 0.4
 # IGCC dataset: 416.9
 # my assessment 417.0 +/- 0.5
@@ -144,13 +144,13 @@ samples["CO2 concentration"] = scipy.stats.norm.rvs(
 ar_distributions = {}
 for constraint in [
 #    "ECS",
-    "TCR",
+    # "TCR",
     "EEI",
     "OHC",
     "temperature 2003-2022",
-    "ERFari",
-    "ERFaci",
-    "ERFaer",
+    # "ERFari",
+    # "ERFaci",
+    # "ERFaer",
     "CO2 concentration",
 ]:
     ar_distributions[constraint] = {}
@@ -173,16 +173,16 @@ mass_factor = 12.011 / molecular_weight_air * mass_atmosphere / 1e21
 accepted = pd.DataFrame(
     {
 #        "ECS": ecs_in[valid_temp],
-        "TCR": tcr_in[valid_temp],
+        # "TCR": tcr_in[valid_temp],
         "EEI": eei_in[valid_temp],
         "OHC": ohc_in[valid_temp] / 1e21,
         "temperature 2003-2022": np.average(
             temp_in[153:174, valid_temp], weights=weights_20yr, axis=0
         )
         - np.average(temp_in[:52, valid_temp], weights=weights_51yr, axis=0),
-        "ERFari": fari_in[valid_temp],
-        "ERFaci": faci_in[valid_temp],
-        "ERFaer": faer_in[valid_temp],
+        # "ERFari": fari_in[valid_temp],
+        # "ERFaci": faci_in[valid_temp],
+        # "ERFaer": faer_in[valid_temp],
         "CO2 concentration": co2_in[valid_temp],
     },
     index=valid_temp,
@@ -313,10 +313,10 @@ draws.append((drawn_samples))
 # post1_ecs = scipy.stats.gaussian_kde(ecs_in[valid_temp])
 # post2_ecs = scipy.stats.gaussian_kde(draws[0]["ECS"])
 
-target_tcr = scipy.stats.gaussian_kde(samples["TCR"])
-prior_tcr = scipy.stats.gaussian_kde(tcr_in)
-post1_tcr = scipy.stats.gaussian_kde(tcr_in[valid_temp])
-post2_tcr = scipy.stats.gaussian_kde(draws[0]["TCR"])
+# target_tcr = scipy.stats.gaussian_kde(samples["TCR"])
+# prior_tcr = scipy.stats.gaussian_kde(tcr_in)
+# post1_tcr = scipy.stats.gaussian_kde(tcr_in[valid_temp])
+# post2_tcr = scipy.stats.gaussian_kde(draws[0]["TCR"])
 
 target_eei = scipy.stats.gaussian_kde(samples["EEI"])
 prior_eei = scipy.stats.gaussian_kde(eei_in)
@@ -339,20 +339,20 @@ prior_ohc = scipy.stats.gaussian_kde(ohc_in / 1e21)
 post1_ohc = scipy.stats.gaussian_kde(ohc_in[valid_temp] / 1e21)
 post2_ohc = scipy.stats.gaussian_kde(draws[0]["OHC"])
 
-target_aer = scipy.stats.gaussian_kde(samples["ERFaer"])
-prior_aer = scipy.stats.gaussian_kde(faer_in)
-post1_aer = scipy.stats.gaussian_kde(faer_in[valid_temp])
-post2_aer = scipy.stats.gaussian_kde(draws[0]["ERFaer"])
-
-target_aci = scipy.stats.gaussian_kde(samples["ERFaci"])
-prior_aci = scipy.stats.gaussian_kde(faci_in)
-post1_aci = scipy.stats.gaussian_kde(faci_in[valid_temp])
-post2_aci = scipy.stats.gaussian_kde(draws[0]["ERFaci"])
-
-target_ari = scipy.stats.gaussian_kde(samples["ERFari"])
-prior_ari = scipy.stats.gaussian_kde(fari_in)
-post1_ari = scipy.stats.gaussian_kde(fari_in[valid_temp])
-post2_ari = scipy.stats.gaussian_kde(draws[0]["ERFari"])
+# target_aer = scipy.stats.gaussian_kde(samples["ERFaer"])
+# prior_aer = scipy.stats.gaussian_kde(faer_in)
+# post1_aer = scipy.stats.gaussian_kde(faer_in[valid_temp])
+# post2_aer = scipy.stats.gaussian_kde(draws[0]["ERFaer"])
+#
+# target_aci = scipy.stats.gaussian_kde(samples["ERFaci"])
+# prior_aci = scipy.stats.gaussian_kde(faci_in)
+# post1_aci = scipy.stats.gaussian_kde(faci_in[valid_temp])
+# post2_aci = scipy.stats.gaussian_kde(draws[0]["ERFaci"])
+#
+# target_ari = scipy.stats.gaussian_kde(samples["ERFari"])
+# prior_ari = scipy.stats.gaussian_kde(fari_in)
+# post1_ari = scipy.stats.gaussian_kde(fari_in[valid_temp])
+# post2_ari = scipy.stats.gaussian_kde(draws[0]["ERFari"])
 
 target_co2 = scipy.stats.gaussian_kde(samples["CO2 concentration"])
 prior_co2 = scipy.stats.gaussian_kde(co2_in)
@@ -431,37 +431,37 @@ if plots:
     ax[0, 0].set_yticklabels([])
     ax[0, 0].set_xlabel("W m$^{-2}$, 2013-2022")
 
-    start = 0
-    stop = 4
-    ax[0, 1].plot(
-        np.linspace(start, stop, 1000),
-        prior_tcr(np.linspace(start, stop, 1000)),
-        color=colors["prior"],
-        label="Prior",
-    )
-    ax[0, 1].plot(
-        np.linspace(start, stop, 1000),
-        post1_tcr(np.linspace(start, stop, 1000)),
-        color=colors["post1"],
-        label="Temperature RMSE",
-    )
-    ax[0, 1].plot(
-        np.linspace(start, stop, 1000),
-        post2_tcr(np.linspace(start, stop, 1000)),
-        color=colors["post2"],
-        label="All constraints",
-    )
-    ax[0, 1].plot(
-        np.linspace(start, stop, 1000),
-        target_tcr(np.linspace(start, stop, 1000)),
-        color=colors["target"],
-        label="Target",
-    )
-    ax[0, 1].set_xlim(start, stop)
-    ax[0, 1].set_ylim(0, 1.4)
-    ax[0, 1].set_title("TCR")
-    ax[0, 1].set_yticklabels([])
-    ax[0, 1].set_xlabel("°C")
+    # start = 0
+    # stop = 4
+    # ax[0, 1].plot(
+    #     np.linspace(start, stop, 1000),
+    #     prior_tcr(np.linspace(start, stop, 1000)),
+    #     color=colors["prior"],
+    #     label="Prior",
+    # )
+    # ax[0, 1].plot(
+    #     np.linspace(start, stop, 1000),
+    #     post1_tcr(np.linspace(start, stop, 1000)),
+    #     color=colors["post1"],
+    #     label="Temperature RMSE",
+    # )
+    # ax[0, 1].plot(
+    #     np.linspace(start, stop, 1000),
+    #     post2_tcr(np.linspace(start, stop, 1000)),
+    #     color=colors["post2"],
+    #     label="All constraints",
+    # )
+    # ax[0, 1].plot(
+    #     np.linspace(start, stop, 1000),
+    #     target_tcr(np.linspace(start, stop, 1000)),
+    #     color=colors["target"],
+    #     label="Target",
+    # )
+    # ax[0, 1].set_xlim(start, stop)
+    # ax[0, 1].set_ylim(0, 1.4)
+    # ax[0, 1].set_title("TCR")
+    # ax[0, 1].set_yticklabels([])
+    # ax[0, 1].set_xlabel("°C")
 
     start = 0.6
     stop = 1.4
@@ -495,102 +495,102 @@ if plots:
     ax[0, 2].set_yticklabels([])
     ax[0, 2].set_xlabel("°C, 2003-2022 minus 1850-1900")
 
-    start = -1.0
-    stop = 0.3
-    ax[1, 0].plot(
-        np.linspace(start, stop, 1000),
-        target_ari(np.linspace(start, stop, 1000)),
-        color=colors["target"],
-        label="Target",
-    )
-    ax[1, 0].plot(
-        np.linspace(start, stop, 1000),
-        prior_ari(np.linspace(start, stop, 1000)),
-        color=colors["prior"],
-        label="Prior",
-    )
-    ax[1, 0].plot(
-        np.linspace(start, stop, 1000),
-        post1_ari(np.linspace(start, stop, 1000)),
-        color=colors["post1"],
-        label="Temperature RMSE",
-    )
-    ax[1, 0].plot(
-        np.linspace(start, stop, 1000),
-        post2_ari(np.linspace(start, stop, 1000)),
-        color=colors["post2"],
-        label="All constraints",
-    )
-    ax[1, 0].set_xlim(start, stop)
-    ax[1, 0].set_ylim(0, 3)
-    ax[1, 0].set_title("Aerosol ERFari")
-    ax[1, 0].set_yticklabels([])
-    ax[1, 0].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
-
-    start = -2.25
-    stop = 0.25
-    ax[1, 1].plot(
-        np.linspace(start, stop, 1000),
-        target_aci(np.linspace(start, stop, 1000)),
-        color=colors["target"],
-        label="Target",
-    )
-    ax[1, 1].plot(
-        np.linspace(start, stop, 1000),
-        prior_aci(np.linspace(start, stop, 1000)),
-        color=colors["prior"],
-        label="Prior",
-    )
-    ax[1, 1].plot(
-        np.linspace(start, stop, 1000),
-        post1_aci(np.linspace(start, stop, 1000)),
-        color=colors["post1"],
-        label="Temperature RMSE",
-    )
-    ax[1, 1].plot(
-        np.linspace(start, stop, 1000),
-        post2_aci(np.linspace(start, stop, 1000)),
-        color=colors["post2"],
-        label="All constraints",
-    )
-    ax[1, 1].set_xlim(start, stop)
-    ax[1, 1].set_ylim(0, 1.6)
-    ax[1, 1].set_title("Aerosol ERFaci")
-    ax[1, 1].set_yticklabels([])
-    ax[1, 1].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
-
-    start = -3
-    stop = 0
-    ax[1, 2].plot(
-        np.linspace(start, stop, 1000),
-        target_aer(np.linspace(start, stop, 1000)),
-        color=colors["target"],
-        label="Target",
-    )
-    ax[1, 2].plot(
-        np.linspace(start, stop, 1000),
-        prior_aer(np.linspace(start, stop, 1000)),
-        color=colors["prior"],
-        label="Prior",
-    )
-    ax[1, 2].plot(
-        np.linspace(start, stop, 1000),
-        post1_aer(np.linspace(start, stop, 1000)),
-        color=colors["post1"],
-        label="Temperature RMSE",
-    )
-    ax[1, 2].plot(
-        np.linspace(start, stop, 1000),
-        post2_aer(np.linspace(start, stop, 1000)),
-        color=colors["post2"],
-        label="All constraints",
-    )
-    ax[1, 2].set_xlim(start, stop)
-    ax[1, 2].set_ylim(0, 1.6)
-    ax[1, 2].set_title("Aerosol ERF")
-    ax[1, 2].legend(frameon=False, loc="upper left")
-    ax[1, 2].set_yticklabels([])
-    ax[1, 2].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
+    # start = -1.0
+    # stop = 0.3
+    # ax[1, 0].plot(
+    #     np.linspace(start, stop, 1000),
+    #     target_ari(np.linspace(start, stop, 1000)),
+    #     color=colors["target"],
+    #     label="Target",
+    # )
+    # ax[1, 0].plot(
+    #     np.linspace(start, stop, 1000),
+    #     prior_ari(np.linspace(start, stop, 1000)),
+    #     color=colors["prior"],
+    #     label="Prior",
+    # )
+    # ax[1, 0].plot(
+    #     np.linspace(start, stop, 1000),
+    #     post1_ari(np.linspace(start, stop, 1000)),
+    #     color=colors["post1"],
+    #     label="Temperature RMSE",
+    # )
+    # ax[1, 0].plot(
+    #     np.linspace(start, stop, 1000),
+    #     post2_ari(np.linspace(start, stop, 1000)),
+    #     color=colors["post2"],
+    #     label="All constraints",
+    # )
+    # ax[1, 0].set_xlim(start, stop)
+    # ax[1, 0].set_ylim(0, 3)
+    # ax[1, 0].set_title("Aerosol ERFari")
+    # ax[1, 0].set_yticklabels([])
+    # ax[1, 0].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
+    #
+    # start = -2.25
+    # stop = 0.25
+    # ax[1, 1].plot(
+    #     np.linspace(start, stop, 1000),
+    #     target_aci(np.linspace(start, stop, 1000)),
+    #     color=colors["target"],
+    #     label="Target",
+    # )
+    # ax[1, 1].plot(
+    #     np.linspace(start, stop, 1000),
+    #     prior_aci(np.linspace(start, stop, 1000)),
+    #     color=colors["prior"],
+    #     label="Prior",
+    # )
+    # ax[1, 1].plot(
+    #     np.linspace(start, stop, 1000),
+    #     post1_aci(np.linspace(start, stop, 1000)),
+    #     color=colors["post1"],
+    #     label="Temperature RMSE",
+    # )
+    # ax[1, 1].plot(
+    #     np.linspace(start, stop, 1000),
+    #     post2_aci(np.linspace(start, stop, 1000)),
+    #     color=colors["post2"],
+    #     label="All constraints",
+    # )
+    # ax[1, 1].set_xlim(start, stop)
+    # ax[1, 1].set_ylim(0, 1.6)
+    # ax[1, 1].set_title("Aerosol ERFaci")
+    # ax[1, 1].set_yticklabels([])
+    # ax[1, 1].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
+    #
+    # start = -3
+    # stop = 0
+    # ax[1, 2].plot(
+    #     np.linspace(start, stop, 1000),
+    #     target_aer(np.linspace(start, stop, 1000)),
+    #     color=colors["target"],
+    #     label="Target",
+    # )
+    # ax[1, 2].plot(
+    #     np.linspace(start, stop, 1000),
+    #     prior_aer(np.linspace(start, stop, 1000)),
+    #     color=colors["prior"],
+    #     label="Prior",
+    # )
+    # ax[1, 2].plot(
+    #     np.linspace(start, stop, 1000),
+    #     post1_aer(np.linspace(start, stop, 1000)),
+    #     color=colors["post1"],
+    #     label="Temperature RMSE",
+    # )
+    # ax[1, 2].plot(
+    #     np.linspace(start, stop, 1000),
+    #     post2_aer(np.linspace(start, stop, 1000)),
+    #     color=colors["post2"],
+    #     label="All constraints",
+    # )
+    # ax[1, 2].set_xlim(start, stop)
+    # ax[1, 2].set_ylim(0, 1.6)
+    # ax[1, 2].set_title("Aerosol ERF")
+    # ax[1, 2].legend(frameon=False, loc="upper left")
+    # ax[1, 2].set_yticklabels([])
+    # ax[1, 2].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
 
     start = 413
     stop = 421
@@ -670,22 +670,22 @@ if plots:
     pl.close()
 
 
-if plots:
-    pl.scatter(draws[0]["TCR"], draws[0]["ERFaci"] + draws[0]["ERFari"])
-    pl.xlabel("TCR, °C")
-    pl.ylabel("Aerosol ERF, W m$^{-2}$, 2005-2014 minus 1750")
-    pl.tight_layout()
-    pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "tcr_aer_constrained.png"
-    )
-    pl.close()
+# if plots:
+#     pl.scatter(draws[0]["TCR"], draws[0]["ERFaci"] + draws[0]["ERFari"])
+#     pl.xlabel("TCR, °C")
+#     pl.ylabel("Aerosol ERF, W m$^{-2}$, 2005-2014 minus 1750")
+#     pl.tight_layout()
+#     pl.savefig(
+#         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+#         "tcr_aer_constrained.png"
+#     )
+#     pl.close()
 
 
 # move these to the validation script
 print("Constrained, reweighted parameters:")
 #print("ECS:", np.percentile(draws[0]["ECS"], (5, 50, 95)))
-print("TCR:", np.percentile(draws[0]["TCR"], (5, 50, 95)))
+# print("TCR:", np.percentile(draws[0]["TCR"], (5, 50, 95)))
 print("TOA imbalance 2013-2022:", np.percentile(draws[0]["EEI"], (5, 50, 95)))
 print(
     "CO2 concentration 2022:", np.percentile(draws[0]["CO2 concentration"], (5, 50, 95))
@@ -694,18 +694,18 @@ print(
     "Temperature 2003-2022 rel. 1850-1900:",
     np.percentile(draws[0]["temperature 2003-2022"], (5, 50, 95)),
 )
-print(
-    "Aerosol ERFari 2005-2014 rel. 1750:",
-    np.percentile(draws[0]["ERFari"], (5, 50, 95)),
-)
-print(
-    "Aerosol ERFaci 2005-2014 rel. 1750:",
-    np.percentile(draws[0]["ERFaci"], (5, 50, 95)),
-)
-print(
-    "Aerosol ERF 2005-2014 rel. 1750:",
-    np.percentile(draws[0]["ERFaci"] + draws[0]["ERFari"], (5, 50, 95)),
-)
+# print(
+#     "Aerosol ERFari 2005-2014 rel. 1750:",
+#     np.percentile(draws[0]["ERFari"], (5, 50, 95)),
+# )
+# print(
+#     "Aerosol ERFaci 2005-2014 rel. 1750:",
+#     np.percentile(draws[0]["ERFaci"], (5, 50, 95)),
+# )
+# print(
+#     "Aerosol ERF 2005-2014 rel. 1750:",
+#     np.percentile(draws[0]["ERFaci"] + draws[0]["ERFari"], (5, 50, 95)),
+# )
 print("OHC change 2020 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95)))
 
 print("*likely range")
