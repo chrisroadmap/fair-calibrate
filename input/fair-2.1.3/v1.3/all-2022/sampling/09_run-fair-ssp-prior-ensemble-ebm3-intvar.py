@@ -201,9 +201,6 @@ if __name__ == "__main__":
         config[ibatch]["scaling_stwv"] = df_scaling.loc[
             batch_start : batch_end - 1, "Stratospheric water vapour"
         ].values.squeeze()
-        config[ibatch]["scaling_contrails"] = df_scaling.loc[
-            batch_start : batch_end - 1, "Contrails"
-        ].values.squeeze()
         config[ibatch]["scaling_lapsi"] = df_scaling.loc[
             batch_start : batch_end - 1, "Light absorbing particles on snow and ice"
         ].values.squeeze()
