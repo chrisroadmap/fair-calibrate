@@ -99,5 +99,5 @@ for scenario in ["HISTTP"]:
     )
     df_out.to_csv(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-        "primap-{scenario.lower()}-2.5_1750-2022.csv"
+        f"primap-{scenario.lower()}-2.5_1750-2022.csv"
     )
