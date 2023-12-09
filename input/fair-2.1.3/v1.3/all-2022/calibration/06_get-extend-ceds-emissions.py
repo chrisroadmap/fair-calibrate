@@ -3,11 +3,9 @@
 
 import os
 
-import h5py
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
-import pooch
 from dotenv import load_dotenv
 
 print("Making SLCF emissions...")
@@ -41,7 +39,8 @@ for specie in species:
     ceds_df.loc[:2019, specie] = (
         0.001
         * pd.read_csv(
-            f"../../../../../data/emissions/ceds/v20210421/{specie}_global_CEDS_emissions_by_sector_2021_04_21.csv"
+            "../../../../../data/emissions/ceds/v20210421/"
+            f"{specie}_global_CEDS_emissions_by_sector_2021_04_21.csv"
         )
         .sum()["X1750":]
         .values
@@ -51,5 +50,6 @@ for specie in species:
     )
 
 ceds_df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/ceds_emissions_extended_1750-2022.csv"
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "ceds_emissions_extended_1750-2022.csv"
 )

@@ -17,7 +17,6 @@ import warnings
 import aneris.convenience
 import numpy as np
 import pandas as pd
-import pooch
 import scmdata
 from dotenv import load_dotenv
 from fair import FAIR, __version__
@@ -197,12 +196,14 @@ overrides = pd.DataFrame(
         {
             "method": "reduce_offset_2150_cov",
             "variable": "Emissions|CO2|AFOLU",
-        },  # high historical variance, but using offset method to prevent diff from increasing when going negative rapidly (cov=23.2)
+        },  # high historical variance, but using offset method to prevent diff from
+        # increasing when going negative rapidly (cov=23.2)
         {
             "method": "reduce_ratio_2080",  # always ratio method by choice
             "variable": "Emissions|CO2|Energy and Industrial Processes",
         },
-        #     {'method': 'default_aneris_tree', 'variable': 'Emissions|CH4'}, # depending on the decision tree in aneris/method.py
+        #     {'method': 'default_aneris_tree', 'variable': 'Emissions|CH4'},
+        # depending on the decision tree in aneris/method.py
         {
             "method": "constant_ratio",
             "variable": "Emissions|HFC-125",
@@ -231,9 +232,12 @@ overrides = pd.DataFrame(
             "method": "constant_ratio",
             "variable": "Emissions|HFC-4310mee",
         },  # minor f-gas with low model reporting confidence
-        #     {'method': 'default_aneris_tree', 'variable': 'Emissions|N2O'}, # depending on the decision tree in aneris/method.py
-        #     {'method': 'default_aneris_tree', 'variable': 'Emissions|NH3'}, # depending on the decision tree in aneris/method.py
-        #     {'method': 'default_aneris_tree', 'variable': 'Emissions|NOx'}, # depending on the decision tree in aneris/method.py
+        #     {'method': 'default_aneris_tree', 'variable': 'Emissions|N2O'},
+        # depending on the decision tree in aneris/method.py
+        #     {'method': 'default_aneris_tree', 'variable': 'Emissions|NH3'},
+        # depending on the decision tree in aneris/method.py
+        #     {'method': 'default_aneris_tree', 'variable': 'Emissions|NOx'},
+        # depending on the decision tree in aneris/method.py
         {
             "method": "reduce_ratio_2150_cov",
             "variable": "Emissions|OC",
@@ -242,7 +246,8 @@ overrides = pd.DataFrame(
             "method": "constant_ratio",
             "variable": "Emissions|SF6",
         },  # minor f-gas with low model reporting confidence
-        #     {'method': 'default_aneris_tree', 'variable': 'Emissions|Sulfur'}, # depending on the decision tree in aneris/method.py
+        #     {'method': 'default_aneris_tree', 'variable': 'Emissions|Sulfur'},
+        # depending on the decision tree in aneris/method.py
         {
             "method": "reduce_ratio_2150_cov",
             "variable": "Emissions|VOC",
@@ -274,7 +279,8 @@ os.makedirs(
 )
 
 scenarios_harmonised.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/ssps_harmonized_2022-2499.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "ssps_harmonized_2022-2499.csv",
     index=False,
 )
 

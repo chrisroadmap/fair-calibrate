@@ -12,7 +12,6 @@ import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 import pooch
-import scipy.optimize
 import xarray as xr
 from dotenv import load_dotenv
 from fair import __version__
@@ -83,7 +82,8 @@ def one_box(
 
 
 rcmip_file = pooch.retrieve(
-    url="https://zenodo.org/records/4589756/files/rcmip-concentrations-annual-means-v5-1-0.csv",
+    url="https://zenodo.org/records/4589756/files/"
+    "rcmip-concentrations-annual-means-v5-1-0.csv",
     known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
     path=datadir,
     progressbar=progress,

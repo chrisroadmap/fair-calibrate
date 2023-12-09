@@ -16,7 +16,6 @@ import scipy.optimize
 from dotenv import load_dotenv
 from fair import __version__
 from fair.fair import DEFAULT_SPECIES_CONFIG_FILE
-from fair.structure.units import desired_concentration_units
 
 load_dotenv()
 
@@ -82,7 +81,8 @@ def one_box(
 
 
 rcmip_file = pooch.retrieve(
-    url="https://zenodo.org/records/4589756/files/rcmip-concentrations-annual-means-v5-1-0.csv",
+    url="https://zenodo.org/records/4589756/files/"
+    "rcmip-concentrations-annual-means-v5-1-0.csv",
     known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
     path=datadir,
     progressbar=progress,
@@ -128,7 +128,8 @@ species = [
 ]
 
 df_emis_obs = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/all_1750-2022.csv"
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "all_1750-2022.csv"
 )
 
 renames = {specie: specie for specie in species}

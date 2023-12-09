@@ -14,7 +14,6 @@
 # Note: biomass burning emissions are intended to be included for SLCFs.
 
 import os
-from pathlib import PurePath
 
 import h5py
 import numpy as np
@@ -34,7 +33,9 @@ progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
 hashes = {
-    "emissions_factors": "5f68c5c4ffdb7d81d3d2fefa662dcad9dd66f2b4097350a08a045523626383b2",
+    "emissions_factors": (
+        "5f68c5c4ffdb7d81d3d2fefa662dcad9dd66f2b4097350a08a045523626383b2"
+    ),
     1997: "997f54a532cae524757c3b35808c10ae0f71ce231c213617cb34ba4b72968bb9",
     1998: "36c13cdcec4f4698f3ab9f05bc83d2307252d89b81da5a14efd8e171148a6dc0",
     1999: "5d0d18b09d9a76e305522c5b46a97bf3180d9301d1d3c6bfa5a4c838fb0fa452",
@@ -155,5 +156,6 @@ os.makedirs(
     exist_ok=True,
 )
 gfed41s_df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/gfed4.1s_1997-2022.csv"
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "gfed4.1s_1997-2022.csv"
 )

@@ -575,7 +575,8 @@ if plots:
         * np.percentile(f.alpha_lifetime[:, 2, :, 3], (50), axis=1)
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/ch4lifetime_ssp245.png"
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "ch4lifetime_ssp245.png"
     )
     pl.close()
 

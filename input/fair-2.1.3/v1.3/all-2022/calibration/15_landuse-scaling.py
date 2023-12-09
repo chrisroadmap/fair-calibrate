@@ -7,14 +7,8 @@
 
 import os
 
-import numpy as np
 import pandas as pd
-import pooch
-import scipy.optimize
-import scipy.stats
-import xarray as xr
 from dotenv import load_dotenv
-from fair import __version__
 
 load_dotenv()
 
@@ -30,7 +24,8 @@ base_year = 1750
 assessment_year = 2019
 
 df_emis = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/all_1750-2022.csv"
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "all_1750-2022.csv"
 )
 co2_afolu = df_emis.loc[
     df_emis["Variable"] == "Emissions|CO2|AFOLU", str(base_year) : str(assessment_year)

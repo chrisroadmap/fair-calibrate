@@ -11,7 +11,6 @@
 # PRIMAP will be used for CH4, N2O, SF6, NF3, HFCs and PFCs.
 
 import os
-from pathlib import PurePath
 
 import numpy as np
 import pandas as pd
@@ -30,7 +29,8 @@ progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
 # PRIMAP-hist emissions: newest version
 primap25 = pooch.retrieve(
-    url="https://zenodo.org/records/10006301/files/Guetschow_et_al_2023b-PRIMAP-hist_v2.5_final_no_rounding_15-Oct-2023.csv",
+    url="https://zenodo.org/records/10006301/files/"
+    "Guetschow_et_al_2023b-PRIMAP-hist_v2.5_final_no_rounding_15-Oct-2023.csv",
     known_hash="md5:e4ddeeb06d9cff9c7e16fc320797d2f1",
     progressbar=progress,
     path=datadir,
@@ -98,5 +98,6 @@ for scenario in ["HISTTP"]:
         exist_ok=True,
     )
     df_out.to_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap-{scenario.lower()}-2.5_1750-2022.csv"
+        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+        "primap-{scenario.lower()}-2.5_1750-2022.csv"
     )

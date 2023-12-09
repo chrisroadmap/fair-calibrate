@@ -19,7 +19,6 @@ import os
 
 import numpy as np
 import pandas as pd
-import pooch
 import scipy.stats
 from dotenv import load_dotenv
 
@@ -33,7 +32,8 @@ progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
 df_emis = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "slcf_emissions_1750-2022.csv",
     index_col=0,
 )
 df_conc = pd.read_csv(

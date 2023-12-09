@@ -2,13 +2,8 @@
 # coding: utf-8
 
 import os
-from pathlib import PurePath
 
-import h5py
-import matplotlib.pyplot as pl
-import numpy as np
 import pandas as pd
-import pooch
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,30 +22,34 @@ update = pd.DataFrame(columns=range(1750, 2023))
 
 # CO2 from Global Carbon Project
 co2_df = pd.read_csv(
-    f"../../../../../data/emissions/gcp_v2023_co2_1750-2022.csv", index_col=0
+    "../../../../../data/emissions/gcp_v2023_co2_1750-2022.csv", index_col=0
 )
 
 # SLCF pre-processed from CEDS and GFED - should put code in
 slcf_df = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "slcf_emissions_1750-2022.csv",
     index_col=0,
 )
 
 # PRIMAP for CH4 FFI+AG, N2O FFI+AG, SF6, NF3
 primap_df = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap-histtp-2.5_1750-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "primap-histtp-2.5_1750-2022.csv",
     index_col=0,
 )
 
 # Split of HFCs and PFCs
 split_df = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/hfcs_pfcs_split_1750-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "hfcs_pfcs_split_1750-2022.csv",
     index_col=0,
 )
 
 # GFED
 gfed41s_df = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/gfed4.1s_1997-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "gfed4.1s_1997-2022.csv",
     index_col=0,
 )
 
@@ -61,7 +60,8 @@ bb_df = pd.read_csv(
 
 # inverse Montreal
 inv_df = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/minor_ghg_inverse_1750-2022.csv"
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "minor_ghg_inverse_1750-2022.csv"
 )
 
 # PRIMAP does not include biomass burning but does include agriculture. Therefore, CH4
@@ -182,7 +182,7 @@ units = [
     "Mt NH3/yr",
 ]
 units = units + [
-    f'kt {specie.replace("-","")}/yr' for specie in species_minor + species_split
+    f'kt {specie.replace("-", "")}/yr' for specie in species_minor + species_split
 ]
 
 update = update.rename_axis("Variable").reset_index(level=0)

@@ -38,7 +38,6 @@ import scipy.optimize
 import scipy.stats
 import xarray as xr
 from dotenv import load_dotenv
-from fair import __version__
 
 load_dotenv()
 
@@ -52,7 +51,8 @@ progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
 rcmip_file = pooch.retrieve(
-    url="https://zenodo.org/records/4589756/files/rcmip-concentrations-annual-means-v5-1-0.csv",
+    url="https://zenodo.org/records/4589756/files/"
+    "rcmip-concentrations-annual-means-v5-1-0.csv",
     known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
     path=datadir,
     progressbar=progress,
@@ -69,7 +69,8 @@ gmst = df_temp["ssp370"].values
 
 # Get emissions and concentrations: from RCMIP for model tuning stage
 rcmip_emissions_file = pooch.retrieve(
-    url="https://zenodo.org/records/4589756/files/rcmip-emissions-annual-means-v5-1-0.csv",
+    url="https://zenodo.org/records/4589756/files/"
+    "rcmip-emissions-annual-means-v5-1-0.csv",
     known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
     path=datadir,
     progressbar=progress,
@@ -77,7 +78,8 @@ rcmip_emissions_file = pooch.retrieve(
 
 rcmip_concentration_file = pooch.retrieve(
     url=(
-        "https://zenodo.org/records/4589756/files/rcmip-concentrations-annual-means-v5-1-0.csv"
+        "https://zenodo.org/records/4589756/files/"
+        "rcmip-concentrations-annual-means-v5-1-0.csv"
     ),
     known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
     path=datadir,
@@ -498,7 +500,8 @@ if plots:
 # Find least squares sensible historical fit using best estimate emissions and
 # concentrations (not those from RCMIP)
 df_emis_obs = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "slcf_emissions_1750-2022.csv",
     index_col=0,
 )
 df_conc_obs = pd.read_csv(
@@ -517,7 +520,8 @@ input_obs["NOx"] = df_emis_obs["NOx"].values[:273]
 input_obs["temp"] = gmst[:273]
 
 df_ch4emis_obs = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/all_1750-2022.csv"
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "all_1750-2022.csv"
 )
 emis_ch4_obs = df_ch4emis_obs.loc[
     df_ch4emis_obs["Variable"] == "Emissions|CH4", "1750":"2022"

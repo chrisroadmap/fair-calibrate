@@ -70,7 +70,8 @@ for model in models:
 
 # Calibrate on RCMIP
 rcmip_emissions_file = pooch.retrieve(
-    url="https://zenodo.org/records/4589756/files/rcmip-emissions-annual-means-v5-1-0.csv",
+    url="https://zenodo.org/records/4589756/files/"
+    "rcmip-emissions-annual-means-v5-1-0.csv",
     known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
     progressbar=progress,
     path=datadir,
@@ -244,7 +245,8 @@ erfaci_sample = scipy.stats.uniform.rvs(
 
 # Sampling with updated emissions.
 df_emis_obs = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "slcf_emissions_1750-2022.csv",
     index_col=0,
 )
 

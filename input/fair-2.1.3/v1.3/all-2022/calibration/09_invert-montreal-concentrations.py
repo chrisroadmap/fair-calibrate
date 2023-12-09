@@ -15,14 +15,9 @@ import os
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
-import pooch
-import scipy.optimize
-import scipy.stats
-import xarray as xr
 from dotenv import load_dotenv
 from fair import FAIR, __version__
 from fair.interface import fill, initialise
-from scipy.interpolate import interp1d
 
 load_dotenv()
 

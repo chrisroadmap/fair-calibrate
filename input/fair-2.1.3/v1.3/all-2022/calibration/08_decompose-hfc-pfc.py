@@ -3,16 +3,11 @@
 
 import os
 
-import h5py
-import matplotlib.pyplot as pl
-import numpy as np
 import pandas as pd
 import pooch
 from dotenv import load_dotenv
 
 load_dotenv()
-
-pl.style.use("../../../../../defaults.mplstyle")
 
 cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")
@@ -23,7 +18,8 @@ progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
 rcmip_file = pooch.retrieve(
-    url="https://zenodo.org/records/4589756/files/rcmip-emissions-annual-means-v5-1-0.csv",
+    url="https://zenodo.org/records/4589756/files/"
+    "rcmip-emissions-annual-means-v5-1-0.csv",
     known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
     path=datadir,
     progressbar=progress,
@@ -92,7 +88,8 @@ pfc_rcmip_total = gases_gwp100ar6.loc[
 
 # Compare to PRIMAP
 primap_df = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap-histtp-2.5_1750-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "primap-histtp-2.5_1750-2022.csv",
     index_col=0,
 )
 
@@ -117,5 +114,6 @@ os.makedirs(
     exist_ok=True,
 )
 df_out.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/hfcs_pfcs_split_1750-2022.csv"
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "hfcs_pfcs_split_1750-2022.csv"
 )

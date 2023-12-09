@@ -12,7 +12,6 @@ import os
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
-import pooch
 import scipy.stats
 from dotenv import load_dotenv
 from fair import __version__
@@ -116,7 +115,8 @@ print("2019-1750 ozone ERF from Skeie:", o3total[269])
 print("2014-1850 ozone ERF from Skeie:", o3total[264] - o3total[100])
 
 df_emis = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "slcf_emissions_1750-2022.csv",
     index_col=0,
 )
 df_conc = pd.read_csv(

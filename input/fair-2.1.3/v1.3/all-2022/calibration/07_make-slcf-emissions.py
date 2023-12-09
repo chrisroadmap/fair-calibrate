@@ -3,11 +3,9 @@
 
 import os
 
-import h5py
 import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
-import pooch
 from dotenv import load_dotenv
 
 print("Making SLCF emissions...")
@@ -31,11 +29,13 @@ species = ["BC", "OC", "SO2", "NOx", "CO", "NMVOC", "NH3"]
 slcf_df = pd.DataFrame(columns=species, index=np.arange(1750, 2023, dtype=int))
 
 ceds_df = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/ceds_emissions_extended_1750-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "ceds_emissions_extended_1750-2022.csv",
     index_col=0,
 )
 gfed41s_df = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/gfed4.1s_1997-2022.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "gfed4.1s_1997-2022.csv",
     index_col=0,
 )
 bb_df = pd.read_csv(
@@ -57,5 +57,6 @@ for specie in species:
     ].values.squeeze() * gfed_convert[specie]
 
 slcf_df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv"
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "slcf_emissions_1750-2022.csv"
 )
