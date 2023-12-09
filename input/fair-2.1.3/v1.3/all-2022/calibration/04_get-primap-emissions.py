@@ -83,9 +83,5 @@ for scenario in ['HISTTP']:
 
     df_out = pd.DataFrame([ch4/1e3, n2o/1e3, sf6, nf3, pfcs, hfcs], index = ["CH4", "N2O", "SF6", "NF3", "PFCs", "HFCs"], columns=np.arange(1750, 2023))
 
-    os.makedirs(
-        f"../../../../../data/emissions/",
-        exist_ok=True,
-    )
-
+    os.makedirs(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions', exist_ok=True)
     df_out.to_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap-{scenario.lower()}-2.5_1750-2022.csv')
