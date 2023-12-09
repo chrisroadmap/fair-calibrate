@@ -239,8 +239,10 @@ if __name__ == "__main__":
         config[ibatch]["ch4_EESC"] = df_methane.loc["historical_best", "HC"]
         config[ibatch]["ch4_N2O"] = df_methane.loc["historical_best", "N2O"]
         config[ibatch]["ch4_temp"] = df_methane.loc["historical_best", "temp"]
-        config[ibatch]['landuse_factor'] = df_landuse.loc["historical_best", "CO2_AFOLU"]
-        config[ibatch]['lapsi_factor'] = df_lapsi.loc["historical_best", "BC"]
+        config[ibatch]["landuse_factor"] = df_landuse.loc[
+            "historical_best", "CO2_AFOLU"
+        ]
+        config[ibatch]["lapsi_factor"] = df_lapsi.loc["historical_best", "BC"]
 
     parallel_process_kwargs = dict(
         func=run_fair,

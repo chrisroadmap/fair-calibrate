@@ -29,8 +29,12 @@ target_forcing = -0.2
 base_year = 1750
 assessment_year = 2019
 
-df_emis = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/all_1750-2022.csv')
-co2_afolu = df_emis.loc[df_emis["Variable"]=="Emissions|CO2|AFOLU", str(base_year):str(assessment_year)]
+df_emis = pd.read_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/all_1750-2022.csv"
+)
+co2_afolu = df_emis.loc[
+    df_emis["Variable"] == "Emissions|CO2|AFOLU", str(base_year) : str(assessment_year)
+]
 
 cumulative_co2_emissions = co2_afolu.values.sum()  # GtCO2
 
@@ -43,7 +47,7 @@ df = pd.DataFrame(
 )
 os.makedirs(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
-    exist_ok=True
+    exist_ok=True,
 )
 df.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"

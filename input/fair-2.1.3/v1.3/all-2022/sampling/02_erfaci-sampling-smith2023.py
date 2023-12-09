@@ -73,7 +73,7 @@ rcmip_emissions_file = pooch.retrieve(
     url="https://zenodo.org/records/4589756/files/rcmip-emissions-annual-means-v5-1-0.csv",
     known_hash="md5:4044106f55ca65b094670e7577eaf9b3",
     progressbar=progress,
-    path=datadir
+    path=datadir,
 )
 
 emis_df = pd.read_csv(rcmip_emissions_file)
@@ -227,16 +227,15 @@ n1_samp = df_params["BC"]
 n2_samp = df_params["OC"]
 
 kde = scipy.stats.gaussian_kde(
-    [np.log(n0_samp), np.log(n1_samp), np.log(n2_samp)],
-    bw_method=0.1
+    [np.log(n0_samp), np.log(n1_samp), np.log(n2_samp)], bw_method=0.1
 )
 aci_sample = kde.resample(size=samples * 1, seed=63648708)
 
-#aci_sample[0, aci_sample[0, :] < 0] = np.nan
-#aci_sample[1, aci_sample[1, :] < 0] = np.nan
-#aci_sample[2, aci_sample[2, :] < 0] = np.nan
-#mask = np.any(np.isnan(aci_sample), axis=0)
-#aci_sample = aci_sample[:, ~mask]
+# aci_sample[0, aci_sample[0, :] < 0] = np.nan
+# aci_sample[1, aci_sample[1, :] < 0] = np.nan
+# aci_sample[2, aci_sample[2, :] < 0] = np.nan
+# mask = np.any(np.isnan(aci_sample), axis=0)
+# aci_sample = aci_sample[:, ~mask]
 
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 erfaci_sample = scipy.stats.uniform.rvs(
@@ -244,15 +243,18 @@ erfaci_sample = scipy.stats.uniform.rvs(
 )
 
 # Sampling with updated emissions.
-df_emis_obs = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv', index_col=0)
+df_emis_obs = pd.read_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv",
+    index_col=0,
+)
 
 # overwrite RCMIP
-so2 = df_emis_obs['SO2'].values
-bc = df_emis_obs['BC'].values
-oc = df_emis_obs['OC'].values
+so2 = df_emis_obs["SO2"].values
+bc = df_emis_obs["BC"].values
+oc = df_emis_obs["OC"].values
 
 beta = np.zeros(samples)
-#erfaci = np.zeros((273, samples))
+# erfaci = np.zeros((273, samples))
 for i in tqdm(range(samples), desc="aci samples", disable=1 - progress):
     ts2010 = np.mean(
         aci_log_nocorrect(
@@ -281,7 +283,10 @@ df = pd.DataFrame(
     }
 )
 
-os.makedirs(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/", exist_ok=True)
+os.makedirs(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/",
+    exist_ok=True,
+)
 
 df.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"

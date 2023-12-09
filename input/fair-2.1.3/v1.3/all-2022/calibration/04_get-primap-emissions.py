@@ -14,9 +14,9 @@ import os
 from pathlib import PurePath
 
 import numpy as np
-from dotenv import load_dotenv
-import pooch
 import pandas as pd
+import pooch
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -38,50 +38,65 @@ primap25 = pooch.retrieve(
 
 primap25_df = pd.read_csv(primap25)
 
-for scenario in ['HISTTP']:
+for scenario in ["HISTTP"]:
     ch4 = primap25_df.loc[
-        (primap25_df['scenario (PRIMAP-hist)']==scenario)&
-        (primap25_df['entity']=='CH4')&
-        (primap25_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
-        (primap25_df['area (ISO3)']=='EARTH'),
-    '1750':].values.squeeze()
+        (primap25_df["scenario (PRIMAP-hist)"] == scenario)
+        & (primap25_df["entity"] == "CH4")
+        & (primap25_df["category (IPCC2006_PRIMAP)"] == "M.0.EL")
+        & (primap25_df["area (ISO3)"] == "EARTH"),
+        "1750":,
+    ].values.squeeze()
 
     n2o = primap25_df.loc[
-        (primap25_df['scenario (PRIMAP-hist)']==scenario)&
-        (primap25_df['entity']=='N2O')&
-        (primap25_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
-        (primap25_df['area (ISO3)']=='EARTH'),
-    '1750':].values.squeeze()
+        (primap25_df["scenario (PRIMAP-hist)"] == scenario)
+        & (primap25_df["entity"] == "N2O")
+        & (primap25_df["category (IPCC2006_PRIMAP)"] == "M.0.EL")
+        & (primap25_df["area (ISO3)"] == "EARTH"),
+        "1750":,
+    ].values.squeeze()
 
     sf6 = primap25_df.loc[
-        (primap25_df['scenario (PRIMAP-hist)']==scenario)&
-        (primap25_df['entity']=='SF6')&
-        (primap25_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
-        (primap25_df['area (ISO3)']=='EARTH'),
-    '1750':].values.squeeze()
+        (primap25_df["scenario (PRIMAP-hist)"] == scenario)
+        & (primap25_df["entity"] == "SF6")
+        & (primap25_df["category (IPCC2006_PRIMAP)"] == "M.0.EL")
+        & (primap25_df["area (ISO3)"] == "EARTH"),
+        "1750":,
+    ].values.squeeze()
 
     nf3 = primap25_df.loc[
-        (primap25_df['scenario (PRIMAP-hist)']==scenario)&
-        (primap25_df['entity']=='NF3')&
-        (primap25_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
-        (primap25_df['area (ISO3)']=='EARTH'),
-    '1750':].values.squeeze()
+        (primap25_df["scenario (PRIMAP-hist)"] == scenario)
+        & (primap25_df["entity"] == "NF3")
+        & (primap25_df["category (IPCC2006_PRIMAP)"] == "M.0.EL")
+        & (primap25_df["area (ISO3)"] == "EARTH"),
+        "1750":,
+    ].values.squeeze()
 
     pfcs = primap25_df.loc[
-        (primap25_df['scenario (PRIMAP-hist)']==scenario)&
-        (primap25_df['entity']=='PFCS (AR6GWP100)')&
-        (primap25_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
-        (primap25_df['area (ISO3)']=='EARTH'),
-    '1750':].values.squeeze()
+        (primap25_df["scenario (PRIMAP-hist)"] == scenario)
+        & (primap25_df["entity"] == "PFCS (AR6GWP100)")
+        & (primap25_df["category (IPCC2006_PRIMAP)"] == "M.0.EL")
+        & (primap25_df["area (ISO3)"] == "EARTH"),
+        "1750":,
+    ].values.squeeze()
 
     hfcs = primap25_df.loc[
-        (primap25_df['scenario (PRIMAP-hist)']==scenario)&
-        (primap25_df['entity']=='HFCS (AR6GWP100)')&
-        (primap25_df['category (IPCC2006_PRIMAP)']=='M.0.EL')&
-        (primap25_df['area (ISO3)']=='EARTH'),
-    '1750':].values.squeeze()
+        (primap25_df["scenario (PRIMAP-hist)"] == scenario)
+        & (primap25_df["entity"] == "HFCS (AR6GWP100)")
+        & (primap25_df["category (IPCC2006_PRIMAP)"] == "M.0.EL")
+        & (primap25_df["area (ISO3)"] == "EARTH"),
+        "1750":,
+    ].values.squeeze()
 
-    df_out = pd.DataFrame([ch4/1e3, n2o/1e3, sf6, nf3, pfcs, hfcs], index = ["CH4", "N2O", "SF6", "NF3", "PFCs", "HFCs"], columns=np.arange(1750, 2023))
+    df_out = pd.DataFrame(
+        [ch4 / 1e3, n2o / 1e3, sf6, nf3, pfcs, hfcs],
+        index=["CH4", "N2O", "SF6", "NF3", "PFCs", "HFCs"],
+        columns=np.arange(1750, 2023),
+    )
 
-    os.makedirs(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions', exist_ok=True)
-    df_out.to_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap-{scenario.lower()}-2.5_1750-2022.csv')
+    os.makedirs(
+        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions",
+        exist_ok=True,
+    )
+    df_out.to_csv(
+        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/primap-{scenario.lower()}-2.5_1750-2022.csv"
+    )

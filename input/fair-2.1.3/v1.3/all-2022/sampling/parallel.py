@@ -116,8 +116,16 @@ def run_fair(cfg):
     fill(f.species_configs["lifetime_temperature_sensitivity"], cfg["ch4_temp"])
 
     # correct land use  and LAPSI scale factor terms
-    fill(f.species_configs["land_use_cumulative_emissions_to_forcing"], cfg["landuse_factor"], specie="CO2 AFOLU")
-    fill(f.species_configs["lapsi_radiative_efficiency"], cfg["lapsi_factor"], specie="BC")
+    fill(
+        f.species_configs["land_use_cumulative_emissions_to_forcing"],
+        cfg["landuse_factor"],
+        specie="CO2 AFOLU",
+    )
+    fill(
+        f.species_configs["lapsi_radiative_efficiency"],
+        cfg["lapsi_factor"],
+        specie="BC",
+    )
 
     # Reconstructed emissions adjustments for all species to match first timepoint
     fill(f.species_configs["baseline_emissions"], 38.246272, specie="CH4")

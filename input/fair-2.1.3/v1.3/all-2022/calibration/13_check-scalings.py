@@ -13,11 +13,11 @@ import numpy as np
 import pandas as pd
 import pooch
 import scipy.optimize
+import xarray as xr
 from dotenv import load_dotenv
 from fair import __version__
 from fair.fair import DEFAULT_SPECIES_CONFIG_FILE
 from fair.structure.units import desired_concentration_units
-import xarray as xr
 
 load_dotenv()
 
@@ -48,6 +48,7 @@ pl.style.use("../../../../../defaults.mplstyle")
 # Use observations 1850-2022 from IGCC, then use ssp370 projections from IPCC
 df_temp = pd.read_csv("../../../../../data/forcing/ssp_strawman_warming.csv")
 gmst = df_temp["ssp370"].values
+
 
 # put this into a simple one box model
 def one_box(
@@ -80,17 +81,20 @@ def one_box(
     )
     return concentration_out, gas_boxes_new, airborne_emissions_new
 
+
 rcmip_file = pooch.retrieve(
     url="https://zenodo.org/records/4589756/files/rcmip-concentrations-annual-means-v5-1-0.csv",
     known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
     path=datadir,
-    progressbar=progress
+    progressbar=progress,
 )
 
 rcmip_df = pd.read_csv(rcmip_file)
 
 
-df_conc_obs = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
+df_conc_obs = pd.read_csv(
+    "../../../../../data/concentrations/ghg_concentrations_1750-2022.csv", index_col=0
+)
 for year in range(1751, 1850):
     df_conc_obs.loc[year, :] = np.nan
 df_conc_obs.sort_index(inplace=True)
@@ -100,9 +104,25 @@ df_conc_obs.interpolate(inplace=True)
 # the RCMIP set
 species = df_conc_obs.columns
 species = [
-    specie for specie in species if specie not in [
-        "CO2", "CH4", "SO2F2", "CFC-13", "i-C6F14", "CFC-112", "CFC-112a", "CFC-113a",
-        "CFC-114a", "HCFC-133a", "HCFC-31", "HCFC-124", "Halon-1202", "C7F16", "C8F18"
+    specie
+    for specie in species
+    if specie
+    not in [
+        "CO2",
+        "CH4",
+        "SO2F2",
+        "CFC-13",
+        "i-C6F14",
+        "CFC-112",
+        "CFC-112a",
+        "CFC-113a",
+        "CFC-114a",
+        "HCFC-133a",
+        "HCFC-31",
+        "HCFC-124",
+        "Halon-1202",
+        "C7F16",
+        "C8F18",
     ]
 ]
 
@@ -121,8 +141,8 @@ emissions_scalings = {}
 
 for specie in species:
     input_obs = {}
-    input_obs[specie] = df_conc_obs[specie].values[:273]   # 1750-2022 timepoints
-    input_obs['temp'] = gmst[:273]                         # 1750-2022 timepoints
+    input_obs[specie] = df_conc_obs[specie].values[:273]  # 1750-2022 timepoints
+    input_obs["temp"] = gmst[:273]  # 1750-2022 timepoints
 
     df_defaults = pd.read_csv(DEFAULT_SPECIES_CONFIG_FILE, index_col=0)
     lifetime = df_defaults.loc[renames[specie], "unperturbed_lifetime0"]
@@ -138,8 +158,21 @@ for specie in species:
     pre_industrial_concentration = df_conc_obs[specie].values[0]
 
     conc_ssp = {}
-    for ssp in ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp434', 'ssp460', 'ssp534-over', 'ssp585']:
-        emis_ssp = da_emis_obs.loc[dict(specie=renames[specie], timepoints=np.arange(1750.5, 2101), scenario=ssp)].values.squeeze()
+    for ssp in [
+        "ssp119",
+        "ssp126",
+        "ssp245",
+        "ssp370",
+        "ssp434",
+        "ssp460",
+        "ssp534-over",
+        "ssp585",
+    ]:
+        emis_ssp = da_emis_obs.loc[
+            dict(
+                specie=renames[specie], timepoints=np.arange(1750.5, 2101), scenario=ssp
+            )
+        ].values.squeeze()
         natural_emissions_adjustment = emis_ssp[0]
         conc_ssp[ssp] = np.zeros(351)
         gas_boxes = 0
@@ -168,7 +201,10 @@ for specie in species:
         fig, ax = pl.subplots(1, 2, figsize=(7.5, 3.5))
 
         ax[0].plot(
-            np.arange(1750, 2023), conc_ssp['ssp245'][:273], color="0.5", label="Best fit"
+            np.arange(1750, 2023),
+            conc_ssp["ssp245"][:273],
+            color="0.5",
+            label="Best fit",
         )
         ax[0].plot(
             np.arange(1750, 2023), input_obs[specie], color="k", label="observations"
@@ -188,12 +224,20 @@ for specie in species:
             "ssp370",
             "ssp585",
         ]:
-            gas = rcmip_df.loc[
-                (rcmip_df["Region"]=="World") &
-                (rcmip_df["Scenario"]==ssp) &
-                (rcmip_df["Variable"].str.endswith(f"|{renames[specie].replace('-', '')}")),
-                "1750":"2100"
-            ].interpolate(axis=1).squeeze()
+            gas = (
+                rcmip_df.loc[
+                    (rcmip_df["Region"] == "World")
+                    & (rcmip_df["Scenario"] == ssp)
+                    & (
+                        rcmip_df["Variable"].str.endswith(
+                            f"|{renames[specie].replace('-', '')}"
+                        )
+                    ),
+                    "1750":"2100",
+                ]
+                .interpolate(axis=1)
+                .squeeze()
+            )
 
             ax[1].plot(
                 np.arange(1750, 2101), conc_ssp[ssp], label=ssp, color=ar6_colors[ssp]

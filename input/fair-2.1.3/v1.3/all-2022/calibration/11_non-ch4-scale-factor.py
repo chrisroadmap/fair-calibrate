@@ -48,6 +48,7 @@ pl.style.use("../../../../../defaults.mplstyle")
 df_temp = pd.read_csv("../../../../../data/forcing/ssp_strawman_warming.csv")
 gmst = df_temp["ssp370"].values
 
+
 # put this into a simple one box model
 def one_box(
     emissions,
@@ -79,11 +80,12 @@ def one_box(
     )
     return concentration_out, gas_boxes_new, airborne_emissions_new
 
+
 rcmip_file = pooch.retrieve(
     url="https://zenodo.org/records/4589756/files/rcmip-concentrations-annual-means-v5-1-0.csv",
     known_hash="md5:0d82c3c3cdd4dd632b2bb9449a5c315f",
     path=datadir,
-    progressbar=progress
+    progressbar=progress,
 )
 
 rcmip_df = pd.read_csv(rcmip_file)
@@ -91,7 +93,9 @@ rcmip_df = pd.read_csv(rcmip_file)
 
 # Find least squares sensible historical fit using best estimate emissions and
 # concentrations from our calibration emissions and observed concentrations
-df_conc_obs = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
+df_conc_obs = pd.read_csv(
+    "../../../../../data/concentrations/ghg_concentrations_1750-2022.csv", index_col=0
+)
 for year in range(1751, 1850):
     df_conc_obs.loc[year, :] = np.nan
 df_conc_obs.sort_index(inplace=True)
@@ -101,13 +105,31 @@ df_conc_obs.interpolate(inplace=True)
 # the RCMIP set
 species = df_conc_obs.columns
 species = [
-    specie for specie in species if specie not in [
-        "CO2", "CH4", "SO2F2", "CFC-13", "i-C6F14", "CFC-112", "CFC-112a", "CFC-113a",
-        "CFC-114a", "HCFC-133a", "HCFC-31", "HCFC-124", "Halon-1202", "C7F16", "C8F18"
+    specie
+    for specie in species
+    if specie
+    not in [
+        "CO2",
+        "CH4",
+        "SO2F2",
+        "CFC-13",
+        "i-C6F14",
+        "CFC-112",
+        "CFC-112a",
+        "CFC-113a",
+        "CFC-114a",
+        "HCFC-133a",
+        "HCFC-31",
+        "HCFC-124",
+        "Halon-1202",
+        "C7F16",
+        "C8F18",
     ]
 ]
 
-df_emis_obs = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/all_1750-2022.csv')
+df_emis_obs = pd.read_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/all_1750-2022.csv"
+)
 
 renames = {specie: specie for specie in species}
 renames["HFC-43-10mee"] = "HFC-4310mee"
@@ -119,10 +141,12 @@ emissions_scalings = {}
 
 for specie in species:
     input_obs = {}
-    input_obs[specie] = df_conc_obs[specie].values[:270]   # 1750-2020 timepoints
-    input_obs['temp'] = gmst[:270]                         # 1750-2020 timepoints
+    input_obs[specie] = df_conc_obs[specie].values[:270]  # 1750-2020 timepoints
+    input_obs["temp"] = gmst[:270]  # 1750-2020 timepoints
 
-    emis_obs = df_emis_obs.loc[df_emis_obs['Variable']==f'Emissions|{renames[specie]}', '1750':'2019'].values.squeeze()  # 1750-2019 timepoints
+    emis_obs = df_emis_obs.loc[
+        df_emis_obs["Variable"] == f"Emissions|{renames[specie]}", "1750":"2019"
+    ].values.squeeze()  # 1750-2019 timepoints
 
     df_defaults = pd.read_csv(DEFAULT_SPECIES_CONFIG_FILE, index_col=0)
     lifetime = df_defaults.loc[renames[specie], "unperturbed_lifetime0"]
@@ -154,7 +178,7 @@ for specie in species:
                 partition_fraction,
                 pre_industrial_concentration=pre_industrial_concentration,
                 timestep=1,
-                natural_emissions_adjustment=natural_emissions_adjustment*sf[0],
+                natural_emissions_adjustment=natural_emissions_adjustment * sf[0],
             )
         return conc_n2o[-1] - input_obs[specie][-1]
         # return conc_n2o[-2:].mean() - input_obs["N2O"][-2]
@@ -168,13 +192,10 @@ for specie in species:
     emissions_scalings[renames[specie]] = parameters["best_fit"]["scale"]
 
 # these are the emissions scaling values that we apply
-df = pd.DataFrame(
-    emissions_scalings,
-    index=["historical_best"]
-)
+df = pd.DataFrame(emissions_scalings, index=["historical_best"])
 os.makedirs(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
-    exist_ok=True
+    exist_ok=True,
 )
 df.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"

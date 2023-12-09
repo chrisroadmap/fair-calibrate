@@ -32,8 +32,13 @@ samples = int(os.getenv("PRIOR_SAMPLES"))
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
-df_emis = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv', index_col=0)
-df_conc = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
+df_emis = pd.read_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv",
+    index_col=0,
+)
+df_conc = pd.read_csv(
+    "../../../../../data/concentrations/ghg_concentrations_1750-2022.csv", index_col=0
+)
 for year in range(1751, 1850):
     df_conc.loc[year, :] = np.nan
 df_conc.sort_index(inplace=True)
@@ -45,15 +50,24 @@ df_conc.interpolate(inplace=True)
 # they sum to exactly -0.22 W/m2, for 2019
 # Calculate a radiative efficiency for each species from CEDS and updated
 # concentrations.
-df_ari_emitted_mean = pd.read_csv('../../../../../data/forcing/table_mean_thornhill_collins_orignames.csv', index_col=0)
-erfari_emitted = pd.Series(df_ari_emitted_mean['Aerosol'])
+df_ari_emitted_mean = pd.read_csv(
+    "../../../../../data/forcing/table_mean_thornhill_collins_orignames.csv",
+    index_col=0,
+)
+erfari_emitted = pd.Series(df_ari_emitted_mean["Aerosol"])
 erfari_emitted.rename_axis(None, inplace=True)
-erfari_emitted.rename({'HC': 'Equivalent effective stratospheric chlorine', 'SO2': 'Sulfur'}, inplace=True)
+erfari_emitted.rename(
+    {"HC": "Equivalent effective stratospheric chlorine", "SO2": "Sulfur"}, inplace=True
+)
 
-df_ari_emitted_std = pd.read_csv('../../../../../data/forcing/table_std_thornhill_collins_orignames.csv', index_col=0)
-erfari_emitted_std = pd.Series(df_ari_emitted_std['Aerosol_sd'])
+df_ari_emitted_std = pd.read_csv(
+    "../../../../../data/forcing/table_std_thornhill_collins_orignames.csv", index_col=0
+)
+erfari_emitted_std = pd.Series(df_ari_emitted_std["Aerosol_sd"])
 erfari_emitted_std.rename_axis(None, inplace=True)
-erfari_emitted_std.rename({'HC': 'Equivalent effective stratospheric chlorine', 'SO2': 'Sulfur'}, inplace=True)
+erfari_emitted_std.rename(
+    {"HC": "Equivalent effective stratospheric chlorine", "SO2": "Sulfur"}, inplace=True
+)
 
 emitted_species = [
     "Sulfur",
@@ -109,8 +123,8 @@ hc_species = [
 ]
 
 name_conv = {specie: specie for specie in emitted_species}
-name_conv['Sulfur'] = 'SO2'
-name_conv['VOC'] = 'NMVOC'
+name_conv["Sulfur"] = "SO2"
+name_conv["VOC"] = "NMVOC"
 
 species_out = {}
 for ispec, species in enumerate(emitted_species):
@@ -120,6 +134,7 @@ for ispec, species in enumerate(concentration_species):
     species_out[species] = df_conc[species].values[:273]
 
 species_df = pd.DataFrame(species_out, index=range(1750, 2023))
+
 
 def calculate_eesc(
     concentration,
@@ -217,38 +232,81 @@ for species in cl_atoms:
 re = erfari_emitted / (species_df.loc[2019, :] - species_df.loc[1750, :])
 re.dropna(inplace=True)
 
-re['CH4'] = erfari_emitted['CH4'] / (species_df.loc[2019, 'CH4'] - species_df.loc[1750, 'CH4'])
-re['N2O'] = erfari_emitted['N2O'] / (species_df.loc[2019, 'N2O'] - species_df.loc[1750, 'N2O'])
-re['Equivalent effective stratospheric chlorine'] = erfari_emitted['Equivalent effective stratospheric chlorine'] / (total_eesc.loc[2019] - total_eesc.loc[1750])
+re["CH4"] = erfari_emitted["CH4"] / (
+    species_df.loc[2019, "CH4"] - species_df.loc[1750, "CH4"]
+)
+re["N2O"] = erfari_emitted["N2O"] / (
+    species_df.loc[2019, "N2O"] - species_df.loc[1750, "N2O"]
+)
+re["Equivalent effective stratospheric chlorine"] = erfari_emitted[
+    "Equivalent effective stratospheric chlorine"
+] / (total_eesc.loc[2019] - total_eesc.loc[1750])
 
 re_std = erfari_emitted_std / (species_df.loc[2019, :] - species_df.loc[1750, :])
 re_std.dropna(inplace=True)
-re_std['CH4'] = erfari_emitted_std['CH4'] / (species_df.loc[2019, 'CH4'] - species_df.loc[1750, 'CH4'])
-re_std['N2O'] = erfari_emitted_std['N2O'] / (species_df.loc[2019, 'N2O'] - species_df.loc[1750, 'N2O'])
-re_std['Equivalent effective stratospheric chlorine'] = erfari_emitted_std['Equivalent effective stratospheric chlorine'] / (total_eesc.loc[2019] - total_eesc.loc[1750])
+re_std["CH4"] = erfari_emitted_std["CH4"] / (
+    species_df.loc[2019, "CH4"] - species_df.loc[1750, "CH4"]
+)
+re_std["N2O"] = erfari_emitted_std["N2O"] / (
+    species_df.loc[2019, "N2O"] - species_df.loc[1750, "N2O"]
+)
+re_std["Equivalent effective stratospheric chlorine"] = erfari_emitted_std[
+    "Equivalent effective stratospheric chlorine"
+] / (total_eesc.loc[2019] - total_eesc.loc[1750])
 
 print(re)
 print(re_std)
 
-erfari_best = pd.concat(
-    (
-        (re * species_df)[['BC', 'OC', 'Sulfur', 'NOx', 'VOC', 'NH3', 'CH4', 'N2O']] - (re * species_df.loc[1750, ['BC', 'OC', 'Sulfur', 'NOx', 'VOC', 'NH3', 'CH4', 'N2O']]),
-        re['Equivalent effective stratospheric chlorine'] * (total_eesc - total_eesc.loc[1750])
-    ), axis=1
-).dropna(axis=1).sum(axis=1)
+erfari_best = (
+    pd.concat(
+        (
+            (re * species_df)[["BC", "OC", "Sulfur", "NOx", "VOC", "NH3", "CH4", "N2O"]]
+            - (
+                re
+                * species_df.loc[
+                    1750, ["BC", "OC", "Sulfur", "NOx", "VOC", "NH3", "CH4", "N2O"]
+                ]
+            ),
+            re["Equivalent effective stratospheric chlorine"]
+            * (total_eesc - total_eesc.loc[1750]),
+        ),
+        axis=1,
+    )
+    .dropna(axis=1)
+    .sum(axis=1)
+)
 
 # we need to map the -0.27 +/- 0.57 to -0.3 +/- 0.3 which is the IPCC AR6 assessment
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 best_scale = -0.3 / erfari_best.loc[2005:2014].mean()
-unc_scale = 0.3 / ((erfari_best.loc[2005:2014].mean()/-0.22) * np.sqrt((erfari_emitted_std**2).sum()) * NINETY_TO_ONESIGMA)
+unc_scale = 0.3 / (
+    (erfari_best.loc[2005:2014].mean() / -0.22)
+    * np.sqrt((erfari_emitted_std**2).sum())
+    * NINETY_TO_ONESIGMA
+)
 
 # convert to numpy for efficiency
 erfari_re_samples = pd.DataFrame(
     scipy.stats.norm.rvs(
-        re*best_scale, re_std*unc_scale, size=(samples, 9), random_state=3729329,
+        re * best_scale,
+        re_std * unc_scale,
+        size=(samples, 9),
+        random_state=3729329,
     ),
-    columns = re.index
-)[['BC', 'OC', 'Sulfur', 'NOx', 'VOC', 'NH3', 'CH4', 'N2O', 'Equivalent effective stratospheric chlorine']]
+    columns=re.index,
+)[
+    [
+        "BC",
+        "OC",
+        "Sulfur",
+        "NOx",
+        "VOC",
+        "NH3",
+        "CH4",
+        "N2O",
+        "Equivalent effective stratospheric chlorine",
+    ]
+]
 
 print(erfari_re_samples)
 
@@ -260,5 +318,5 @@ os.makedirs(
 erfari_re_samples.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
     "aerosol_radiation.csv",
-    index=False
+    index=False,
 )

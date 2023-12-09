@@ -9,11 +9,11 @@ import matplotlib.pyplot as pl
 import numpy as np
 import pandas as pd
 import pooch
+import xarray as xr
 from dotenv import load_dotenv
 from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
-import xarray as xr
 
 pl.switch_backend("agg")
 
@@ -212,8 +212,16 @@ fill(
 )
 
 # correct land use  and LAPSI scale factor terms
-fill(f.species_configs["land_use_cumulative_emissions_to_forcing"], df_landuse.loc["historical_best", "CO2_AFOLU"], specie="CO2 AFOLU")
-fill(f.species_configs["lapsi_radiative_efficiency"], df_lapsi.loc["historical_best", "BC"], specie="BC")
+fill(
+    f.species_configs["land_use_cumulative_emissions_to_forcing"],
+    df_landuse.loc["historical_best", "CO2_AFOLU"],
+    specie="CO2 AFOLU",
+)
+fill(
+    f.species_configs["lapsi_radiative_efficiency"],
+    df_lapsi.loc["historical_best", "BC"],
+    specie="BC",
+)
 
 # emissions adjustments for N2O and CH4 (we don't want to make these defaults as people
 # might wanna run pulse expts with these gases)
@@ -562,7 +570,10 @@ if plots:
     )
     pl.close()
 
-    pl.plot(df_methane.loc["historical_best", "base"] * np.percentile(f.alpha_lifetime[:, 2, :, 3], (50), axis=1))
+    pl.plot(
+        df_methane.loc["historical_best", "base"]
+        * np.percentile(f.alpha_lifetime[:, 2, :, 3], (50), axis=1)
+    )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/ch4lifetime_ssp245.png"
     )

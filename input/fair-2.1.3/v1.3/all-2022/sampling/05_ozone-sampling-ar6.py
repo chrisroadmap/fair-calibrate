@@ -34,7 +34,9 @@ datadir = os.getenv("DATADIR")
 print("Doing ozone sampling...")
 
 # now include temperature feedback
-Tobs = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2022.csv", index_col=0).values
+Tobs = pd.read_csv(
+    "../../../../../data/forcing/IGCC_GMST_1850-2022.csv", index_col=0
+).values
 
 delta_gmst = [
     0,
@@ -94,11 +96,14 @@ skeie_ssp245[1750] = -0.03
 skeie_ssp245.sort_index(inplace=True)
 skeie_ssp245 = skeie_ssp245 + 0.03
 skeie_ssp245.drop([2014, 2017, 2020], inplace=True)
-skeie_ssp245 = pd.concat((skeie_ssp245,
-    skeie_total.loc["OsloCTM3", 2014:]
-    - skeie_total.loc["OsloCTM3", 2010]
-    + skeie_ssp245[2010]
-))
+skeie_ssp245 = pd.concat(
+    (
+        skeie_ssp245,
+        skeie_total.loc["OsloCTM3", 2014:]
+        - skeie_total.loc["OsloCTM3", 2010]
+        + skeie_ssp245[2010],
+    )
+)
 
 f = interp1d(
     skeie_ssp245.index, skeie_ssp245, bounds_error=False, fill_value="extrapolate"
@@ -110,8 +115,13 @@ print("2014-1750 ozone ERF from Skeie:", o3total[264])
 print("2019-1750 ozone ERF from Skeie:", o3total[269])
 print("2014-1850 ozone ERF from Skeie:", o3total[264] - o3total[100])
 
-df_emis = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv', index_col=0)
-df_conc = pd.read_csv('../../../../../data/concentrations/ghg_concentrations_1750-2022.csv', index_col=0)
+df_emis = pd.read_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/slcf_emissions_1750-2022.csv",
+    index_col=0,
+)
+df_conc = pd.read_csv(
+    "../../../../../data/concentrations/ghg_concentrations_1750-2022.csv", index_col=0
+)
 for year in range(1751, 1850):
     df_conc.loc[year, :] = np.nan
 df_conc.sort_index(inplace=True)
@@ -167,7 +177,7 @@ hc_species = [
 ]
 
 name_conv = {specie: specie for specie in emitted_species}
-name_conv['VOC'] = 'NMVOC'
+name_conv["VOC"] = "NMVOC"
 
 species_out = {}
 for ispec, species in enumerate(emitted_species):

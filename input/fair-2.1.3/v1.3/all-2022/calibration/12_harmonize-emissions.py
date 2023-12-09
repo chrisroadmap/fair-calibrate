@@ -66,7 +66,7 @@ f.fill_from_rcmip()
 
 df_in = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-     "all_1750-2022.csv"
+    "all_1750-2022.csv"
 )
 variables = list(df_in["Variable"])
 units = list(df_in["Unit"])
@@ -87,13 +87,14 @@ for year in years_future:
 scale_factors = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
     "emissions_scalings.csv",
-    index_col=0
+    index_col=0,
 )
 
 history = (
     scmdata.ScmRun(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-        "all_1750-2022.csv", lowercase_cols=True
+        "all_1750-2022.csv",
+        lowercase_cols=True,
     )
     .filter(region="World", variable=variables)
     .interpolate(target_times=times)
@@ -102,7 +103,10 @@ history = (
 
 # Apply emissions scalings to historical
 for sf in scale_factors:
-    history.iloc[history.index.get_level_values('variable') == f"Emissions|{sf}"] = history.iloc[history.index.get_level_values('variable') == f"Emissions|{sf}"] * scale_factors.loc["historical_best", sf]
+    history.iloc[history.index.get_level_values("variable") == f"Emissions|{sf}"] = (
+        history.iloc[history.index.get_level_values("variable") == f"Emissions|{sf}"]
+        * scale_factors.loc["historical_best", sf]
+    )
 
 arrays = []
 for idx in range(0, len(history.index)):
@@ -118,21 +122,35 @@ new_index = pd.MultiIndex.from_tuples(
 history.index = new_index
 
 future = (
-    scmdata.ScmRun("../../../../../data/emissions/rcmip-5-1-0-corrected-nox.csv", lowercase_cols=True)
+    scmdata.ScmRun(
+        "../../../../../data/emissions/rcmip-5-1-0-corrected-nox.csv",
+        lowercase_cols=True,
+    )
     .filter(scenario=scenarios, variable=variables, region="World")
     .interpolate(times_future)
     .timeseries(time_axis="year")
 )
 
-future.iloc[future.index.get_level_values('variable').isin((
-    "Emissions|CO2|Energy and Industrial Processes",
-    "Emissions|CO2|AFOLU",
-    "Emissions|N2O"
-))] = future.iloc[future.index.get_level_values('variable').isin((
-    "Emissions|CO2|Energy and Industrial Processes",
-    "Emissions|CO2|AFOLU",
-    "Emissions|N2O"
-))] / 1000
+future.iloc[
+    future.index.get_level_values("variable").isin(
+        (
+            "Emissions|CO2|Energy and Industrial Processes",
+            "Emissions|CO2|AFOLU",
+            "Emissions|N2O",
+        )
+    )
+] = (
+    future.iloc[
+        future.index.get_level_values("variable").isin(
+            (
+                "Emissions|CO2|Energy and Industrial Processes",
+                "Emissions|CO2|AFOLU",
+                "Emissions|N2O",
+            )
+        )
+    ]
+    / 1000
+)
 
 arrays = []
 for idx in range(0, len(future.index)):
@@ -146,8 +164,12 @@ new_index = pd.MultiIndex.from_tuples(
 )
 future.index = new_index
 
-history = history.reorder_levels(['model','scenario','region','variable','unit']).sort_index()
-future = future.reorder_levels(['model','scenario','region','variable','unit']).sort_index()
+history = history.reorder_levels(
+    ["model", "scenario", "region", "variable", "unit"]
+).sort_index()
+future = future.reorder_levels(
+    ["model", "scenario", "region", "variable", "unit"]
+).sort_index()
 
 # Harmonization overrides - use same as RCMIP
 overrides = pd.DataFrame(
@@ -238,8 +260,8 @@ with warnings.catch_warnings():
             history=history,
             harmonisation_year=harmonisation_year,
             overrides=overrides,
-        ).reset_index(level=(5,6,7,8,9), drop=True)
-        for _, msdf in tqdm(future.groupby(["model", "scenario"]), disable=1-progress)
+        ).reset_index(level=(5, 6, 7, 8, 9), drop=True)
+        for _, msdf in tqdm(future.groupby(["model", "scenario"]), disable=1 - progress)
     ]
 # reset_index is needed above because aneris for some reason gives us two copies of
 # the MultiIndex
@@ -252,7 +274,8 @@ os.makedirs(
 )
 
 scenarios_harmonised.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/ssps_harmonized_2022-2499.csv", index=False
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/ssps_harmonized_2022-2499.csv",
+    index=False,
 )
 
 
@@ -272,10 +295,7 @@ for scenario in scenarios:
         ].values.squeeze()
         data_fut = scenarios_harmonised.loc[
             (scenarios_harmonised["scenario"] == scenario)
-            & (
-                scenarios_harmonised["variable"]
-                == specie
-            ),
+            & (scenarios_harmonised["variable"] == specie),
             2022:2499,
         ].values.squeeze()
         data = np.concatenate((data_his, data_fut))

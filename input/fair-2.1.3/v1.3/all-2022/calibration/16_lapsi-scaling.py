@@ -29,10 +29,12 @@ target_forcing = +0.08
 base_year = 1750
 assessment_year = 2019
 
-df_emis = pd.read_csv(f'../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/all_1750-2022.csv')
+df_emis = pd.read_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/all_1750-2022.csv"
+)
 bc = (
-    df_emis.loc[df_emis["Variable"]=="Emissions|BC", str(assessment_year)] -
-    df_emis.loc[df_emis["Variable"]=="Emissions|BC", str(base_year)]
+    df_emis.loc[df_emis["Variable"] == "Emissions|BC", str(assessment_year)]
+    - df_emis.loc[df_emis["Variable"] == "Emissions|BC", str(base_year)]
 ).values[0]
 
 lapsi_scale_factor = target_forcing / bc
@@ -44,7 +46,7 @@ df = pd.DataFrame(
 )
 os.makedirs(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
-    exist_ok=True
+    exist_ok=True,
 )
 df.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
