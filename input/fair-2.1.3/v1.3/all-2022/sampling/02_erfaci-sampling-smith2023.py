@@ -239,8 +239,8 @@ aci_sample = kde.resample(size=samples * 1, seed=63648708)
 # aci_sample = aci_sample[:, ~mask]
 
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
-erfaci_sample = scipy.stats.uniform.rvs(
-    size=samples, loc=-2.0, scale=2.0, random_state=71271
+erfaci_sample = scipy.stats.norm.rvs(
+    size=samples, loc=-1.0, scale=0.7/NINETY_TO_ONESIGMA, random_state=71271
 )
 
 # Sampling with updated emissions.

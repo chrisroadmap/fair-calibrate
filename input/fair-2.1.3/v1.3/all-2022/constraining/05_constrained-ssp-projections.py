@@ -587,21 +587,54 @@ if plots:
     pl.close()
 
     pl.plot(
-        np.arange(1750, 2021),
-        np.percentile(f.concentration[:271, 2, :, 2], (50), axis=1),
+        np.arange(1750, 2301),
+        np.percentile(f.concentration[:, 2, :, 2], (50), axis=1),
         label="fair2.1 median",
     )
     pl.plot(
-        np.arange(1750, 2021),
-        conc_co2["ssp245"][:271],
+        np.arange(1750, 2301),
+        conc_co2["ssp245"][:551],
         color="k",
         label="SSP historical",
     )
     pl.legend()
-    pl.xlim(1750, 2020)
+    pl.xlim(1750, 2300)
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "co2_historical.png"
+    )
+    pl.close()
+
+    pl.fill_between(
+        np.arange(1950, 2101),
+        np.percentile(
+            f.toa_imbalance[200:351, 2, :],
+            5,
+            axis=1,
+        ),
+        np.percentile(
+            f.toa_imbalance[200:351, 2, :],
+            95,
+            axis=1,
+        ),
+        color="k",
+        alpha=0.3,
+    )
+    pl.plot(
+        np.arange(1950, 2101),
+        np.median(
+            f.toa_imbalance[200:351, 2, :],
+            axis=1,
+        ),
+        color="k",
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "toa_imbalance_ssp245.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "toa_imbalance_ssp245.pdf"
     )
     pl.close()
 
