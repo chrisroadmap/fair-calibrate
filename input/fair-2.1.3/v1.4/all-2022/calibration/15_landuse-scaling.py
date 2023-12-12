@@ -19,24 +19,25 @@ fair_v = os.getenv("FAIR_VERSION")
 constraint_set = os.getenv("CONSTRAINT_SET")
 datadir = os.getenv("DATADIR")
 
-target_forcing = +0.08
+target_forcing = -0.2
 base_year = 1750
 assessment_year = 2019
 
 df_emis = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "all_1750-2022.csv"
+    "all_scaled_1750-2022.csv"
 )
-bc = (
-    df_emis.loc[df_emis["Variable"] == "Emissions|BC", str(assessment_year)]
-    - df_emis.loc[df_emis["Variable"] == "Emissions|BC", str(base_year)]
-).values[0]
+co2_afolu = df_emis.loc[
+    df_emis["variable"] == "Emissions|CO2|AFOLU", str(base_year) : str(assessment_year)
+]
 
-lapsi_scale_factor = target_forcing / bc
+cumulative_co2_emissions = co2_afolu.values.sum()  # GtCO2
+
+landuse_scale_factor = target_forcing / cumulative_co2_emissions
 
 df = pd.DataFrame(
-    lapsi_scale_factor,
-    columns=["BC"],
+    landuse_scale_factor,
+    columns=["CO2_AFOLU"],
     index=["historical_best"],
 )
 os.makedirs(
@@ -45,5 +46,5 @@ os.makedirs(
 )
 df.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-    "lapsi_scale_factor.csv"
+    "landuse_scale_factor.csv"
 )

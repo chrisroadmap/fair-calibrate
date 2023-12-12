@@ -238,9 +238,9 @@ aci_sample = kde.resample(size=samples * 1, seed=63648708)
 # mask = np.any(np.isnan(aci_sample), axis=0)
 # aci_sample = aci_sample[:, ~mask]
 
-NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
-erfaci_sample = scipy.stats.norm.rvs(
-    size=samples, loc=-1.0, scale=0.7/NINETY_TO_ONESIGMA, random_state=71271
+# trapezoid distribution [-2.2, -1.7, -1.0, -0.3, +0.2]
+erfaci_sample = scipy.stats.trapezoid.rvs(
+    0.25, 0.75, size=samples, loc=-2.2, scale=2.4, random_state=71271
 )
 
 # Sampling with updated emissions.

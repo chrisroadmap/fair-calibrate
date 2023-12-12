@@ -521,10 +521,10 @@ input_obs["temp"] = gmst[:273]
 
 df_ch4emis_obs = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "all_1750-2022.csv"
+    "all_scaled_1750-2022.csv"
 )
 emis_ch4_obs = df_ch4emis_obs.loc[
-    df_ch4emis_obs["Variable"] == "Emissions|CH4", "1750":"2022"
+    df_ch4emis_obs["variable"] == "Emissions|CH4", "1750":"2022"
 ].values.squeeze()
 
 emis_ch4_obs = emis_ch4_obs
@@ -690,7 +690,7 @@ gas_boxes = 0
 airborne_emissions = 0
 
 emis_ch4_obs = df_ch4emis_obs.loc[
-    df_ch4emis_obs["Variable"] == "Emissions|CH4", "1750":"2022"
+    df_ch4emis_obs["variable"] == "Emissions|CH4", "1750":"2022"
 ].values.squeeze()
 
 for i in range(273):

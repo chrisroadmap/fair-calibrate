@@ -106,6 +106,12 @@ for sf in scale_factors:
         history.iloc[history.index.get_level_values("variable") == f"Emissions|{sf}"]
         * scale_factors.loc["historical_best", sf]
     )
+history.reorder_levels(
+    ["model", "scenario", "region", "variable", "unit"]
+).sort_index().to_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "all_scaled_1750-2022.csv"
+)
 
 arrays = []
 for idx in range(0, len(history.index)):
