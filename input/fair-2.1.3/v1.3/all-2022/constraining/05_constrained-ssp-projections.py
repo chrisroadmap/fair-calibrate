@@ -588,12 +588,12 @@ if plots:
 
     pl.plot(
         np.arange(1750, 2301),
-        np.percentile(f.concentration[:, 2, :, 2], (50), axis=1),
+        np.percentile(f.concentration[:, 7, :, 2], (50), axis=1),
         label="fair2.1 median",
     )
     pl.plot(
         np.arange(1750, 2301),
-        conc_co2["ssp245"][:551],
+        conc_co2["ssp585"][:551],
         color="k",
         label="SSP historical",
     )
