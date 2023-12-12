@@ -194,7 +194,7 @@ for specie in species:
     # Two panel plot
     if plots:
         os.makedirs(
-            f"../../../../../plots/minor_ghgs/fair-{fair_v}/v{cal_v}/{constraint_set}/",
+            f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/minor_ghgs/",
             exist_ok=True,
         )
 
