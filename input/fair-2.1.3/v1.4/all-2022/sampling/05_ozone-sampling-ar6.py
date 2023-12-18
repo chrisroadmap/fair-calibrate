@@ -357,10 +357,11 @@ forcing = (
 )
 
 if plots:
-    pl.plot(np.arange(1750.5, 2023), forcing, label="best estimate fit")
-    pl.plot(np.arange(1750.5, 2021), o3total, label="Skeie et al. 2020 mean")
+    pl.figure(figsize=(5, 5))
+    pl.plot(np.arange(1750.5, 2023), forcing, label="best estimate fit", color='0.5')
+    pl.plot(np.arange(1750.5, 2021), o3total, label="Skeie et al. 2020 mean", color='k')
     pl.legend()
-    pl.title("Ozone forcing calibration to CMIP6 mean")
+    pl.title("Ozone forcing calibration (no feedbacks)")
     pl.ylabel("W m$^{-2}$")
     pl.xlim(1750, 2023)
     pl.tight_layout()
