@@ -191,6 +191,34 @@ for specie in species:
                 natural_emissions_adjustment=natural_emissions_adjustment,
             )
 
+    scalings_df = pd.read_csv(
+        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+        "emissions_scalings.csv",
+        index_col=0
+    )
+    emis_ssp = da_emis_obs.loc[
+        dict(
+            specie=renames[specie], timepoints=np.arange(1750.5, 2101), scenario="ssp245"
+        )
+    ].values.squeeze() / scalings_df.loc["historical_best", renames[specie]]
+    conc_unscaled_hist = np.zeros(273)
+    natural_emissions_adjustment = emis_ssp[0]
+    gas_boxes = 0
+    airborne_emissions = 0
+    for i in range(273):
+        conc_unscaled_hist[i], gas_boxes, airborne_emissions = one_box(
+            emis_ssp[i],
+            gas_boxes,
+            airborne_emissions,
+            burden_per_emission,
+            lifetime,
+            1,
+            partition_fraction,
+            pre_industrial_concentration=pre_industrial_concentration,
+            timestep=1,
+            natural_emissions_adjustment=natural_emissions_adjustment,
+        )
+
     # Two panel plot
     if plots:
         os.makedirs(
@@ -204,10 +232,17 @@ for specie in species:
             np.arange(1750, 2023),
             conc_ssp["ssp245"][:273],
             color="0.5",
-            label="Best fit",
+            label="Scaled PRIMAP-HistTP",
         )
         ax[0].plot(
-            np.arange(1750, 2023), input_obs[specie], color="k", label="observations"
+            np.arange(1750, 2023),
+            conc_unscaled_hist[:273],
+            color="0.5",
+            ls='--',
+            label="Unscaled PRIMAP-HistTP",
+        )
+        ax[0].plot(
+            np.arange(1750, 2023), input_obs[specie], color="k", label="Historical best estimate"
         )
         ax[0].set_ylabel(desired_concentration_units[renames[specie]])
         ax[0].set_xlim(1750, 2023)
