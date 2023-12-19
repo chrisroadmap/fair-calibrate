@@ -124,7 +124,58 @@ accept_temp = rmse_temp < 0.17
 print("Passing RMSE constraint:", np.sum(accept_temp))
 valid_temp = np.arange(samples, dtype=int)[accept_temp]
 
+# get 10 largest (but passing) and 10 smallest RMSEs
+rmse_temp_accept = rmse_temp[accept_temp]
+just_passing = np.argpartition(rmse_temp_accept, -10)[-10:]
+smashing_it  = np.argpartition(rmse_temp_accept, 10)[:10]
+print(just_passing)
+print(rmse_temp_accept[just_passing])
+print(rmse_temp_accept[smashing_it])
+
+
 if plots:
+    # plot top 10 and "just squeaking in 10"
+    fig, ax = pl.subplots(figsize=(5, 5))
+    ax.plot(
+        np.arange(1850.5, 2102),
+        (
+            temp_in[:, valid_temp[just_passing]]
+            - np.average(temp_in[:52, valid_temp[just_passing]], weights=weights, axis=0)
+        ),
+        color="#ff0000",
+        label=[r'RMSE $\approx$ 0.17°C']+['']*9
+    )
+    ax.plot(
+        np.arange(1850.5, 2102),
+        (
+            temp_in[:, valid_temp[smashing_it]]
+            - np.average(temp_in[:52, valid_temp[smashing_it]], weights=weights, axis=0)
+        ),
+        color="#0000ff",
+        label=[r'RMSE $\approx$ 0.10°C']+['']*9
+    )
+    ax.axhspan(0.67, 0.99, color='k', alpha=0.15, lw=0)
+    ax.axvspan(1995, 2015, color='k', alpha=0.15, lw=0)
+    ax.plot(np.arange(1850.5, 2023), gmst, color="k", label='Best estimate historical')
+    ax.set_xlim(1850, 2100)
+    ax.set_ylim(-1, 4)
+    ax.set_ylabel("°C relative to 1850-1900")
+    ax.axhline(0, color="k", ls=":", lw=0.5)
+    ax.text(1860, 0.83, 'IPCC AR6 5--95% range', va='center')
+    ax.legend(loc='upper left')
+    pl.title("Historical + SSP2-4.5 GMST")
+    pl.tight_layout()
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "post_rsme_top10_bottom10_ssp245.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "post_rsme_top10_bottom10_ssp245.pdf"
+    )
+    pl.close()
+
+    # ensemble wide
     fig, ax = pl.subplots(figsize=(5, 5))
     ax.fill_between(
         np.arange(1850, 2102),
