@@ -401,6 +401,18 @@ scalings = scipy.stats.norm.rvs(
     random_state=52,
 )
 
+# 90% ranges - for paper
+print(np.array(
+    [
+        0.05 / delta_Cch4 / fac_cmip6_skeie,
+        0.02 / delta_Cn2o / fac_cmip6_skeie,
+        0.10 / delta_Cods / fac_cmip6_skeie,
+        0.057 / delta_Eco / fac_cmip6_skeie,
+        0.043 / delta_Evoc / fac_cmip6_skeie,
+        0.11 / delta_Enox / fac_cmip6_skeie,
+    ]
+))
+
 df = pd.DataFrame(
     scalings,
     columns=[
