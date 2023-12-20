@@ -458,6 +458,10 @@ if plots:
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "final_ssp_temperatures.png"
     )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "final_ssp_temperatures.pdf"
+    )
     pl.close()
 
 # # Temperature diffs w.r.t. 1995-2014

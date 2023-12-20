@@ -746,7 +746,7 @@ if plots:
     ax.set_ylim(-1, 5)
     ax.set_ylabel("°C relative to 1850-1900")
     ax.axhline(0, color="k", ls=":", lw=0.5)
-    pl.title("Temperature anomaly: posterior ssp245")
+    pl.title("Constrained, reweighted posterior")
     pl.tight_layout()
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"

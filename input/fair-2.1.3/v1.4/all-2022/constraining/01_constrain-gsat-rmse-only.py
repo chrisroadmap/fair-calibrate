@@ -92,7 +92,7 @@ if plots:
     ax.set_ylim(-1, 5)
     ax.set_ylabel("°C relative to 1850-1900")
     ax.axhline(0, color="k", ls=":", lw=0.5)
-    pl.title("Temperature anomaly: ssp245 prior")
+    pl.title("Prior ensemble")
     pl.tight_layout()
     os.makedirs(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
@@ -242,7 +242,7 @@ if plots:
     ax.set_ylim(-1, 5)
     ax.set_ylabel("°C relative to 1850-1900")
     ax.axhline(0, color="k", ls=":", lw=0.5)
-    pl.title("Temperature anomaly: ssp245 RMSE constraint")
+    pl.title("After RMSE constraint")
     pl.tight_layout()
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
