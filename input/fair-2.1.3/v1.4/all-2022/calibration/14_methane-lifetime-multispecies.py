@@ -851,33 +851,35 @@ if plots:
         "ssp585": "#980002",
     }
 
-    fig, ax = pl.subplots(1, 3, figsize=(12, 3.5))
+    fig, ax = pl.subplots(1, 3, figsize=(18/2.54, 6/2.54))
     for model in models:
         ax[0].plot(
             np.arange(1750, 2101),
             lifetime_scaling[model] * parameters[model]["base"],
             label=model,
+            lw=1
         )
     ax[0].plot(
         np.arange(1750, 2023),
         lifetime_scaling["best_fit"] * parameters["best_fit"]["base"],
         color="0.5",
         label="Best fit",
+        lw=1
     )
     ax[0].set_xlim(1750, 2100)
     ax[0].set_ylabel("yr")
-    ax[0].set_title("(a) CH$_4$ lifetime SSP3-7.0")
+    ax[0].set_title("(a) CH$_4$ lifetime")
 
     #    for model in models:
     #        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
     ax[1].plot(
-        np.arange(1750, 2023), conc_ch4["best_fit"], color="0.5", label="Best fit"
+        np.arange(1750, 2023), conc_ch4["best_fit"], color="0.5", label="Best fit", lw=1
     )
-    ax[1].plot(np.arange(1750, 2023), input_obs["CH4"], color="k", label="observations")
+    ax[1].plot(np.arange(1750, 2023), input_obs["CH4"], color="k", label="observations", lw=1)
     ax[1].set_ylabel("ppb")
     ax[1].set_xlim(1750, 2023)
     ax[1].legend(frameon=False)
-    ax[1].set_title("(b) CH$_4$ concentration SSP3-7.0")
+    ax[1].set_title("(b) CH$_4$ concentration")
 
     for ssp in [
         "ssp119",
@@ -901,11 +903,12 @@ if plots:
         )
 
         ax[2].plot(
-            np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp]
+            np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp],
+            lw=1
         )
-        ax[2].plot(np.arange(1750, 2101), gas, color=ar6_colors[ssp], lw=0.5)
+        ax[2].plot(np.arange(1750, 2101), gas, color=ar6_colors[ssp], lw=0.3)
     ax[2].set_ylabel("ppb")
-    ax[2].set_title("(c) Best fit CH$_4$ projections")
+    ax[2].set_title("(c) CH$_4$ projections")
     ax[2].set_xlim(1750, 2100)
     ax[2].legend(frameon=False)
 

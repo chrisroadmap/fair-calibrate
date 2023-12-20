@@ -98,7 +98,7 @@ params = pd.DataFrame(params)
 print(params.corr())
 
 if plots:
-    fig = pl.figure(figsize=(5.875, 5.875))
+    fig = pl.figure(figsize=(18/2.54, 13/2.54))
     pd.plotting.scatter_matrix(params)
     pl.suptitle("Distributions and correlations of CMIP6 calibrations")
     pl.tight_layout()

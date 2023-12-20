@@ -159,16 +159,17 @@ if plots:
         "mean": "black",
     }
 
-    fig, ax = pl.subplots(4, 4, figsize=(10, 6.5), squeeze=False)
+    fig, ax = pl.subplots(4, 4, figsize=(18/2.54, 12/2.54), squeeze=False)
     for imodel, model in enumerate(sorted(models, key=str.lower)):
         i = imodel // 4
         j = imodel % 4
-        ax[i, j].plot(years[model], aci[model], color="k", ls="-", alpha=0.5)
+        ax[i, j].plot(years[model], aci[model], color="k", ls="-", alpha=0.5, lw=1)
         ax[i, j].plot(
             np.arange(1750.5, 2101),
             aci_log([so2, bc, oc], *param_fits[model]),
             color=colors[model],
             zorder=7,
+            lw=1
         )
 
         ax[i, j].set_xlim(1750, 2100)

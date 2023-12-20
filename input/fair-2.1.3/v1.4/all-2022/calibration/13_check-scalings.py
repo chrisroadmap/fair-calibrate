@@ -226,28 +226,32 @@ for specie in species:
             exist_ok=True,
         )
 
-        fig, ax = pl.subplots(1, 2, figsize=(7.5, 3.5))
+        fig, ax = pl.subplots(1, 2, figsize=(12/2.54, 6/2.54))
 
         ax[0].plot(
-            np.arange(1750, 2023),
-            conc_ssp["ssp245"][:273],
-            color="0.5",
-            label="Scaled PRIMAP-HistTP",
+            np.arange(1750, 2023), input_obs[specie], color="k", label="Historical best estimate", lw=1
         )
         ax[0].plot(
             np.arange(1750, 2023),
             conc_unscaled_hist[:273],
             color="0.5",
-            ls='--',
-            label="Unscaled PRIMAP-HistTP",
+            ls=':',
+            lw=1,
+            label="Unscaled emissions",
         )
         ax[0].plot(
-            np.arange(1750, 2023), input_obs[specie], color="k", label="Historical best estimate"
+            np.arange(1750, 2023),
+            conc_ssp["ssp245"][:273],
+            color="0.5",
+            ls='-',
+            #color='r',
+            lw=1,
+            label="Scaled emissions",
         )
         ax[0].set_ylabel(desired_concentration_units[renames[specie]])
         ax[0].set_xlim(1750, 2023)
         ax[0].legend(frameon=False)
-        ax[0].set_title(f"{specie} concentration")
+        ax[0].set_title(f"(a) {specie} concentration")
 
         for ssp in [
             "ssp119",
@@ -275,9 +279,9 @@ for specie in species:
             )
 
             ax[1].plot(
-                np.arange(1750, 2101), conc_ssp[ssp], label=ssp, color=ar6_colors[ssp]
+                np.arange(1750, 2101), conc_ssp[ssp], label=ssp, color=ar6_colors[ssp], lw=1,
             )
-            ax[1].plot(np.arange(1750, 2101), gas, color=ar6_colors[ssp], lw=0.5)
+            ax[1].plot(np.arange(1750, 2101), gas, color=ar6_colors[ssp], lw=0.3)
         ax[1].set_ylabel(desired_concentration_units[renames[specie]])
         ax[1].set_title(f"(b) Best fit {specie} projections")
         ax[1].set_xlim(1750, 2100)

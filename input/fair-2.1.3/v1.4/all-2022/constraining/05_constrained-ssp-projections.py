@@ -386,7 +386,7 @@ df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2022.csv")
 gmst = df_gmst["gmst"].values
 
 if plots:
-    fig, ax = pl.subplots(2, 4, figsize=(12, 6))
+    fig, ax = pl.subplots(2, 4, figsize=(18/2.54, 8/2.54))
     for i in range(8):
         ax[i // 4, i % 4].fill_between(
             np.arange(1750.5, 2301),
@@ -402,6 +402,7 @@ if plots:
             ),
             color=ar6_colors[scenarios[i]],
             alpha=0.2,
+            lw=0
         )
         ax[i // 4, i % 4].fill_between(
             np.arange(1750.5, 2301),
@@ -419,6 +420,7 @@ if plots:
             ),
             color=ar6_colors[scenarios[i]],
             alpha=0.2,
+            lw=0
         )
         ax[i // 4, i % 4].fill_between(
             np.arange(1750.5, 2301),
@@ -436,6 +438,7 @@ if plots:
             ),
             color=ar6_colors[scenarios[i]],
             alpha=0.2,
+            lw=0
         )
         ax[i // 4, i % 4].plot(
             np.arange(1750.5, 2301),
@@ -445,14 +448,17 @@ if plots:
                 axis=1,
             ),
             color=ar6_colors[scenarios[i]],
+            lw=1
         )
-        ax[i // 4, i % 4].plot(np.arange(1850.5, 2023), gmst, color="k")
+        ax[i // 4, i % 4].plot(np.arange(1850.5, 2023), gmst, color="k", lw=1)
         ax[i // 4, i % 4].set_xlim(1950, 2200)
         ax[i // 4, i % 4].set_ylim(-1, 10)
         ax[i // 4, i % 4].axhline(0, color="k", ls=":", lw=0.5)
         ax[i // 4, i % 4].set_title(fancy_titles[scenarios[i]])
 
-    pl.suptitle("SSP temperature anomalies")
+    ax[0, 0].set_ylabel('°C since 1850-1900')
+    ax[1, 0].set_ylabel('°C since 1850-1900')
+    #pl.suptitle("SSP temperature anomalies")
     fig.tight_layout()
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
