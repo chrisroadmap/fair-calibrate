@@ -352,7 +352,7 @@ if plots:
     os.makedirs(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
     )
-    fig, ax = pl.subplots(3, 3, figsize=(18/2.54, 18/2.54))
+    fig, ax = pl.subplots(3, 3, figsize=(18 / 2.54, 18 / 2.54))
     start = 0
     stop = 8
     ax[0, 0].plot(
@@ -388,7 +388,7 @@ if plots:
     ax[0, 0].set_title("ECS")
     ax[0, 0].set_yticklabels([])
     ax[0, 0].set_xlabel("°C")
-    ax[0, 0].set_ylabel('Probability density')
+    ax[0, 0].set_ylabel("Probability density")
 
     start = 0
     stop = 4
@@ -497,7 +497,7 @@ if plots:
     ax[1, 0].set_title("Aerosol ERFari")
     ax[1, 0].set_yticklabels([])
     ax[1, 0].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
-    ax[1, 0].set_ylabel('Probability density')
+    ax[1, 0].set_ylabel("Probability density")
 
     start = -2.25
     stop = 0.25
@@ -603,7 +603,7 @@ if plots:
     )
     ax[2, 0].set_xlim(start, stop)
     ax[2, 0].set_ylim(0, 1.0)
-    ax[2, 0].set_ylabel('Probability density')
+    ax[2, 0].set_ylabel("Probability density")
     ax[2, 0].set_title("CO$_2$ concentration")
     ax[2, 0].set_yticklabels([])
     ax[2, 0].set_xlabel("ppm, 2022")
@@ -651,7 +651,7 @@ if plots:
         Line2D([0], [0], color=colors["post2"], lw=2),
         Line2D([0], [0], color=colors["target"], lw=2),
     ]
-    legend_labels=["Prior", "Temperature RMSE", "All constraints", "Target"]
+    legend_labels = ["Prior", "Temperature RMSE", "All constraints", "Target"]
     ax[2, 2].legend(legend_lines, legend_labels, frameon=False, loc="upper left")
 
     fig.tight_layout()

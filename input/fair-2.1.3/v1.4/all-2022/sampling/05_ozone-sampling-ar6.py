@@ -357,9 +357,9 @@ forcing = (
 )
 
 if plots:
-    pl.figure(figsize=(9/2.54, 9/2.54))
-    pl.plot(np.arange(1750.5, 2023), forcing, label="best estimate fit", color='0.5')
-    pl.plot(np.arange(1750.5, 2021), o3total, label="Skeie et al. 2020 mean", color='k')
+    pl.figure(figsize=(9 / 2.54, 9 / 2.54))
+    pl.plot(np.arange(1750.5, 2023), forcing, label="best estimate fit", color="0.5")
+    pl.plot(np.arange(1750.5, 2021), o3total, label="Skeie et al. 2020 mean", color="k")
     pl.legend()
     pl.title("Ozone forcing (no feedbacks)")
     pl.ylabel("W m$^{-2}$")
@@ -402,16 +402,18 @@ scalings = scipy.stats.norm.rvs(
 )
 
 # 90% ranges - for paper
-print(np.array(
-    [
-        0.05 / delta_Cch4 / fac_cmip6_skeie,
-        0.02 / delta_Cn2o / fac_cmip6_skeie,
-        0.10 / delta_Cods / fac_cmip6_skeie,
-        0.057 / delta_Eco / fac_cmip6_skeie,
-        0.043 / delta_Evoc / fac_cmip6_skeie,
-        0.11 / delta_Enox / fac_cmip6_skeie,
-    ]
-))
+print(
+    np.array(
+        [
+            0.05 / delta_Cch4 / fac_cmip6_skeie,
+            0.02 / delta_Cn2o / fac_cmip6_skeie,
+            0.10 / delta_Cods / fac_cmip6_skeie,
+            0.057 / delta_Eco / fac_cmip6_skeie,
+            0.043 / delta_Evoc / fac_cmip6_skeie,
+            0.11 / delta_Enox / fac_cmip6_skeie,
+        ]
+    )
+)
 
 df = pd.DataFrame(
     scalings,

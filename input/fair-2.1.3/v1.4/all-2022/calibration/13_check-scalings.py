@@ -194,13 +194,18 @@ for specie in species:
     scalings_df = pd.read_csv(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
         "emissions_scalings.csv",
-        index_col=0
+        index_col=0,
     )
-    emis_ssp = da_emis_obs.loc[
-        dict(
-            specie=renames[specie], timepoints=np.arange(1750.5, 2101), scenario="ssp245"
-        )
-    ].values.squeeze() / scalings_df.loc["historical_best", renames[specie]]
+    emis_ssp = (
+        da_emis_obs.loc[
+            dict(
+                specie=renames[specie],
+                timepoints=np.arange(1750.5, 2101),
+                scenario="ssp245",
+            )
+        ].values.squeeze()
+        / scalings_df.loc["historical_best", renames[specie]]
+    )
     conc_unscaled_hist = np.zeros(273)
     natural_emissions_adjustment = emis_ssp[0]
     gas_boxes = 0
@@ -226,16 +231,20 @@ for specie in species:
             exist_ok=True,
         )
 
-        fig, ax = pl.subplots(1, 2, figsize=(12/2.54, 6/2.54))
+        fig, ax = pl.subplots(1, 2, figsize=(12 / 2.54, 6 / 2.54))
 
         ax[0].plot(
-            np.arange(1750, 2023), input_obs[specie], color="k", label="Historical best estimate", lw=1
+            np.arange(1750, 2023),
+            input_obs[specie],
+            color="k",
+            label="Historical best estimate",
+            lw=1,
         )
         ax[0].plot(
             np.arange(1750, 2023),
             conc_unscaled_hist[:273],
             color="0.5",
-            ls=':',
+            ls=":",
             lw=1,
             label="Unscaled emissions",
         )
@@ -243,8 +252,8 @@ for specie in species:
             np.arange(1750, 2023),
             conc_ssp["ssp245"][:273],
             color="0.5",
-            ls='-',
-            #color='r',
+            ls="-",
+            # color='r',
             lw=1,
             label="Scaled emissions",
         )
@@ -279,7 +288,11 @@ for specie in species:
             )
 
             ax[1].plot(
-                np.arange(1750, 2101), conc_ssp[ssp], label=ssp, color=ar6_colors[ssp], lw=1,
+                np.arange(1750, 2101),
+                conc_ssp[ssp],
+                label=ssp,
+                color=ar6_colors[ssp],
+                lw=1,
             )
             ax[1].plot(np.arange(1750, 2101), gas, color=ar6_colors[ssp], lw=0.3)
         ax[1].set_ylabel(desired_concentration_units[renames[specie]])

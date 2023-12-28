@@ -851,20 +851,20 @@ if plots:
         "ssp585": "#980002",
     }
 
-    fig, ax = pl.subplots(1, 3, figsize=(18/2.54, 6/2.54))
+    fig, ax = pl.subplots(1, 3, figsize=(18 / 2.54, 6 / 2.54))
     for model in models:
         ax[0].plot(
             np.arange(1750, 2101),
             lifetime_scaling[model] * parameters[model]["base"],
             label=model,
-            lw=1
+            lw=1,
         )
     ax[0].plot(
         np.arange(1750, 2023),
         lifetime_scaling["best_fit"] * parameters["best_fit"]["base"],
         color="0.5",
         label="Best fit",
-        lw=1
+        lw=1,
     )
     ax[0].set_xlim(1750, 2100)
     ax[0].set_ylabel("yr")
@@ -875,7 +875,9 @@ if plots:
     ax[1].plot(
         np.arange(1750, 2023), conc_ch4["best_fit"], color="0.5", label="Best fit", lw=1
     )
-    ax[1].plot(np.arange(1750, 2023), input_obs["CH4"], color="k", label="observations", lw=1)
+    ax[1].plot(
+        np.arange(1750, 2023), input_obs["CH4"], color="k", label="observations", lw=1
+    )
     ax[1].set_ylabel("ppb")
     ax[1].set_xlim(1750, 2023)
     ax[1].legend(frameon=False)
@@ -903,8 +905,7 @@ if plots:
         )
 
         ax[2].plot(
-            np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp],
-            lw=1
+            np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp], lw=1
         )
         ax[2].plot(np.arange(1750, 2101), gas, color=ar6_colors[ssp], lw=0.3)
     ax[2].set_ylabel("ppb")
