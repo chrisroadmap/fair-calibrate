@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 from fair import __version__
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
-from tqdm.auto import tqdm
 
 # if we're not plotting, don't even start
 load_dotenv()

@@ -36,7 +36,6 @@ import pandas as pd
 import pooch
 import scipy.optimize
 import scipy.stats
-import xarray as xr
 from dotenv import load_dotenv
 
 load_dotenv()
