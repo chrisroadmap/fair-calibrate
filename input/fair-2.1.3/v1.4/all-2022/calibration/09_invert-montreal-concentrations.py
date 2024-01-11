@@ -187,7 +187,7 @@ for specie in species:
 # NaNs
 fill(f.temperature, 0)
 
-f.run(progress=1 - progress)
+f.run(progress=progress)
 
 # on the basis of no better information, set 2022 equal to 2021
 output = np.ones((273, len(species))) * np.nan
