@@ -31,12 +31,12 @@ input_data = read.csv(file.path("..", "..", "..", "..", "..", "output", fair_v, 
 # Initial guess for parameter values
 inits3 <- list(
 	gamma = 2,
-	C = c(5, 20, 100),
+	C = c(4, 15, 80),
 	kappa = c(1, 2, 1),
-	epsilon = 1,
+	epsilon = 1.1,
 	sigma_eta = 0.5,
 	sigma_xi = 0.5,
-	F_4xCO2 = 5
+	F_4xCO2 = 8
 )
 
 # prepare empty output dataframe
@@ -95,7 +95,7 @@ for (model in models) {
 					message("Here's the original error message from FitKalman:")
 					message(c)
 					if (attempt < 4) {
-						message("Trying again with more liberal quadratic penalty (alpha)")
+						message(paste("Trying again with more liberal quadratic penalty (alpha) = ", 1e-05 * 10^attempt))
 					}
 					else {
 						message(paste("This isn't going to work, is it? I'm giving up for", model))

@@ -45,14 +45,15 @@ df = pd.read_csv(
 )
 models = df["model"].unique()
 
+# NorESM2-LM is currently INCLUDED. Comment below left in for train-of-thought.
 # Executive decision: remove NorESM2-LM. It is always incredibly difficult to calibrate.
 # Sometimes it fails completely, sometimes it gives nonsense values that wreck the rest
 # of the distribution.
-
-if "NorESM2-LM" in models:
-    noresm2lm_index = np.argwhere(models=="NorESM2-LM")
-    np.delete(models, noresm2lm_index)
-    print("NorESM2-LM is being removed.")
+#
+# if "NorESM2-LM" in models:
+#     noresm2lm_index = np.argwhere(models=="NorESM2-LM")
+#     np.delete(models, noresm2lm_index)
+#     print("NorESM2-LM is being removed.")
 
 for model in models:
     print(model, df.loc[df["model"] == model, "run"].values)
@@ -128,13 +129,13 @@ if plots:
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 
 kde = scipy.stats.gaussian_kde(params.T)
-ebm_sample = kde.resample(size=int(samples * 6), seed=2181882)
+ebm_sample = kde.resample(size=int(samples * 4), seed=2181882)
 
 # remove unphysical combinations
 for col in range(10):
     ebm_sample[:, ebm_sample[col, :] <= 0] = np.nan
 ebm_sample[:, ebm_sample[0, :] <= 0.5] = np.nan  # gamma
-ebm_sample[:, ebm_sample[1, :] <= 1.5] = np.nan  # C1
+ebm_sample[:, ebm_sample[1, :] <= 1.8] = np.nan  # C1
 ebm_sample[:, ebm_sample[2, :] <= ebm_sample[1, :]] = np.nan  # C2
 ebm_sample[:, ebm_sample[3, :] <= ebm_sample[2, :]] = np.nan  # C3
 ebm_sample[:, ebm_sample[4, :] <= 0.3] = np.nan  # kappa1 = lambda
