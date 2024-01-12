@@ -6,8 +6,14 @@ then
 fi
 
 # first remove any existing zipfile and list of files
-rm ziplist.txt
-rm fair_calibrate.zip
+if [ -f ziplist.txt ]
+then
+  rm ziplist.txt
+fi
+if [ -f fair_calibrate.zip ]
+then
+  rm fair_calibrate.zip
+fi
 
 > ziplist.txt
 find input/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET}/ -type d -name __pycache__ -prune -o -print >> ziplist.txt
