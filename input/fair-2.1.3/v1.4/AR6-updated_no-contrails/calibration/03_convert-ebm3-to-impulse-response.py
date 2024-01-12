@@ -53,6 +53,7 @@ for model in models:
         params[model][run]["sigma_xi"] = df.loc[condition, "sigma_xi"].values[0]
         params[model][run]["forcing_4co2"] = df.loc[condition, "F_4xCO2"].values[0]
 
+
 co2 = 284.3169988
 ch4 = 808.2490285
 n2o = 273.021047
@@ -116,6 +117,29 @@ for model in models:
         # df_out = pd.concat((df_out, row_to_add), axis=1)
         rows_to_add.append(row_to_add)
         count = count + 1
+
+# Make LaTeX format table
+# don't make decision on run here for pipeline, but do for paper.
+
+multi_runs = {
+    "GISS-E2-1-G": "r1i1p1f1",
+    "GISS-E2-1-H": "r1i1p3f1",
+    "MRI-ESM2-0": "r1i1p1f1",
+    "EC-Earth3": "r3i1p1f1",
+    "FIO-ESM-2-0": "r1i1p1f1",
+    "CanESM5": "r1i1p2f1",
+    "FGOALS-f3-L": "r1i1p1f1",
+    "CNRM-ESM2-1": "r1i1p1f2",
+}
+
+for model in sorted(list(models)):
+    if model in multi_runs:
+        run = multi_runs[model]
+    else:
+        run = df.loc[df["model"] == model, "run"].values[0]
+    print(f"{model} & {params[model][run]['ocean_heat_transfer'][0]:.2f} & {params[model][run]['ocean_heat_transfer'][1]:.2f} & {params[model][run]['ocean_heat_transfer'][2]:.2f} & {params[model][run]['ocean_heat_capacity'][0]:.2f} & {params[model][run]['ocean_heat_capacity'][1]:.1f} & {params[model][run]['ocean_heat_capacity'][2]:.0f} & {params[model][run]['deep_ocean_efficacy']:.2f} & {params[model][run]['gamma_autocorrelation']:.2f} & {params[model][run]['sigma_xi']:.2f} & {params[model][run]['sigma_eta']:.2f} & {params[model][run]['forcing_4co2']:.2f} & {params[model][run]['ecs']:.2f} & {params[model][run]['tcr']:.2f} \\\\")
+
+
 
 df_out = pd.concat(rows_to_add)
 df_out.sort_values(["model", "run"], inplace=True)
