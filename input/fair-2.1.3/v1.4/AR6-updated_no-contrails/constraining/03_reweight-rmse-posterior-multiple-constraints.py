@@ -16,6 +16,7 @@ import scipy.stats
 from dotenv import load_dotenv
 from fair import __version__
 from fair.earth_params import mass_atmosphere, molecular_weight_air
+from matplotlib.lines import Line2D
 from tqdm.auto import tqdm
 
 pl.switch_backend("agg")
@@ -351,7 +352,7 @@ if plots:
     os.makedirs(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
     )
-    fig, ax = pl.subplots(3, 3, figsize=(10, 10))
+    fig, ax = pl.subplots(3, 3, figsize=(18 / 2.54, 18 / 2.54))
     start = 0
     stop = 8
     ax[0, 0].plot(
@@ -359,30 +360,35 @@ if plots:
         prior_ecs(np.linspace(start, stop, 1000)),
         color=colors["prior"],
         label="Prior",
+        lw=2,
     )
     ax[0, 0].plot(
         np.linspace(start, stop, 1000),
         post1_ecs(np.linspace(start, stop, 1000)),
         color=colors["post1"],
         label="Temperature RMSE",
+        lw=2,
     )
     ax[0, 0].plot(
         np.linspace(start, stop, 1000),
         post2_ecs(np.linspace(start, stop, 1000)),
         color=colors["post2"],
         label="All constraints",
+        lw=2,
     )
     ax[0, 0].plot(
         np.linspace(start, stop, 1000),
         target_ecs(np.linspace(start, stop, 1000)),
         color=colors["target"],
         label="Target",
+        lw=2,
     )
     ax[0, 0].set_xlim(start, stop)
-    ax[0, 0].set_ylim(0, 0.5)
+    ax[0, 0].set_ylim(0, 0.6)
     ax[0, 0].set_title("ECS")
     ax[0, 0].set_yticklabels([])
     ax[0, 0].set_xlabel("°C")
+    ax[0, 0].set_ylabel("Probability density")
 
     start = 0
     stop = 4
@@ -391,27 +397,31 @@ if plots:
         prior_tcr(np.linspace(start, stop, 1000)),
         color=colors["prior"],
         label="Prior",
+        lw=2,
     )
     ax[0, 1].plot(
         np.linspace(start, stop, 1000),
         post1_tcr(np.linspace(start, stop, 1000)),
         color=colors["post1"],
         label="Temperature RMSE",
+        lw=2,
     )
     ax[0, 1].plot(
         np.linspace(start, stop, 1000),
         post2_tcr(np.linspace(start, stop, 1000)),
         color=colors["post2"],
         label="All constraints",
+        lw=2,
     )
     ax[0, 1].plot(
         np.linspace(start, stop, 1000),
         target_tcr(np.linspace(start, stop, 1000)),
         color=colors["target"],
         label="Target",
+        lw=2,
     )
     ax[0, 1].set_xlim(start, stop)
-    ax[0, 1].set_ylim(0, 1.4)
+    ax[0, 1].set_ylim(0, 1.5)
     ax[0, 1].set_title("TCR")
     ax[0, 1].set_yticklabels([])
     ax[0, 1].set_xlabel("°C")
@@ -423,24 +433,28 @@ if plots:
         target_temp(np.linspace(start, stop, 1000)),
         color=colors["target"],
         label="Target",
+        lw=2,
     )
     ax[0, 2].plot(
         np.linspace(start, stop, 1000),
         prior_temp(np.linspace(start, stop, 1000)),
         color=colors["prior"],
         label="Prior",
+        lw=2,
     )
     ax[0, 2].plot(
         np.linspace(start, stop, 1000),
         post1_temp(np.linspace(start, stop, 1000)),
         color=colors["post1"],
         label="Temperature RMSE",
+        lw=2,
     )
     ax[0, 2].plot(
         np.linspace(start, stop, 1000),
         post2_temp(np.linspace(start, stop, 1000)),
         color=colors["post2"],
         label="All constraints",
+        lw=2,
     )
     ax[0, 2].set_xlim(start, stop)
     ax[0, 2].set_ylim(0, 6)
@@ -449,36 +463,41 @@ if plots:
     ax[0, 2].set_xlabel("°C, 2003-2022 minus 1850-1900")
 
     start = -1.0
-    stop = 0.3
+    stop = 0.4
     ax[1, 0].plot(
         np.linspace(start, stop, 1000),
         target_ari(np.linspace(start, stop, 1000)),
         color=colors["target"],
         label="Target",
+        lw=2,
     )
     ax[1, 0].plot(
         np.linspace(start, stop, 1000),
         prior_ari(np.linspace(start, stop, 1000)),
         color=colors["prior"],
         label="Prior",
+        lw=2,
     )
     ax[1, 0].plot(
         np.linspace(start, stop, 1000),
         post1_ari(np.linspace(start, stop, 1000)),
         color=colors["post1"],
         label="Temperature RMSE",
+        lw=2,
     )
     ax[1, 0].plot(
         np.linspace(start, stop, 1000),
         post2_ari(np.linspace(start, stop, 1000)),
         color=colors["post2"],
         label="All constraints",
+        lw=2,
     )
     ax[1, 0].set_xlim(start, stop)
-    ax[1, 0].set_ylim(0, 3)
+    ax[1, 0].set_ylim(0, 2.5)
     ax[1, 0].set_title("Aerosol ERFari")
     ax[1, 0].set_yticklabels([])
     ax[1, 0].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
+    ax[1, 0].set_ylabel("Probability density")
 
     start = -2.25
     stop = 0.25
@@ -487,61 +506,68 @@ if plots:
         target_aci(np.linspace(start, stop, 1000)),
         color=colors["target"],
         label="Target",
+        lw=2,
     )
     ax[1, 1].plot(
         np.linspace(start, stop, 1000),
         prior_aci(np.linspace(start, stop, 1000)),
         color=colors["prior"],
         label="Prior",
+        lw=2,
     )
     ax[1, 1].plot(
         np.linspace(start, stop, 1000),
         post1_aci(np.linspace(start, stop, 1000)),
         color=colors["post1"],
         label="Temperature RMSE",
+        lw=2,
     )
     ax[1, 1].plot(
         np.linspace(start, stop, 1000),
         post2_aci(np.linspace(start, stop, 1000)),
         color=colors["post2"],
         label="All constraints",
+        lw=2,
     )
     ax[1, 1].set_xlim(start, stop)
-    ax[1, 1].set_ylim(0, 1.6)
+    ax[1, 1].set_ylim(0, 1.1)
     ax[1, 1].set_title("Aerosol ERFaci")
     ax[1, 1].set_yticklabels([])
     ax[1, 1].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
 
     start = -3
-    stop = 0
+    stop = 0.4
     ax[1, 2].plot(
         np.linspace(start, stop, 1000),
         target_aer(np.linspace(start, stop, 1000)),
         color=colors["target"],
         label="Target",
+        lw=2,
     )
     ax[1, 2].plot(
         np.linspace(start, stop, 1000),
         prior_aer(np.linspace(start, stop, 1000)),
         color=colors["prior"],
         label="Prior",
+        lw=2,
     )
     ax[1, 2].plot(
         np.linspace(start, stop, 1000),
         post1_aer(np.linspace(start, stop, 1000)),
         color=colors["post1"],
         label="Temperature RMSE",
+        lw=2,
     )
     ax[1, 2].plot(
         np.linspace(start, stop, 1000),
         post2_aer(np.linspace(start, stop, 1000)),
         color=colors["post2"],
         label="All constraints",
+        lw=2,
     )
     ax[1, 2].set_xlim(start, stop)
-    ax[1, 2].set_ylim(0, 1.6)
+    ax[1, 2].set_ylim(0, 1.1)
     ax[1, 2].set_title("Aerosol ERF")
-    ax[1, 2].legend(frameon=False, loc="upper left")
     ax[1, 2].set_yticklabels([])
     ax[1, 2].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
 
@@ -552,27 +578,32 @@ if plots:
         target_co2(np.linspace(start, stop, 1000)),
         color=colors["target"],
         label="Target",
+        lw=2,
     )
     ax[2, 0].plot(
         np.linspace(start, stop, 1000),
         prior_co2(np.linspace(start, stop, 1000)),
         color=colors["prior"],
         label="Prior",
+        lw=2,
     )
     ax[2, 0].plot(
         np.linspace(start, stop, 1000),
         post1_co2(np.linspace(start, stop, 1000)),
         color=colors["post1"],
         label="Temperature RMSE",
+        lw=2,
     )
     ax[2, 0].plot(
         np.linspace(start, stop, 1000),
         post2_co2(np.linspace(start, stop, 1000)),
         color=colors["post2"],
         label="All constraints",
+        lw=2,
     )
     ax[2, 0].set_xlim(start, stop)
-    ax[2, 0].set_ylim(0, 1.2)
+    ax[2, 0].set_ylim(0, 1.0)
+    ax[2, 0].set_ylabel("Probability density")
     ax[2, 0].set_title("CO$_2$ concentration")
     ax[2, 0].set_yticklabels([])
     ax[2, 0].set_xlabel("ppm, 2022")
@@ -584,24 +615,28 @@ if plots:
         target_ohc(np.linspace(start, stop)),
         color=colors["target"],
         label="Target",
+        lw=2,
     )
     ax[2, 1].plot(
         np.linspace(start, stop),
         prior_ohc(np.linspace(start, stop)),
         color=colors["prior"],
         label="Prior",
+        lw=2,
     )
     ax[2, 1].plot(
         np.linspace(start, stop),
         post1_ohc(np.linspace(start, stop)),
         color=colors["post1"],
         label="Temperature RMSE",
+        lw=2,
     )
     ax[2, 1].plot(
         np.linspace(start, stop),
         post2_ohc(np.linspace(start, stop)),
         color=colors["post2"],
         label="All constraints",
+        lw=2,
     )
     ax[2, 1].set_xlim(start, stop)
     ax[2, 1].set_ylim(0, 0.007)
@@ -610,6 +645,14 @@ if plots:
     ax[2, 1].set_xlabel("ZJ, 2020 minus 1971")
 
     ax[2, 2].axis("off")
+    legend_lines = [
+        Line2D([0], [0], color=colors["prior"], lw=2),
+        Line2D([0], [0], color=colors["post1"], lw=2),
+        Line2D([0], [0], color=colors["post2"], lw=2),
+        Line2D([0], [0], color=colors["target"], lw=2),
+    ]
+    legend_labels = ["Prior", "Temperature RMSE", "All constraints", "Target"]
+    ax[2, 2].legend(legend_lines, legend_labels, frameon=False, loc="upper left")
 
     fig.tight_layout()
     pl.savefig(
@@ -746,7 +789,7 @@ if plots:
     ax.set_ylim(-1, 5)
     ax.set_ylabel("°C relative to 1850-1900")
     ax.axhline(0, color="k", ls=":", lw=0.5)
-    pl.title("Temperature anomaly: posterior ssp245")
+    pl.title("Constrained, reweighted posterior")
     pl.tight_layout()
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
