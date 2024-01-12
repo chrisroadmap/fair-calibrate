@@ -138,7 +138,18 @@ for model in sorted(list(models)):
     else:
         run = df.loc[df["model"] == model, "run"].values[0]
     print(
-        f"{model} & {params[model][run]['ocean_heat_transfer'][0]:.2f} & {params[model][run]['ocean_heat_transfer'][1]:.2f} & {params[model][run]['ocean_heat_transfer'][2]:.2f} & {params[model][run]['ocean_heat_capacity'][0]:.2f} & {params[model][run]['ocean_heat_capacity'][1]:.1f} & {params[model][run]['ocean_heat_capacity'][2]:.0f} & {params[model][run]['deep_ocean_efficacy']:.2f} & {params[model][run]['gamma_autocorrelation']:.2f} & {params[model][run]['sigma_xi']:.2f} & {params[model][run]['sigma_eta']:.2f} & {params[model][run]['forcing_4co2']:.2f} & {params[model][run]['ecs']:.2f} & {params[model][run]['tcr']:.2f} \\\\"
+        f"{model} & {params[model][run]['ocean_heat_transfer'][0]:.2f} & "
+        f"{params[model][run]['ocean_heat_transfer'][1]:.2f} & "
+        f"{params[model][run]['ocean_heat_transfer'][2]:.2f} & "
+        f"{params[model][run]['ocean_heat_capacity'][0]:.2f} & "
+        f"{params[model][run]['ocean_heat_capacity'][1]:.1f} & "
+        f"{params[model][run]['ocean_heat_capacity'][2]:.0f} & "
+        f"{params[model][run]['deep_ocean_efficacy']:.2f} & "
+        f"{params[model][run]['gamma_autocorrelation']:.2f} & "
+        f"{params[model][run]['sigma_xi']:.2f} & "
+        f"{params[model][run]['sigma_eta']:.2f} & "
+        f"{params[model][run]['forcing_4co2']:.2f} & {params[model][run]['ecs']:.2f} & "
+        f"{params[model][run]['tcr']:.2f} \\\\"
     )
 
 
