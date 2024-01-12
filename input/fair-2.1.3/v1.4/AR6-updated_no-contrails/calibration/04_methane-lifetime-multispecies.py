@@ -334,7 +334,7 @@ for species in ["CH4", "N2O", "VOC", "NOx", "HC"]:
     baseline[species] = input[species][100]
 baseline["temp"] = 0
 
-# ## Steps 1 and 2
+# Steps 1 and 2
 
 # Get and tune to AerChemMIP models
 # MRI and GISS both give pretty good historical emulations
@@ -486,7 +486,7 @@ if plots:
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "aerchemmip_tuning_ch4_conc_1750-2022.png"
+        "aerchemmip_tuning_ch4_conc_1750-2023.png"
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
@@ -552,7 +552,7 @@ p, cov = scipy.optimize.curve_fit(
     input["CH4"][:273],
     bounds=(  # AerChemMIP min to max range
         (0.18, -0.46, 0.11, -0.075, -0.039, -0.0408, 6.3),
-        (0.26, -0.25, 0.27, -0.006, -0.012, +0.0718, 13.4),
+        (0.26, -0.25, 0.27, -0.006, -0.012, 0, 13.4),
     ),
 )
 
@@ -610,6 +610,10 @@ if plots:
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "ch4_chemical_lifetime_best_fit.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "ch4_chemical_lifetime_best_fit.pdf"
     )
     pl.close()
 
@@ -697,31 +701,32 @@ if plots:
         "ssp585": "#980002",
     }
 
-    fig, ax = pl.subplots(1, 3, figsize=(12, 3.5))
+    fig, ax = pl.subplots(1, 3, figsize=(18 / 2.54, 6 / 2.54))
     for model in models:
         ax[0].plot(
             np.arange(1750, 2101),
             lifetime_scaling[model] * parameters[model]["base"],
             label=model,
+            lw=1,
         )
     ax[0].plot(
         np.arange(1750, 2101),
         lifetime_scaling["best_fit"] * parameters["best_fit"]["base"],
         color="0.5",
         label="Best fit",
+        lw=1
     )
-    # ax[0].legend(loc='upper left', bbox_to_anchor=[0, 0.9], frameon=False)
     ax[0].set_xlim(1750, 2100)
     ax[0].set_ylabel("yr")
-    ax[0].set_title("(a) CH$_4$ lifetime SSP3-7.0")
+    ax[0].set_title("(a) CH$_4$ lifetime")
 
     for model in models:
-        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
+        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model, lw=1)
     ax[1].plot(
-        np.arange(1750, 2101), conc_ch4["best_fit"], color="0.5", label="Best fit"
+        np.arange(1750, 2101), conc_ch4["best_fit"], color="0.5", label="Best fit", lw=1
     )
     ax[1].plot(
-        np.arange(1750, 2101), input["CH4"], color="k", label="observations +\nMAGICC6"
+        np.arange(1750, 2101), input["CH4"], color="k", label="observations +\nMAGICC6", lw=1
     )
     ax[1].set_ylabel("ppb")
     ax[1].set_xlim(1750, 2100)
@@ -749,11 +754,11 @@ if plots:
             .squeeze()
         )
         ax[2].plot(
-            np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp]
+            np.arange(1750, 2101), conc_ch4[ssp], label=ssp, color=ar6_colors[ssp], lw=1
         )
-        ax[2].plot(np.arange(1750, 2101), gas, color=ar6_colors[ssp], lw=0.5)
+        ax[2].plot(np.arange(1750, 2101), gas, color=ar6_colors[ssp], lw=0.3)
     ax[2].set_ylabel("ppb")
-    ax[2].set_title("(c) Best fit CH$_4$ projections")
+    ax[2].set_title("(c) CH$_4$ projections")
     ax[2].set_xlim(1750, 2100)
     ax[2].legend(frameon=False)
 
@@ -761,6 +766,10 @@ if plots:
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "methane_calibrations.png"
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "methane_calibrations.pdf"
     )
     pl.close()
 
