@@ -326,7 +326,7 @@ erfari_best = (
 )
 
 
-# we need to map the 2019 mean and stdev to -0.3 +/- 0.3 for 2005-2014 which is the 
+# we need to map the 2019 mean and stdev to -0.3 +/- 0.3 for 2005-2014 which is the
 # IPCC AR6 assessment
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 best_scale = -0.3 / erfari_best.loc[2005:2014].mean()

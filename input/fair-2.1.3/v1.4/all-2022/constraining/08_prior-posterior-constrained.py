@@ -24,7 +24,7 @@ if not plots:
 pl.style.use("../../../../../defaults.mplstyle")
 
 # override font size
-pl.rcParams['font.size'] = 6
+pl.rcParams["font.size"] = 6
 
 print("Making parameters plot...")
 
@@ -84,7 +84,7 @@ df_1750co2 = pd.read_csv(
 )
 
 negative_only_beta = df_aci.loc[:, "beta"].values
-negative_only_beta[negative_only_beta >=0] = np.nan
+negative_only_beta[negative_only_beta >= 0] = np.nan
 
 prior = np.vstack(
     (
@@ -105,7 +105,7 @@ prior = np.vstack(
         np.log(df_aci.loc[:, "shape_so2"].values),
         np.log(df_aci.loc[:, "shape_bc"].values),
         np.log(df_aci.loc[:, "shape_oc"].values),
-        #df_aci.loc[:, "beta"].values,
+        # df_aci.loc[:, "beta"].values,
         np.log(-negative_only_beta),
         df_cr.loc[:, "F_4xCO2"].values,
         df_cr.loc[:, "c1"].values,
@@ -138,51 +138,51 @@ prior = np.vstack(
 )
 
 titles = [
-    r'CO$_2$ conc. 1750',
-    'iirf_airborne',
-    'iirf_uptake',
-    'iirf_temperature',
-    'iirf_1750',
-    'ARI BC',
-    'ARI OC',
-    r'ARI SO$_2$',
-    r'ARI NH$_3$',
-    'ARI NOx',
-    'ARI CH$_4$',
-    'ARI N$_2$O',
-    'ARI VOC',
-    'ARI EESC',
-    'log(ACI shape BC)',
-    'log(ACI shape OC)',
-    'log(ACI shape SO2)',
-    '-log(ACI scale)',
-    r'F_4$\times$CO$_2$',
-    'c1',
-    'c2',
-    'c3',
-    'kappa1',
-    'kappa2',
-    'kappa3',
-    'epsilon',
-    'gamma',
-    'sigma_eta',
-    'sigma_xi',
-    'o3_CH4',
-    'o3_N2O',
-    'o3_EESC',
-    'o3_VOC',
-    'o3_CO',
-    'o3_VOC',
-    'scale_CO2',
-    'scale_CH4',
-    'scale_N2O',
-    'scale_minorGHG',
-    'scale_stratH2O',
-    'scale_LAPSI',
-    'scale_landuse',
-    'scale_volcanic',
-    'solar_trend',
-    'solar_amplitude',
+    r"CO$_2$ conc. 1750",
+    "iirf_airborne",
+    "iirf_uptake",
+    "iirf_temperature",
+    "iirf_1750",
+    "ARI BC",
+    "ARI OC",
+    r"ARI SO$_2$",
+    r"ARI NH$_3$",
+    "ARI NOx",
+    "ARI CH$_4$",
+    "ARI N$_2$O",
+    "ARI VOC",
+    "ARI EESC",
+    "log(ACI shape BC)",
+    "log(ACI shape OC)",
+    "log(ACI shape SO2)",
+    "-log(ACI scale)",
+    r"F_4$\times$CO$_2$",
+    "c1",
+    "c2",
+    "c3",
+    "kappa1",
+    "kappa2",
+    "kappa3",
+    "epsilon",
+    "gamma",
+    "sigma_eta",
+    "sigma_xi",
+    "o3_CH4",
+    "o3_N2O",
+    "o3_EESC",
+    "o3_VOC",
+    "o3_CO",
+    "o3_VOC",
+    "scale_CO2",
+    "scale_CH4",
+    "scale_N2O",
+    "scale_minorGHG",
+    "scale_stratH2O",
+    "scale_LAPSI",
+    "scale_landuse",
+    "scale_volcanic",
+    "solar_trend",
+    "solar_amplitude",
 ]
 
 fig, ax = pl.subplots(9, 5, figsize=(18 / 2.54, 18 / 2.54))

@@ -714,7 +714,7 @@ if plots:
         lifetime_scaling["best_fit"] * parameters["best_fit"]["base"],
         color="0.5",
         label="Best fit",
-        lw=1
+        lw=1,
     )
     ax[0].set_xlim(1750, 2100)
     ax[0].set_ylabel("yr")
@@ -726,7 +726,11 @@ if plots:
         np.arange(1750, 2101), conc_ch4["best_fit"], color="0.5", label="Best fit", lw=1
     )
     ax[1].plot(
-        np.arange(1750, 2101), input["CH4"], color="k", label="observations +\nMAGICC6", lw=1
+        np.arange(1750, 2101),
+        input["CH4"],
+        color="k",
+        label="observations +\nMAGICC6",
+        lw=1,
     )
     ax[1].set_ylabel("ppb")
     ax[1].set_xlim(1750, 2100)
