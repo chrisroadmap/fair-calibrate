@@ -111,7 +111,6 @@ species = [
     not in [
         "CO2",
         "CH4",
-        "SO2F2",
         "CFC-13",
         "i-C6F14",
         "CFC-112",
