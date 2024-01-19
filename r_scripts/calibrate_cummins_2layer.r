@@ -14,6 +14,8 @@
 # donaldcummins. (2021). donaldcummins/EBM: Optional quadratic penalty
 # (v1.1.0). Zenodo. https://doi.org/10.5281/zenodo.5217975
 
+message("Running R script for 2 layer model calibrations...")
+
 # Use Donald Cummins' package
 library(EBM)
 
@@ -21,9 +23,10 @@ library(EBM)
 readRenviron("../.env")
 cal_v = paste("v", Sys.getenv("CALIBRATION_VERSION"), sep="")
 fair_v = paste("fair-", Sys.getenv("FAIR_VERSION"), sep="")
+constraint_set = Sys.getenv("CONSTRAINT_SET")
 
 # Get the precalculated 4xCO2 N and T data
-input_data = read.csv(file.path("..", "output", fair_v, cal_v, "calibrations", "4xCO2_cmip6.csv"))
+input_data = read.csv(file.path("..", "output", fair_v, cal_v, constraint_set, "calibrations", "4xCO2_cmip6.csv"))
 
 # Initial guess for parameter values
 inits2 <- list(
@@ -92,7 +95,7 @@ for (model in models) {
 					message("Here's the original error message from FitKalman:")
 					message(c)
 					if (attempt < 4) {
-						message("Trying again with more liberal quadratic penalty (alpha)")
+						message(paste("Trying again with more liberal quadratic penalty (alpha) = ", 1e-05 * 10^attempt))
 					}
 					else {
 						message(paste("This isn't going to work, is it? I'm giving up for", model))
@@ -102,11 +105,8 @@ for (model in models) {
 			if (success) { break }
 			attempt <- attempt + 1
 		}
-		if (!success) {
-			row_out <- c(model, run, FALSE, NA, NA, NA, NA, NA, NA,
-			NA, NA, NA, NA)
-
-			output <- rbind(output, row_out)
+        if (!success) {
+			message(paste("I am excluding" , model, " from my table of results."))
 			next
 		}
 
@@ -141,6 +141,6 @@ colnames(output) <- names
 # save output
 write.csv(
     output,
-    file.path("..", "output", fair_v, cal_v, "calibrations","4xCO2_cummins_ebm2_cmip6.csv"),
+    file.path("..", "output", fair_v, cal_v, constraint_set, "calibrations", "4xCO2_cummins_ebm2_cmip6.csv"),
     row.names=FALSE
 )
