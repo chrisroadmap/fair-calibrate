@@ -34,11 +34,11 @@ The `.env` file contains environment variables that should be changed in order t
 
 ```
 # example .env
-CALIBRATION_VERSION=1.2
-FAIR_VERSION=2.1.1
-CONSTRAINT_SET=AR6_updated
-PRIOR_SAMPLES=1500000        # how many prior samples to draw
-POSTERIOR_SAMPLES=1001       # final posterior ensemble size
+CALIBRATION_VERSION=1.4
+FAIR_VERSION=2.1.3
+CONSTRAINT_SET="all-2022"
+PRIOR_SAMPLES=1600000        # how many prior samples to draw
+POSTERIOR_SAMPLES=841        # final posterior ensemble size
 BATCH_SIZE=500               # how many scenarios to run in parallel
 WORKERS=40                   # how many cores to use for parallel runs
 FRONT_SERIAL=0               # for debugging, how many serial runs to do first
@@ -47,6 +47,8 @@ FRONT_PARALLEL=0             # after serial runs, how many parallel runs to test
 PLOTS=True                   # Produce plots?
 PROGRESS=False               # show progress bar? (good for interactive, bad
                              # on HPC batch jobs)
+DATADIR=/path/to/datadir     # A local location to download large external
+                             # datafiles (a cache directory)
 ```
 
 The output will be produced in `output/fair-X.X.X/vY.Y.Y/Z/` where X is the FaIR version, Y is the calibration version and Z is the constraint set used. Multiple constraint philosphies can be applied for the same set of calibrations (e.g. AR6, 2022 observations, etc.). No posterior data will be committed to Git owing to size, but the intention is that the full output data will be on Zenodo.
