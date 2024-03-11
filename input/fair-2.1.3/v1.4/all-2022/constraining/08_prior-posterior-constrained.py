@@ -53,7 +53,7 @@ step2 = np.loadtxt(
 accept_step2 = np.zeros(samples, dtype=bool)
 accept_step2[step2] = True
 
-colors = {"prior": "#207F6E", "post1": "#684C94", "post2": "#EE696B", "target": "black"}
+colors = {"prior": "#1E88E5", "post1": "#FFC107", "post2": "#D81B60", "target": "black"}
 
 df_cc = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"

@@ -346,7 +346,7 @@ prior_co2 = scipy.stats.gaussian_kde(co2_in)
 post1_co2 = scipy.stats.gaussian_kde(co2_in[valid_temp])
 post2_co2 = scipy.stats.gaussian_kde(draws[0]["CO2 concentration"])
 
-colors = {"prior": "#207F6E", "post1": "#684C94", "post2": "#EE696B", "target": "black"}
+colors = {"prior": "#1E88E5", "post1": "#FFC107", "post2": "#D81B60", "target": "black"}
 
 if plots:
     os.makedirs(
