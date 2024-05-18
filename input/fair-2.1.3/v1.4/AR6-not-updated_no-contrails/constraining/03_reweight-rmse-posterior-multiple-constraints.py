@@ -698,7 +698,7 @@ print(
 )
 print(
     "Temperature 1995-2014 rel. 1850-1900:",
-    np.percentile(draws[0]["temperature 2003-2022"], (5, 50, 95)),
+    np.percentile(draws[0]["temperature 1995-2014"], (5, 50, 95)),
 )
 print(
     "Aerosol ERFari 2005-2014 rel. 1750:",

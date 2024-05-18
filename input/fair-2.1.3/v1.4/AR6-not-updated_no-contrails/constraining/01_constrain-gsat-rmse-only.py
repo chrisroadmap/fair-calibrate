@@ -116,8 +116,8 @@ if plots:
 # want to average out internal variability in the model or the obs.
 for i in tqdm(range(samples), disable=1 - progress):
     rmse_temp[i] = rmse(
-        gmst[:173],
-        temp_in[1:174, i] - np.average(temp_in[:52, i], weights=weights, axis=0),
+        gmst[:171],
+        temp_in[1:172, i] - np.average(temp_in[:52, i], weights=weights, axis=0),
     )
 
 accept_temp = rmse_temp < 0.17
