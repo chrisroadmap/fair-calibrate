@@ -27,7 +27,7 @@ import pandas as pd
 import pooch
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Getting PRIMAP data...")
 

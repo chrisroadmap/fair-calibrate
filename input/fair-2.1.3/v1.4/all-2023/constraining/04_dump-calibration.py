@@ -10,7 +10,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from fair import __version__
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Dumping output...")
 

@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from fair import __version__
 
 # if we're not plotting, don't even start
-load_dotenv()
+load_dotenv(override=True)
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 
 if not plots:

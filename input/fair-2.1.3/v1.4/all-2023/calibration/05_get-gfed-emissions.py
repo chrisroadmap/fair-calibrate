@@ -22,7 +22,7 @@ import pooch
 from dotenv import load_dotenv
 from tqdm.auto import tqdm
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Getting GFED data...")
 

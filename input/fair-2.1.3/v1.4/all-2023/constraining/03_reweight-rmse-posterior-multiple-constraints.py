@@ -21,7 +21,7 @@ from tqdm.auto import tqdm
 
 pl.switch_backend("agg")
 
-load_dotenv()
+load_dotenv(override=True)
 
 cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")
@@ -66,7 +66,7 @@ faci_in = np.load(
 )
 co2_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-    "concentration_co2_2022.npy"
+    "concentration_co2_2023.npy"
 )
 ecs_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/ecs.npy"
@@ -90,7 +90,7 @@ def opt(x, q05_desired, q50_desired, q95_desired):
 
 
 ecs_params = scipy.optimize.root(opt, [1, 1, 1], args=(2, 3, 5)).x
-gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(0.87, 1.03, 1.13)).x
+gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(0.90, 1.05, 1.16)).x
 
 samples = {}
 samples["ECS"] = scipy.stats.skewnorm.rvs(
@@ -106,10 +106,13 @@ samples["TCR"] = scipy.stats.norm.rvs(
 # note fair produces, and we here report, total earth energy uptake, not just ocean
 # this value from IGCC 2023. Use new uncertainties for ocean, assume same uncertainties
 # for land, atmosphere and cryopshere.
+# update 2023: cannot find the uncertainty calculation for ocean and how this fits into
+# other components, so we use the same 2022 uncertainty. The mean value has been updated
+# and is calculated as the 2020 value minus the small 1971 value.
 samples["OHC"] = scipy.stats.norm.rvs(
-    loc=465.3, scale=108.5 / NINETY_TO_ONESIGMA, size=10**5, random_state=43178
+    loc=471.5, scale=108.5 / NINETY_TO_ONESIGMA, size=10**5, random_state=43178
 )
-samples["temperature 2003-2022"] = scipy.stats.skewnorm.rvs(
+samples["temperature 2004-2023"] = scipy.stats.skewnorm.rvs(
     gsat_params[0],
     loc=gsat_params[1],
     scale=gsat_params[2],
@@ -128,11 +131,8 @@ samples["ERFaer"] = scipy.stats.norm.rvs(
     size=10**5,
     random_state=3916153,
 )
-# IGCC paper: 417.1 +/- 0.4
-# IGCC dataset: 416.9
-# my assessment 417.0 +/- 0.5
 samples["CO2 concentration"] = scipy.stats.norm.rvs(
-    loc=417.0, scale=0.5, size=10**5, random_state=81693
+    loc=419.3, scale=0.4, size=10**5, random_state=81693
 )
 
 ar_distributions = {}
@@ -140,7 +140,7 @@ for constraint in [
     "ECS",
     "TCR",
     "OHC",
-    "temperature 2003-2022",
+    "temperature 2004-2023",
     "ERFari",
     "ERFaci",
     "ERFaer",
@@ -168,8 +168,8 @@ accepted = pd.DataFrame(
         "ECS": ecs_in[valid_temp],
         "TCR": tcr_in[valid_temp],
         "OHC": ohc_in[valid_temp] / 1e21,
-        "temperature 2003-2022": np.average(
-            temp_in[153:174, valid_temp], weights=weights_20yr, axis=0
+        "temperature 2004-2023": np.average(
+            temp_in[154:175, valid_temp], weights=weights_20yr, axis=0
         )
         - np.average(temp_in[:52, valid_temp], weights=weights_51yr, axis=0),
         "ERFari": fari_in[valid_temp],
@@ -310,7 +310,7 @@ prior_tcr = scipy.stats.gaussian_kde(tcr_in)
 post1_tcr = scipy.stats.gaussian_kde(tcr_in[valid_temp])
 post2_tcr = scipy.stats.gaussian_kde(draws[0]["TCR"])
 
-target_temp = scipy.stats.gaussian_kde(samples["temperature 2003-2022"])
+target_temp = scipy.stats.gaussian_kde(samples["temperature 2004-2023"])
 prior_temp = scipy.stats.gaussian_kde(
     np.average(temp_in[153:174, :], weights=weights_20yr, axis=0)
     - np.average(temp_in[:52, :], weights=weights_51yr, axis=0)
@@ -319,7 +319,7 @@ post1_temp = scipy.stats.gaussian_kde(
     np.average(temp_in[153:174, valid_temp], weights=weights_20yr, axis=0)
     - np.average(temp_in[:52, valid_temp], weights=weights_51yr, axis=0)
 )
-post2_temp = scipy.stats.gaussian_kde(draws[0]["temperature 2003-2022"])
+post2_temp = scipy.stats.gaussian_kde(draws[0]["temperature 2004-2023"])
 
 target_ohc = scipy.stats.gaussian_kde(samples["OHC"])
 prior_ohc = scipy.stats.gaussian_kde(ohc_in / 1e21)
@@ -460,7 +460,7 @@ if plots:
     ax[0, 2].set_ylim(0, 6)
     ax[0, 2].set_title("Temperature anomaly")
     ax[0, 2].set_yticklabels([])
-    ax[0, 2].set_xlabel("°C, 2003-2022 minus 1850-1900")
+    ax[0, 2].set_xlabel("°C, 2004-2023 minus 1850-1900")
 
     start = -1.0
     stop = 0.4
@@ -606,7 +606,7 @@ if plots:
     ax[2, 0].set_ylabel("Probability density")
     ax[2, 0].set_title("CO$_2$ concentration")
     ax[2, 0].set_yticklabels([])
-    ax[2, 0].set_xlabel("ppm, 2022")
+    ax[2, 0].set_xlabel("ppm, 2023")
 
     start = 100
     stop = 900
@@ -695,11 +695,11 @@ print("Constrained, reweighted parameters:")
 print("ECS:", np.percentile(draws[0]["ECS"], (5, 50, 95)))
 print("TCR:", np.percentile(draws[0]["TCR"], (5, 50, 95)))
 print(
-    "CO2 concentration 2022:", np.percentile(draws[0]["CO2 concentration"], (5, 50, 95))
+    "CO2 concentration 2023", np.percentile(draws[0]["CO2 concentration"], (5, 50, 95))
 )
 print(
-    "Temperature 2003-2022 rel. 1850-1900:",
-    np.percentile(draws[0]["temperature 2003-2022"], (5, 50, 95)),
+    "Temperature 2004-2023 rel. 1850-1900:",
+    np.percentile(draws[0]["temperature 2004-2023"], (5, 50, 95)),
 )
 print(
     "Aerosol ERFari 2005-2014 rel. 1750:",
@@ -718,7 +718,7 @@ print("OHC change 2020 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95)))
 print("*likely range")
 
 if plots:
-    df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2022.csv")
+    df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2023.csv")
     gmst = df_gmst["gmst"].values
 
     fig, ax = pl.subplots(figsize=(5, 5))
@@ -781,7 +781,7 @@ if plots:
         color="#000000",
     )
 
-    ax.plot(np.arange(1850.5, 2023), gmst, color="b", label="Observations")
+    ax.plot(np.arange(1850.5, 2024), gmst, color="b", label="Observations")
 
     ax.legend(frameon=False, loc="upper left")
 

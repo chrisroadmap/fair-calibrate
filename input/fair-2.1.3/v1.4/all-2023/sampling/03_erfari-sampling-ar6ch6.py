@@ -22,7 +22,7 @@ import pandas as pd
 import scipy.stats
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")
@@ -33,11 +33,11 @@ datadir = os.getenv("DATADIR")
 
 df_emis = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "slcf_emissions_1750-2022.csv",
+    "slcf_emissions_1750-2023.csv",
     index_col=0,
 )
 df_conc = pd.read_csv(
-    "../../../../../data/concentrations/ghg_concentrations_1750-2022.csv", index_col=0
+    "../../../../../data/concentrations/ghg_concentrations_1750-2023.csv", index_col=0
 )
 for year in range(1751, 1850):
     df_conc.loc[year, :] = np.nan
@@ -128,7 +128,7 @@ name_conv["VOC"] = "NMVOC"
 
 species_out = {}
 for ispec, species in enumerate(emitted_species):
-    species_out[species] = df_emis[name_conv[species]].values
+    species_out[species] = df_emis[name_conv[species]].values[:273]
 
 for ispec, species in enumerate(concentration_species):
     species_out[species] = df_conc[species].values[:273]

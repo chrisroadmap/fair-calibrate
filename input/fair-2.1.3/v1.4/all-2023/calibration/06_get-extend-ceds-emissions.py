@@ -13,7 +13,7 @@ print("Making SLCF emissions...")
 # Create a consolidated time series file from the CEDS emissions, then extend them to
 # 2022 using the COVID-MIP assumptions (same process as Forster et al. 2023)
 
-load_dotenv()
+load_dotenv(override=True)
 
 pl.style.use("../../../../../defaults.mplstyle")
 
@@ -36,17 +36,17 @@ covid_df = pd.read_csv(
 )
 
 for specie in species:
-    ceds_df.loc[:2019, specie] = (
+    ceds_df.loc[:2022, specie] = (
         0.001
         * pd.read_csv(
-            "../../../../../data/emissions/ceds/v20210421/"
-            f"{specie}_global_CEDS_emissions_by_sector_2021_04_21.csv"
+            "../../../../../data/emissions/ceds/v20240401/"
+            f"{specie}_CEDS_global_emissions_by_sector_v2024_04_01.csv"
         )
         .sum()["X1750":]
         .values
     )
-    ceds_df.loc[2020:2023, specie] = (
-        ceds_df.loc[2019, specie] * covid_df.loc[2020:2023, rcmip_specie[specie]]
+    ceds_df.loc[2023, specie] = (
+        ceds_df.loc[2019, specie] * covid_df.loc[2023, rcmip_specie[specie]]
     )
 
 ceds_df.to_csv(

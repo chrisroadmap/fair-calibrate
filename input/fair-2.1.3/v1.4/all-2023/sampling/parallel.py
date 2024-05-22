@@ -9,7 +9,7 @@ from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
-load_dotenv()
+load_dotenv(override=True)
 
 cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")
@@ -128,23 +128,22 @@ def run_fair(cfg):
     )
 
     # Reconstructed emissions adjustments for all species to match first timepoint
-    fill(f.species_configs["baseline_emissions"], 38.246272, specie="CH4")
-    fill(f.species_configs["baseline_emissions"], 0.92661989, specie="N2O")
-    fill(f.species_configs["baseline_emissions"], 19.41683292, specie="NOx")
-    fill(f.species_configs["baseline_emissions"], 2.293964929, specie="Sulfur")
-    fill(f.species_configs["baseline_emissions"], 348.4549732, specie="CO")
-    fill(f.species_configs["baseline_emissions"], 60.62284009, specie="VOC")
-    fill(f.species_configs["baseline_emissions"], 2.096765609, specie="BC")
-    fill(f.species_configs["baseline_emissions"], 15.44571911, specie="OC")
-    fill(f.species_configs["baseline_emissions"], 6.656462698, specie="NH3")
-    fill(f.species_configs["baseline_emissions"], 0.92661989, specie="N2O")
-    fill(f.species_configs["baseline_emissions"], 0.02129917, specie="CCl4")
-    fill(f.species_configs["baseline_emissions"], 202.7251231, specie="CHCl3")
-    fill(f.species_configs["baseline_emissions"], 211.0095537, specie="CH2Cl2")
-    fill(f.species_configs["baseline_emissions"], 4544.519056, specie="CH3Cl")
-    fill(f.species_configs["baseline_emissions"], 111.4920237, specie="CH3Br")
-    fill(f.species_configs["baseline_emissions"], 0.008146006, specie="Halon-1211")
-    fill(f.species_configs["baseline_emissions"], 0.000010554155, specie="SO2F2")
+    fill(f.species_configs["baseline_emissions"], 38.246128, specie="CH4")
+    fill(f.species_configs["baseline_emissions"], 1.004849712232, specie="N2O")
+    fill(f.species_configs["baseline_emissions"], 19.416153139269, specie="NOx")
+    fill(f.species_configs["baseline_emissions"], 2.78988322212428, specie="Sulfur")
+    fill(f.species_configs["baseline_emissions"], 348.407245294965, specie="CO")
+    fill(f.species_configs["baseline_emissions"], 60.8518470507445, specie="VOC")
+    fill(f.species_configs["baseline_emissions"], 2.10109609969206, specie="BC")
+    fill(f.species_configs["baseline_emissions"], 15.4562184847567, specie="OC")
+    fill(f.species_configs["baseline_emissions"], 6.62109029653446, specie="NH3")
+    fill(f.species_configs["baseline_emissions"], 0.0214229624109668, specie="CCl4")
+    fill(f.species_configs["baseline_emissions"], 197.78060792128, specie="CHCl3")
+    fill(f.species_configs["baseline_emissions"], 209.76439059552, specie="CH2Cl2")
+    fill(f.species_configs["baseline_emissions"], 4460.12449798668, specie="CH3Cl")
+    fill(f.species_configs["baseline_emissions"], 102.452145166338, specie="CH3Br")
+    fill(f.species_configs["baseline_emissions"], 0.00832389133264743, specie="Halon-1211")
+    fill(f.species_configs["baseline_emissions"], 0.0000103472092918767, specie="SO2F2")
     fill(f.species_configs["baseline_emissions"], 0, specie="CF4")
 
     # aerosol indirect
@@ -273,7 +272,7 @@ def run_fair(cfg):
         f.temperature[100:, 0, :, 0],
         f.ocean_heat_content_change[270:272, 0, :].mean(axis=0)
         - f.ocean_heat_content_change[221:223, 0, :].mean(axis=0),
-        f.concentration[272:274, 0, :, 2].mean(axis=0),
+        f.concentration[273:275, 0, :, 2].mean(axis=0),
         np.average(
             f.forcing[255:266, 0, :, 54],
             weights=np.array([0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]),
@@ -286,4 +285,9 @@ def run_fair(cfg):
         ),
         f.ebms.ecs,
         f.ebms.tcr,
+        np.average(
+            f.toa_imbalance[261:274, 0, :],
+            weights = np.array([0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]),
+            axis=0,
+        )
     )

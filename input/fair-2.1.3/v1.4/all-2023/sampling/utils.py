@@ -6,7 +6,7 @@ from concurrent.futures import as_completed
 from dotenv import load_dotenv
 from tqdm.auto import tqdm
 
-load_dotenv()
+load_dotenv(override=True)
 
 front_serial = int(os.getenv("FRONT_SERIAL"))
 front_parallel = int(os.getenv("FRONT_PARALLEL"))

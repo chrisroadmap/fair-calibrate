@@ -6,7 +6,7 @@ import os
 import pandas as pd
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Combining GCP, CEDS, PRIMAP, GFED data into one file...")
 

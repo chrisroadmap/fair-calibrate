@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from fair import __version__
 from sklearn.preprocessing import QuantileTransformer
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Doing forcing uncertainty sampling...")
 

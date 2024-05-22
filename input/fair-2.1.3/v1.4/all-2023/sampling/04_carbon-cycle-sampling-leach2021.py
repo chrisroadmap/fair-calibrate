@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from fair import __version__
 from fair.structure.units import compound_convert
 
-load_dotenv()
+load_dotenv(override=True)
 
 cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")

@@ -14,7 +14,7 @@ from tqdm.auto import tqdm
 
 pl.switch_backend("agg")
 
-load_dotenv()
+load_dotenv(override=True)
 pl.style.use("../../../../../defaults.mplstyle")
 
 print("Doing RMSE constraint...")
@@ -34,7 +34,7 @@ temp_in = np.load(
     "temperature_1850-2101.npy"
 )
 
-df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2022.csv")
+df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2023.csv")
 gmst = df_gmst["gmst"].values
 
 
@@ -86,7 +86,7 @@ if plots:
         ),
         color="#000000",
     )
-    ax.plot(np.arange(1850.5, 2023), gmst, color="b")
+    ax.plot(np.arange(1850.5, 2024), gmst, color="b")
 
     ax.set_xlim(1850, 2100)
     ax.set_ylim(-1, 5)
@@ -116,8 +116,8 @@ if plots:
 # want to average out internal variability in the model or the obs.
 for i in tqdm(range(samples), disable=1 - progress):
     rmse_temp[i] = rmse(
-        gmst[:173],
-        temp_in[1:174, i] - np.average(temp_in[:52, i], weights=weights, axis=0),
+        gmst[:174],
+        temp_in[1:175, i] - np.average(temp_in[:52, i], weights=weights, axis=0),
     )
 
 accept_temp = rmse_temp < 0.17
@@ -158,7 +158,7 @@ if plots:
     )
     ax.axhspan(0.67, 0.99, color="k", alpha=0.15, lw=0)
     ax.axvspan(1995, 2015, color="k", alpha=0.15, lw=0)
-    ax.plot(np.arange(1850.5, 2023), gmst, color="k", label="Best estimate historical")
+    ax.plot(np.arange(1850.5, 2024), gmst, color="k", label="Best estimate historical")
     ax.set_xlim(1850, 2100)
     ax.set_ylim(-1, 4)
     ax.set_ylabel("°C relative to 1850-1900")
@@ -238,7 +238,7 @@ if plots:
         color="#000000",
     )
 
-    ax.plot(np.arange(1850.5, 2023), gmst, color="b")
+    ax.plot(np.arange(1850.5, 2024), gmst, color="b")
 
     ax.set_xlim(1850, 2100)
     ax.set_ylim(-1, 5)

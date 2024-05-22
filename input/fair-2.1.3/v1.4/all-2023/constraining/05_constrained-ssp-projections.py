@@ -17,7 +17,7 @@ from fair.io import read_properties
 
 pl.switch_backend("agg")
 
-load_dotenv()
+load_dotenv(override=True)
 
 pl.style.use("../../../../../defaults.mplstyle")
 
@@ -53,7 +53,7 @@ df_volcanic = pd.read_csv(
 solar_forcing = np.zeros(551)
 volcanic_forcing = np.zeros(551)
 volcanic_forcing[:352] = df_volcanic["erf"].loc[1750:2101].values
-solar_forcing = df_solar["erf"].loc[1750:2300].values
+solar_forcing[:352] = df_solar["erf"].loc[1750:2101].values
 
 df_methane = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
@@ -382,7 +382,7 @@ ar6_colors = {
     "ssp585": "#980002",
 }
 
-df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2022.csv")
+df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2023.csv")
 gmst = df_gmst["gmst"].values
 
 if plots:
@@ -450,7 +450,7 @@ if plots:
             color=ar6_colors[scenarios[i]],
             lw=1,
         )
-        ax[i // 4, i % 4].plot(np.arange(1850.5, 2023), gmst, color="k", lw=1)
+        ax[i // 4, i % 4].plot(np.arange(1850.5, 2024), gmst, color="k", lw=1)
         ax[i // 4, i % 4].set_xlim(1950, 2200)
         ax[i // 4, i % 4].set_ylim(-1, 10)
         ax[i // 4, i % 4].axhline(0, color="k", ls=":", lw=0.5)

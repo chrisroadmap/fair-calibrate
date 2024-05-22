@@ -10,7 +10,7 @@ from fair.interface import fill, initialise
 from fair.io import read_properties
 from scipy.interpolate import interp1d
 
-load_dotenv()
+load_dotenv(override=True)
 
 cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")

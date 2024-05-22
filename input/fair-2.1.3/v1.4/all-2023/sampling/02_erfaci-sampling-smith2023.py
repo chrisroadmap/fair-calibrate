@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from scipy.optimize import curve_fit
 from tqdm import tqdm
 
-load_dotenv()
+load_dotenv(override=True)
 
 pl.style.use("../../../../../defaults.mplstyle")
 
@@ -247,7 +247,7 @@ erfaci_sample = scipy.stats.trapezoid.rvs(
 # Sampling with updated emissions.
 df_emis_obs = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "slcf_emissions_1750-2022.csv",
+    "slcf_emissions_1750-2023.csv",
     index_col=0,
 )
 

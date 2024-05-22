@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from fair import FAIR, __version__
 from fair.interface import fill, initialise
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Calculating historical equivalent emissions...")
 
@@ -190,6 +190,7 @@ fill(f.temperature, 0)
 f.run(progress=progress)
 
 # on the basis of no better information, set 2023 equal to 2022
+# it would be better to harmonize these gases to 2022, I suppose
 output = np.ones((274, len(species))) * np.nan
 output[:273, :] = f.emissions[:, 0, 0, :]
 output[273] = f.emissions[-1, 0, 0, :]

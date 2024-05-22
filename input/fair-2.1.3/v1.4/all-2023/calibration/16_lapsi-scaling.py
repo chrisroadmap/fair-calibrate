@@ -10,7 +10,7 @@ import os
 import pandas as pd
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Calculating land use scale factor...")
 
@@ -25,7 +25,7 @@ assessment_year = 2019
 
 df_emis = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "all_scaled_1750-2022.csv"
+    "all_scaled_1750-2023.csv"
 )
 bc = (
     df_emis.loc[df_emis["variable"] == "Emissions|BC", str(assessment_year)]

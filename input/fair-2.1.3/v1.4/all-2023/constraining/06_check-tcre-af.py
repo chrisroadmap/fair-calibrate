@@ -12,7 +12,7 @@ import numpy as np
 from dotenv import load_dotenv
 from fair.earth_params import mass_atmosphere, molecular_weight_air
 
-load_dotenv()
+load_dotenv(override=True)
 
 cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")

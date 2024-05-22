@@ -16,7 +16,7 @@ from utils import _parallel_process
 
 if __name__ == "__main__":
     print("Running 1pctCO2 scenarios...")
-    load_dotenv()
+    load_dotenv(override=True)
 
     cal_v = os.getenv("CALIBRATION_VERSION")
     fair_v = os.getenv("FAIR_VERSION")

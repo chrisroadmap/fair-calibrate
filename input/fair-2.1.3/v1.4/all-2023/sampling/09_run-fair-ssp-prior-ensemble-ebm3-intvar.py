@@ -31,7 +31,7 @@ from utils import _parallel_process
 
 if __name__ == "__main__":
     print("Running the priors (could take a while)...")
-    load_dotenv()
+    load_dotenv(override=True)
 
     cal_v = os.getenv("CALIBRATION_VERSION")
     fair_v = os.getenv("FAIR_VERSION")
@@ -113,6 +113,7 @@ if __name__ == "__main__":
     fo3_out = np.ones((samples)) * np.nan
     ecs = np.ones(samples) * np.nan
     tcr = np.ones(samples) * np.nan
+    toa = np.ones(samples) * np.nan
 
     config = []
     for ibatch, batch_start in enumerate(range(0, samples, batch_size)):
@@ -262,6 +263,7 @@ if __name__ == "__main__":
         faci_out[batch_start:batch_end] = res[ibatch][4]
         ecs[batch_start:batch_end] = res[ibatch][5]
         tcr[batch_start:batch_end] = res[ibatch][6]
+        toa[batch_start:batch_end] = res[ibatch][7]
 
     os.makedirs(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/",
@@ -281,7 +283,7 @@ if __name__ == "__main__":
     )
     np.save(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-        "concentration_co2_2022.npy",
+        "concentration_co2_2023.npy",
         co2_out,
         allow_pickle=True,
     )
@@ -307,5 +309,11 @@ if __name__ == "__main__":
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
         "tcr.npy",
         tcr,
+        allow_pickle=True,
+    )
+    np.save(
+        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+        "toa_imbalance.npy",
+        toa,
         allow_pickle=True,
     )

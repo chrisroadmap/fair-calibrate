@@ -15,7 +15,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
 # if we're not plotting, don't even start
-load_dotenv()
+load_dotenv(override=True)
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 
 if not plots:
@@ -57,7 +57,7 @@ temp_in = np.load(
     "temperature_1850-2101.npy"
 )
 
-df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2022.csv")
+df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2023.csv")
 gmst = df_gmst["gmst"].values
 
 weights = np.ones(52)
@@ -103,7 +103,7 @@ ax[0].plot(
     color="#000000",
     lw=1,
 )
-ax[0].plot(np.arange(1850.5, 2023), gmst, color="b", lw=1)
+ax[0].plot(np.arange(1850.5, 2024), gmst, color="b", lw=1)
 
 ax[0].set_xlim(1850, 2100)
 ax[0].set_ylim(-1, 5)
@@ -173,7 +173,7 @@ ax[1].plot(
     color="#000000",
     lw=1,
 )
-ax[1].plot(np.arange(1850.5, 2023), gmst, color="b", lw=1)
+ax[1].plot(np.arange(1850.5, 2024), gmst, color="b", lw=1)
 ax[1].set_xlim(1850, 2100)
 ax[1].set_ylim(-1, 5)
 # ax[1].set_ylabel("°C relative to 1850-1900")
@@ -243,7 +243,7 @@ ax[2].plot(
     lw=1,
 )
 
-ax[2].plot(np.arange(1850.5, 2023), gmst, color="b", lw=1)
+ax[2].plot(np.arange(1850.5, 2024), gmst, color="b", lw=1)
 # ax.legend(frameon=False, loc="upper left")
 ax[2].set_xlim(1850, 2100)
 ax[2].set_ylim(-1, 5)

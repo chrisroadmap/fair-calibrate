@@ -18,7 +18,7 @@ from fair import __version__
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 
-load_dotenv()
+load_dotenv(override=True)
 
 pl.style.use("../../../../../defaults.mplstyle")
 
@@ -34,7 +34,7 @@ print("Doing ozone sampling...")
 
 # now include temperature feedback
 Tobs = pd.read_csv(
-    "../../../../../data/forcing/IGCC_GMST_1850-2022.csv", index_col=0
+    "../../../../../data/forcing/IGCC_GMST_1850-2023.csv", index_col=0
 ).values
 
 delta_gmst = [
@@ -116,11 +116,11 @@ print("2014-1850 ozone ERF from Skeie:", o3total[264] - o3total[100])
 
 df_emis = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "slcf_emissions_1750-2022.csv",
+    "slcf_emissions_1750-2023.csv",
     index_col=0,
 )
 df_conc = pd.read_csv(
-    "../../../../../data/concentrations/ghg_concentrations_1750-2022.csv", index_col=0
+    "../../../../../data/concentrations/ghg_concentrations_1750-2023.csv", index_col=0
 )
 for year in range(1751, 1850):
     df_conc.loc[year, :] = np.nan

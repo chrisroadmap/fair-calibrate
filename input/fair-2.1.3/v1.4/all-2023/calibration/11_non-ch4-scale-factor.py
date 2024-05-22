@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from fair import __version__
 from fair.fair import DEFAULT_SPECIES_CONFIG_FILE
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Calibrating GHG emissions scale factors...")
 
@@ -43,7 +43,7 @@ assert fair_v == __version__
 pl.style.use("../../../../../defaults.mplstyle")
 
 # Temperature data
-# Use observations 1850-2022 from IGCC, then use ssp370 projections from IPCC
+# Use observations 1850-2023 from IGCC, then use ssp370 projections from IPCC
 df_temp = pd.read_csv("../../../../../data/forcing/ssp_strawman_warming.csv")
 gmst = df_temp["ssp370"].values
 
@@ -94,7 +94,7 @@ rcmip_df = pd.read_csv(rcmip_file)
 # Find least squares sensible historical fit using best estimate emissions and
 # concentrations from our calibration emissions and observed concentrations
 df_conc_obs = pd.read_csv(
-    "../../../../../data/concentrations/ghg_concentrations_1750-2022.csv", index_col=0
+    "../../../../../data/concentrations/ghg_concentrations_1750-2023.csv", index_col=0
 )
 for year in range(1751, 1850):
     df_conc_obs.loc[year, :] = np.nan
@@ -126,7 +126,7 @@ species = [
 
 df_emis_obs = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "all_1750-2022.csv"
+    "all_1750-2023.csv"
 )
 
 renames = {specie: specie for specie in species}

@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from fair import FAIR, __version__
 from fair.interface import fill
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 cal_v = os.getenv("CALIBRATION_VERSION")

@@ -39,7 +39,7 @@ import scipy.stats
 import xarray as xr
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Calibrating methane lifetime...")
 
@@ -63,7 +63,7 @@ rcmip_df = pd.read_csv(rcmip_file)
 pl.style.use("../../../../../defaults.mplstyle")
 
 # Temperature data
-# Use observations 1850-2022 from IGCC, then use ssp370 projections from IPCC
+# Use observations 1850-2023 from IGCC, then use ssp370 projections from IPCC
 df_temp = pd.read_csv("../../../../../data/forcing/ssp_strawman_warming.csv")
 gmst = df_temp["ssp370"].values
 
@@ -501,11 +501,11 @@ if plots:
 # concentrations (not those from RCMIP)
 df_emis_obs = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "slcf_emissions_1750-2022.csv",
+    "slcf_emissions_1750-2023.csv",
     index_col=0,
 )
 df_conc_obs = pd.read_csv(
-    "../../../../../data/concentrations/ghg_concentrations_1750-2022.csv", index_col=0
+    "../../../../../data/concentrations/ghg_concentrations_1750-2023.csv", index_col=0
 )
 for year in range(1751, 1850):
     df_conc_obs.loc[year, :] = np.nan
@@ -521,7 +521,7 @@ input_obs["temp"] = gmst[:273]
 
 df_ch4emis_obs = pd.read_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "all_scaled_1750-2022.csv"
+    "all_scaled_1750-2023.csv"
 )
 emis_ch4_obs = df_ch4emis_obs.loc[
     df_ch4emis_obs["variable"] == "Emissions|CH4", "1750":"2022"

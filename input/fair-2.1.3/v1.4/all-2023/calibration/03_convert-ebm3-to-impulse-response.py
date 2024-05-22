@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from fair.energy_balance_model import EnergyBalanceModel
 from fair.forcing.ghg import meinshausen2020
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Converting EBM parameters to IRM parameters...")
 

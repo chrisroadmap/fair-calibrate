@@ -7,7 +7,7 @@ import pandas as pd
 import pooch
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 cal_v = os.getenv("CALIBRATION_VERSION")
 fair_v = os.getenv("FAIR_VERSION")

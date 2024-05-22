@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 warnings.simplefilter("error", RuntimeWarning)
 
-load_dotenv()
+load_dotenv(override=True)
 
 print("Making climate response calibrations...")
 

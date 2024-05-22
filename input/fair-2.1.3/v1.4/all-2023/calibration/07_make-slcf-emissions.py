@@ -12,7 +12,7 @@ print("Making SLCF emissions...")
 
 # here, we do use biomass burning emissions for the SLCFs.
 
-load_dotenv()
+load_dotenv(override=True)
 
 pl.style.use("../../../../../defaults.mplstyle")
 
