@@ -225,23 +225,22 @@ fill(
 
 # emissions adjustments for N2O and CH4 (we don't want to make these defaults as people
 # might wanna run pulse expts with these gases)
-fill(f.species_configs["baseline_emissions"], 38.246272, specie="CH4")
-fill(f.species_configs["baseline_emissions"], 0.92661989, specie="N2O")
-fill(f.species_configs["baseline_emissions"], 19.41683292, specie="NOx")
-fill(f.species_configs["baseline_emissions"], 2.293964929, specie="Sulfur")
-fill(f.species_configs["baseline_emissions"], 348.4549732, specie="CO")
-fill(f.species_configs["baseline_emissions"], 60.62284009, specie="VOC")
-fill(f.species_configs["baseline_emissions"], 2.096765609, specie="BC")
-fill(f.species_configs["baseline_emissions"], 15.44571911, specie="OC")
-fill(f.species_configs["baseline_emissions"], 6.656462698, specie="NH3")
-fill(f.species_configs["baseline_emissions"], 0.92661989, specie="N2O")
-fill(f.species_configs["baseline_emissions"], 0.02129917, specie="CCl4")
-fill(f.species_configs["baseline_emissions"], 202.7251231, specie="CHCl3")
-fill(f.species_configs["baseline_emissions"], 211.0095537, specie="CH2Cl2")
-fill(f.species_configs["baseline_emissions"], 4544.519056, specie="CH3Cl")
-fill(f.species_configs["baseline_emissions"], 111.4920237, specie="CH3Br")
-fill(f.species_configs["baseline_emissions"], 0.008146006, specie="Halon-1211")
-fill(f.species_configs["baseline_emissions"], 0.000010554155, specie="SO2F2")
+fill(f.species_configs["baseline_emissions"], 38.246128, specie="CH4")
+fill(f.species_configs["baseline_emissions"], 1.004849712232, specie="N2O")
+fill(f.species_configs["baseline_emissions"], 19.416153139269, specie="NOx")
+fill(f.species_configs["baseline_emissions"], 2.78988322212428, specie="Sulfur")
+fill(f.species_configs["baseline_emissions"], 348.407245294965, specie="CO")
+fill(f.species_configs["baseline_emissions"], 60.8518470507445, specie="VOC")
+fill(f.species_configs["baseline_emissions"], 2.10109609969206, specie="BC")
+fill(f.species_configs["baseline_emissions"], 15.4562184847567, specie="OC")
+fill(f.species_configs["baseline_emissions"], 6.62109029653446, specie="NH3")
+fill(f.species_configs["baseline_emissions"], 0.0214229624109668, specie="CCl4")
+fill(f.species_configs["baseline_emissions"], 197.78060792128, specie="CHCl3")
+fill(f.species_configs["baseline_emissions"], 209.76439059552, specie="CH2Cl2")
+fill(f.species_configs["baseline_emissions"], 4460.12449798668, specie="CH3Cl")
+fill(f.species_configs["baseline_emissions"], 102.452145166338, specie="CH3Br")
+fill(f.species_configs["baseline_emissions"], 0.00832389133264743, specie="Halon-1211")
+fill(f.species_configs["baseline_emissions"], 0.0000103472092918767, specie="SO2F2")
 fill(f.species_configs["baseline_emissions"], 0, specie="CF4")
 
 # aerosol direct
@@ -570,7 +569,9 @@ for scenario in scenarios:
         .interpolate(axis=1)
         .values.squeeze()
     )
+    f
 
+f.forcing[:351, 2, :, 54:56].sum(axis=2).to_pandas().to_csv(f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/ssp245.csv")
 
 if plots:
     pl.plot(np.percentile(f.concentration[:, 2, :, 3], (50), axis=1))
