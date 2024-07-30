@@ -1,0 +1,30 @@
+name,type,input_mode,greenhouse_gas,aerosol_chemistry_from_emissions,aerosol_chemistry_from_concentration,partition_fraction0,partition_fraction1,partition_fraction2,partition_fraction3,unperturbed_lifetime0,unperturbed_lifetime1,unperturbed_lifetime2,unperturbed_lifetime3,tropospheric_adjustment,forcing_efficacy,forcing_temperature_feedback,forcing_scale,molecular_weight,baseline_concentration,forcing_reference_concentration,iirf_0,iirf_airborne,iirf_uptake,iirf_temperature,baseline_emissions,g1,g0,greenhouse_gas_radiative_efficiency,h2o_stratospheric_factor,lapsi_radiative_efficiency,land_use_cumulative_emissions_to_forcing,cl_atoms,br_atoms,fractional_release,ch4_lifetime_chemical_sensitivity,lifetime_temperature_sensitivity,contrails_radiative_efficiency,erfari_radiative_efficiency,ozone_radiative_efficiency,aci_shape,aci_scale
+CO2 FFI,co2 ffi,emissions,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,0,nan,nan,nan,nan,nan,0,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+CO2 AFOLU,co2 afolu,emissions,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,0,nan,nan,nan,nan,nan,-0.000206478,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+CO2,co2,calculated,1,0,0,0.2173,0.224,0.2824,0.2763,1000000000,394.4,36.54,4.304,0.05,1,0,1,44.009,278.3,277.15,nan,nan,nan,nan,0,11.41262243,0.010178288,nan,0,0,nan,0,0,0,0,nan,nan,nan,0,nan,nan
+CH4,ch4,emissions,1,0,1,1,0,0,0,9.858324719,9.858324719,9.858324719,9.858324719,-0.14,1,0,1,16.043,729.2,731.41,nan,nan,nan,nan,18.92861674,8.249410814,0.36785517,nan,4.40E-05,0,0,0,0,0,0.000295472,-1.51E-14,nan,nan,0,nan,nan
+N2O,n2o,emissions,1,0,1,1,0,0,0,109,109,109,109,0.07,1,0,1,44.013,270.1,273.87,65.44969575,0,0,0,0.074782435,25.49528818,0.076755588,nan,0,0,0,0,0,0,2.71E-05,nan,nan,nan,0,nan,nan
+Sulfur,sulfur,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,64.069,nan,nan,nan,nan,nan,nan,1.360968099,nan,nan,nan,0,0,0,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+BC,black carbon,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,12.011,nan,nan,nan,nan,nan,nan,2.062813462,nan,nan,nan,0,0.018312442,0,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+OC,organic carbon,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,12.011,nan,nan,nan,nan,nan,nan,20.59753514,nan,nan,nan,0,0,0,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+NH3,other slcf,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,17.031,nan,nan,nan,nan,nan,nan,7.784061906,nan,nan,nan,0,0,0,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+NOx,other slcf,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,46.006,nan,nan,nan,nan,nan,nan,8.578268705,nan,nan,nan,0,0,0,nan,nan,nan,-0.002808424,nan,nan,nan,0,nan,nan
+VOC,other slcf,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,59.746,nan,nan,nan,nan,nan,nan,54.37980482,nan,nan,nan,0,0,0,nan,nan,nan,0.000710114,nan,nan,nan,0,nan,nan
+CO,other slcf,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,28.01,nan,nan,nan,nan,nan,nan,318.4047994,nan,nan,nan,0,0,0,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+CF4,f-gas,emissions,1,0,0,1,0,0,0,50000,50000,50000,50000,0,1,0,1,88.004,34.05,34.05,99.90006663,0,0,0,0.011105598,0.099866767,0,0.09859,0,0,0,0,0,0,0,nan,nan,nan,0,nan,nan
+SF6,f-gas,emissions,1,0,0,1,0,0,0,3200,3200,3200,3200,0,1,0,1,146.06,0,0,98.45364968,0,0,0,0,1.530326228,1.15E-28,0.56657,0,0,0,0,0,0,0,nan,nan,nan,0,nan,nan
+HFC-125,f-gas,emissions,1,0,0,1,0,0,0,30,30,30,30,0,1,0,1,120.02,0,0,28.9297802,0,0,0,0,25.36238086,0.319608933,0.23378,0,0,0,0,0,0,0,nan,nan,nan,0,nan,nan
+HFC-134a,f-gas,emissions,1,0,0,1,0,0,0,14,14,14,14,0,1,0,1,102.03,0,0,13.98893314,0,0,0,0,13.9098841,0.365794734,0.16714,0,0,0,0,0,0,0,nan,nan,nan,0,nan,nan
+HFC-143a,f-gas,emissions,1,0,0,1,0,0,0,51,51,51,51,0,1,0,1,84.04,0,0,43.82185266,0,0,0,0,29.74705396,0.229202513,0.168,0,0,0,0,0,0,0,nan,nan,nan,0,nan,nan
+HFC-227ea,f-gas,emissions,1,0,0,1,0,0,0,36,36,36,36,0,1,0,1,170.03,0,0,33.76164514,0,0,0,0,27.54399273,0.29354177,0.27325,0,0,0,0,0,0,0,nan,nan,nan,0,nan,nan
+HFC-245fa,f-gas,emissions,1,0,0,1,0,0,0,7.9,7.9,7.9,7.9,0,1,0,1,134.05,0,0,7.899974868,0,0,0,0,7.89965674,0.367864627,0.24498,0,0,0,0,0,0,0,nan,nan,nan,0,nan,nan
+HFC-32,f-gas,emissions,1,0,0,1,0,0,0,5.4,5.4,5.4,5.4,0,1,0,1,52.023,0,0,5.399999951,0,0,0,0,5.399999044,0.367879379,0.11144,0,0,0,0,0,0,0,nan,nan,nan,0,nan,nan
+HFC-4310mee,f-gas,emissions,1,0,0,1,0,0,0,17,17,17,17,0,1,0,1,252.05,0,0,16.95260031,0,0,0,0,16.67377861,0.36177885,0.35731,0,0,0,0,0,0,0,nan,nan,nan,0,nan,nan
+Solar,solar,forcing,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+Volcanic,volcanic,forcing,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,0.6,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+Aerosol-radiation interactions,ari,calculated,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+Aerosol-cloud interactions,aci,calculated,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+Ozone,ozone,calculated,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,-0.037,1,47.998,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+Light absorbing particles on snow and ice,lapsi,calculated,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+Stratospheric water vapour,h2o stratospheric,calculated,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,nan,nan,nan,0,nan,nan
+Land use,land use,calculated,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,nan,nan,nan,0,nan,nan
