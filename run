@@ -12,8 +12,7 @@ fi
 
 script_dir=$PWD
 
-#for pipeline in calibration sampling constraining; do
-for pipeline in sampling constraining; do
+for pipeline in calibration sampling constraining; do
     cd ${script_dir}/input/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET}/${pipeline}
     file_array=( $(\ls [0-9][0-9]_*.*) )
     for file in "${file_array[@]}"; do
