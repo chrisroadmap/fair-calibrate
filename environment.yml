@@ -2,7 +2,6 @@ name: fair-calibrate
 channels:
   - chrisroadmap
   - conda-forge
-  - defaults
 dependencies:
   - python==3.11
   - black
@@ -17,8 +16,6 @@ dependencies:
   - pandas
   - pooch
   - python-dotenv
-  - r-base==4.3.1
-  - r-devtools
   - scikit-learn
   - scipy
   - scmdata
