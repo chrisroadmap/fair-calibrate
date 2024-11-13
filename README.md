@@ -9,7 +9,7 @@ Multiple strategies to calibrate the FaIR model.
 ### requirements
 - `anaconda` for `python3`
 - `python>=3.7`
-- for the Cummins calibration, `R>=4.1.1` and `cmake>=3.2`
+- for the Cummins calibration, `R>=4.4.0` and `cmake>=3.2`
 
 ### set up environments for Python and R
 
