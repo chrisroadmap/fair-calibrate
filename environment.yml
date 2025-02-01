@@ -2,12 +2,12 @@ name: fair-calibrate
 channels:
   - chrisroadmap
   - conda-forge
-  - defaults
 dependencies:
-  - python==3.11
+  - python==3.11.10
   - black
   - fair==2.1.3
   - flake8
+  - flexparser<0.4  # pint dependency but v0.4 breaks it, see https://github.com/hgrecco/pint/issues/2074
   - h5py
   - isort
   - matplotlib
@@ -15,10 +15,9 @@ dependencies:
   - netCDF4
   - numpy
   - pandas
+  - pint==0.24.3  # aneris dependency
   - pooch
   - python-dotenv
-  - r-base==4.3.1
-  - r-devtools
   - scikit-learn
   - scipy
   - scmdata
