@@ -54,7 +54,7 @@ accept_step2[step2] = True
 
 temp_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-    "temperature_1850-2024.npy"
+    "temperature_1850-2022.npy"
 )
 
 df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2023.csv")
@@ -66,7 +66,7 @@ weights[-1] = 0.5
 
 fig, ax = pl.subplots(1, 3, figsize=(18 / 2.54, 6 / 2.54))
 ax[0].fill_between(
-    np.arange(1850, 2025),
+    np.arange(1850, 2023),
     np.min(temp_in - np.average(temp_in[:52, :], weights=weights, axis=0), axis=1),
     np.max(temp_in - np.average(temp_in[:52, :], weights=weights, axis=0), axis=1),
     color="#000000",
@@ -74,7 +74,7 @@ ax[0].fill_between(
     lw=0,
 )
 ax[0].fill_between(
-    np.arange(1850, 2025),
+    np.arange(1850, 2023),
     np.percentile(
         temp_in - np.average(temp_in[:52, :], weights=weights, axis=0), 5, axis=1
     ),
@@ -86,7 +86,7 @@ ax[0].fill_between(
     lw=0,
 )
 ax[0].fill_between(
-    np.arange(1850, 2025),
+    np.arange(1850, 2023),
     np.percentile(
         temp_in - np.average(temp_in[:52, :], weights=weights, axis=0), 16, axis=1
     ),
@@ -98,7 +98,7 @@ ax[0].fill_between(
     lw=0,
 )
 ax[0].plot(
-    np.arange(1850, 2025),
+    np.arange(1850, 2023),
     np.median(temp_in - np.average(temp_in[:52, :], weights=weights, axis=0), axis=1),
     color="#000000",
     lw=1,
@@ -112,7 +112,7 @@ ax[0].axhline(0, color="k", ls=":", lw=0.5)
 ax[0].set_title("(a) Prior")
 
 ax[1].fill_between(
-    np.arange(1850, 2025),
+    np.arange(1850, 2023),
     np.min(
         temp_in[:, accept_step1]
         - np.average(temp_in[:52, accept_step1], weights=weights, axis=0),
@@ -128,7 +128,7 @@ ax[1].fill_between(
     lw=0,
 )
 ax[1].fill_between(
-    np.arange(1850.5, 2025),
+    np.arange(1850.5, 2023),
     np.percentile(
         temp_in[:, accept_step1]
         - np.average(temp_in[:52, accept_step1], weights=weights, axis=0),
@@ -146,7 +146,7 @@ ax[1].fill_between(
     lw=0,
 )
 ax[1].fill_between(
-    np.arange(1850.5, 2025),
+    np.arange(1850.5, 2023),
     np.percentile(
         temp_in[:, accept_step1]
         - np.average(temp_in[:52, accept_step1], weights=weights, axis=0),
@@ -164,7 +164,7 @@ ax[1].fill_between(
     lw=0,
 )
 ax[1].plot(
-    np.arange(1850.5, 2025),
+    np.arange(1850.5, 2023),
     np.median(
         temp_in[:, accept_step1]
         - np.average(temp_in[:52, accept_step1], weights=weights, axis=0),
@@ -181,7 +181,7 @@ ax[1].axhline(0, color="k", ls=":", lw=0.5)
 ax[1].set_title("(b) After RMSE constraint")
 
 ax[2].fill_between(
-    np.arange(1850, 2025),
+    np.arange(1850, 2023),
     np.min(
         temp_in[:, accept_step2]
         - np.average(temp_in[:52, accept_step2], weights=weights, axis=0),
@@ -197,7 +197,7 @@ ax[2].fill_between(
     lw=0,
 )
 ax[2].fill_between(
-    np.arange(1850, 2025),
+    np.arange(1850, 2023),
     np.percentile(
         temp_in[:, accept_step2]
         - np.average(temp_in[:52, accept_step2], weights=weights, axis=0),
@@ -215,7 +215,7 @@ ax[2].fill_between(
     lw=0,
 )
 ax[2].fill_between(
-    np.arange(1850, 2025),
+    np.arange(1850, 2023),
     np.percentile(
         temp_in[:, accept_step2]
         - np.average(temp_in[:52, accept_step2], weights=weights, axis=0),
@@ -233,7 +233,7 @@ ax[2].fill_between(
     lw=0,
 )
 ax[2].plot(
-    np.arange(1850, 2025),
+    np.arange(1850, 2023),
     np.median(
         temp_in[:, accept_step2]
         - np.average(temp_in[:52, accept_step2], weights=weights, axis=0),

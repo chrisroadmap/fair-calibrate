@@ -54,8 +54,8 @@ if __name__ == "__main__":
         index_col="year",
     )
 
-    volcanic_forcing = df_volcanic["volcanic_ERF"].loc[1750:2024].values
-    solar_forcing = df_solar["erf"].loc[1750:2024].values
+    volcanic_forcing = df_volcanic["volcanic_ERF"].loc[1750:2022].values
+    solar_forcing = df_solar["erf"].loc[1750:2022].values
 
     df_cc = pd.read_csv(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
     # for all except temperature, the full time series is not important so we can save
     # a bit of space
-    temp_out = np.ones((175, samples)) * np.nan
+    temp_out = np.ones((173, samples)) * np.nan
     ohc_out = np.ones((samples)) * np.nan
     fari_out = np.ones((samples)) * np.nan
     faci_out = np.ones((samples)) * np.nan
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     )
     np.save(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-        "temperature_1850-2024.npy",
+        "temperature_1850-2022.npy",
         temp_out,
         allow_pickle=True,
     )
@@ -279,7 +279,7 @@ if __name__ == "__main__":
     )
     np.save(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-        "concentration_co2_2023.npy",
+        "concentration_co2_2021.npy",
         co2_out,
         allow_pickle=True,
     )

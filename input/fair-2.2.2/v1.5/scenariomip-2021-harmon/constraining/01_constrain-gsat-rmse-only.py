@@ -31,11 +31,11 @@ assert fair_v == __version__
 
 temp_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-    "temperature_1850-2024.npy"
+    "temperature_1850-2022.npy"
 )
 
 df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2023.csv")
-gmst = df_gmst["gmst"].values
+gmst = df_gmst["gmst"].values[:172]  # 1850.5 to 2021.5
 
 
 def rmse(obs, mod):
@@ -51,14 +51,14 @@ rmse_temp = np.zeros((samples))
 if plots:
     fig, ax = pl.subplots(figsize=(5, 5))
     ax.fill_between(
-        np.arange(1850, 2025),
+        np.arange(1850, 2023),
         np.min(temp_in - np.average(temp_in[:52, :], weights=weights, axis=0), axis=1),
         np.max(temp_in - np.average(temp_in[:52, :], weights=weights, axis=0), axis=1),
         color="#000000",
         alpha=0.2,
     )
     ax.fill_between(
-        np.arange(1850, 2025),
+        np.arange(1850, 2023),
         np.percentile(
             temp_in - np.average(temp_in[:52, :], weights=weights, axis=0), 5, axis=1
         ),
@@ -69,7 +69,7 @@ if plots:
         alpha=0.2,
     )
     ax.fill_between(
-        np.arange(1850, 2025),
+        np.arange(1850, 2023),
         np.percentile(
             temp_in - np.average(temp_in[:52, :], weights=weights, axis=0), 16, axis=1
         ),
@@ -80,15 +80,15 @@ if plots:
         alpha=0.2,
     )
     ax.plot(
-        np.arange(1850, 2025),
+        np.arange(1850, 2023),
         np.median(
             temp_in - np.average(temp_in[:52, :], weights=weights, axis=0), axis=1
         ),
         color="#000000",
     )
-    ax.plot(np.arange(1850.5, 2024), gmst, color="b")
+    ax.plot(np.arange(1850.5, 2022), gmst, color="b")
 
-    ax.set_xlim(1850, 2025)
+    ax.set_xlim(1850, 2022)
     ax.set_ylim(-1, 5)
     ax.set_ylabel("°C relative to 1850-1900")
     ax.axhline(0, color="k", ls=":", lw=0.5)
@@ -116,8 +116,8 @@ if plots:
 # want to average out internal variability in the model or the obs.
 for i in tqdm(range(samples), disable=1 - progress):
     rmse_temp[i] = rmse(
-        gmst[:174],
-        temp_in[1:175, i] - np.average(temp_in[:52, i], weights=weights, axis=0),
+        gmst,
+        temp_in[1:173, i] - np.average(temp_in[:52, i], weights=weights, axis=0),
     )
 
 accept_temp = rmse_temp < 0.17
@@ -137,7 +137,7 @@ if plots:
     # plot top 10 and "just squeaking in 10"
     fig, ax = pl.subplots(figsize=(5, 5))
     ax.plot(
-        np.arange(1850.5, 2025),
+        np.arange(1850.5, 2023),
         (
             temp_in[:, valid_temp[just_passing]]
             - np.average(
@@ -148,7 +148,7 @@ if plots:
         label=[r"RMSE $\approx$ 0.17°C"] + [""] * 9,
     )
     ax.plot(
-        np.arange(1850.5, 2025),
+        np.arange(1850.5, 2023),
         (
             temp_in[:, valid_temp[smashing_it]]
             - np.average(temp_in[:52, valid_temp[smashing_it]], weights=weights, axis=0)
@@ -158,8 +158,8 @@ if plots:
     )
     ax.axhspan(0.67, 0.99, color="k", alpha=0.15, lw=0)
     ax.axvspan(1995, 2015, color="k", alpha=0.15, lw=0)
-    ax.plot(np.arange(1850.5, 2024), gmst, color="k", label="Best estimate historical")
-    ax.set_xlim(1850, 2025)
+    ax.plot(np.arange(1850.5, 2022), gmst, color="k", label="Best estimate historical")
+    ax.set_xlim(1850, 2022)
     ax.set_ylim(-1, 4)
     ax.set_ylabel("°C relative to 1850-1900")
     ax.axhline(0, color="k", ls=":", lw=0.5)
@@ -180,7 +180,7 @@ if plots:
     # ensemble wide
     fig, ax = pl.subplots(figsize=(5, 5))
     ax.fill_between(
-        np.arange(1850, 2025),
+        np.arange(1850, 2023),
         np.min(
             temp_in[:, accept_temp]
             - np.average(temp_in[:52, accept_temp], weights=weights, axis=0),
@@ -195,7 +195,7 @@ if plots:
         alpha=0.2,
     )
     ax.fill_between(
-        np.arange(1850.5, 2025),
+        np.arange(1850.5, 2023),
         np.percentile(
             temp_in[:, accept_temp]
             - np.average(temp_in[:52, accept_temp], weights=weights, axis=0),
@@ -212,7 +212,7 @@ if plots:
         alpha=0.2,
     )
     ax.fill_between(
-        np.arange(1850.5, 2025),
+        np.arange(1850.5, 2023),
         np.percentile(
             temp_in[:, accept_temp]
             - np.average(temp_in[:52, accept_temp], weights=weights, axis=0),
@@ -229,7 +229,7 @@ if plots:
         alpha=0.2,
     )
     ax.plot(
-        np.arange(1850.5, 2025),
+        np.arange(1850.5, 2023),
         np.median(
             temp_in[:, accept_temp]
             - np.average(temp_in[:52, accept_temp], weights=weights, axis=0),
@@ -238,9 +238,9 @@ if plots:
         color="#000000",
     )
 
-    ax.plot(np.arange(1850.5, 2024), gmst, color="b")
+    ax.plot(np.arange(1850.5, 2022), gmst, color="b")
 
-    ax.set_xlim(1850, 2025)
+    ax.set_xlim(1850, 2022)
     ax.set_ylim(-1, 5)
     ax.set_ylabel("°C relative to 1850-1900")
     ax.axhline(0, color="k", ls=":", lw=0.5)

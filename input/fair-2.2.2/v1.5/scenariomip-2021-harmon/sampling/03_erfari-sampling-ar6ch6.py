@@ -32,9 +32,8 @@ progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
 df_emis = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "slcf_emissions_1750-2022.csv",
-    index_col=0,
+    f"../../../../../data/emissions/"
+    "historical_emissions_1750-2021.csv"
 )
 df_conc = pd.read_csv(
     "../../../../../data/concentrations/ghg_concentrations_1750-2023.csv", index_col=0
@@ -122,18 +121,18 @@ hc_species = [
     "Halon-2402",
 ]
 
-name_conv = {specie: specie for specie in emitted_species}
-name_conv["Sulfur"] = "SO2"
-name_conv["VOC"] = "NMVOC"
+#name_conv = {specie: specie for specie in emitted_species}
+#name_conv["Sulfur"] = "SO2"
+#name_conv["VOC"] = "NMVOC"
 
 species_out = {}
 for ispec, species in enumerate(emitted_species):
-    species_out[species] = df_emis[name_conv[species]].values
+    species_out[species] = df_emis.loc[df_emis["variable"] == f"Emissions|{species}", '1750':'2021'].values.squeeze()
 
 for ispec, species in enumerate(concentration_species):
-    species_out[species] = df_conc[species].values[:273]
+    species_out[species] = df_conc[species].values[:272]
 
-species_df = pd.DataFrame(species_out, index=range(1750, 2023))
+species_df = pd.DataFrame(species_out, index=range(1750, 2022))
 
 
 def calculate_eesc(
@@ -217,7 +216,7 @@ br_atoms = {
 }
 
 hc_eesc = {}
-total_eesc = np.zeros(273)
+total_eesc = np.zeros(272)
 for species in cl_atoms:
     hc_eesc[species] = calculate_eesc(
         species_df.loc[:, species],

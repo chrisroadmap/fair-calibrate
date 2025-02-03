@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Calibrate emissions scale factors for non-CH4."""
+"""Calibrate lifetime scale factors for non-CH4."""
 
-# PRIMAP emissions are too low in most cases, so scale them up to maintain consistency
-# with observed concentrations. We retain the IPCC's best estimate lifetime.
-
-# the only gas for which this should now be an issue is N2O
+# This script compares emissions to concentrations over the historical and
+# modifies the IPCC best estimate lifetime if necessary (presuming there is
+# some uncertainty in this, and it's not an order of magnitude different).
 
 import os
 
@@ -43,13 +42,6 @@ datadir = os.getenv("DATADIR")
 
 assert fair_v == __version__
 pl.style.use("../../../../../defaults.mplstyle")
-
-# Temperature data
-# Use observations 1850-2023 from IGCC, then use ssp370 projections from IPCC
-# though this does not get used here
-df_temp = pd.read_csv("../../../../../data/forcing/ssp_strawman_warming.csv")
-gmst = df_temp["ssp370"].values
-
 
 # put this into a simple one box model
 def one_box(
@@ -113,7 +105,6 @@ species = [
         "HCFC-133a",
         "HCFC-31",
         "HCFC-124",
-        "Halon-1202",
     ]
 ]
 
@@ -128,12 +119,11 @@ renames["n-C4F10"] = "C4F10"
 renames["n-C5F12"] = "C5F12"
 renames["n-C6F14"] = "C6F14"
 
-emissions_scalings = {}
+lifetime_scalings = {}
 
 for specie in species:
     input_obs = {}
-    input_obs[specie] = df_conc_obs[specie].values[:271]  # 1750-2022 timepoints
-    input_obs["temp"] = gmst[:271]  # 1750-2021 timepoints
+    input_obs[specie] = df_conc_obs[specie].values[:272]  # 1750-2021 timepoints
 
     emis_obs = df_emis_obs.loc[
         df_emis_obs["variable"] == f"Emissions|{renames[specie]}", "1750":"2021"
@@ -143,10 +133,9 @@ for specie in species:
     lifetime = df_defaults.loc[renames[specie], "unperturbed_lifetime0"]
     molecular_weight = df_defaults.loc[renames[specie], "molecular_weight"]
 
-    # baselines are 1850! so "base" lifetime out is for 1750!
+    # baselines are 1850, so "base" lifetime out is for 1750
     baseline_obs = {}
     baseline_obs[specie] = input_obs[specie][100]
-    baseline_obs["temp"] = 0
 
     burden_per_emission = 1 / (5.1352e18 / 1e18 * molecular_weight / 28.97)
     partition_fraction = 1
@@ -155,45 +144,39 @@ for specie in species:
     natural_emissions_adjustment = emis_obs[0]
 
     def find_scale_factor(sf):
-        conc_n2o = np.zeros(272)
+        conc_projected = np.zeros(272)  # 1751-2022 timebounds
         gas_boxes = 0
         airborne_emissions = 0
 
         for i in range(272):
-            conc_n2o[i], gas_boxes, airborne_emissions = one_box(
-                emis_obs[i] * sf[0],
+            conc_projected[i], gas_boxes, airborne_emissions = one_box(
+                emis_obs[i],
                 gas_boxes,
                 airborne_emissions,
                 burden_per_emission,
-                lifetime,
+                lifetime * sf[0],
                 1,
                 partition_fraction,
                 pre_industrial_concentration=pre_industrial_concentration,
                 timestep=1,
-                natural_emissions_adjustment=natural_emissions_adjustment * sf[0],
+                natural_emissions_adjustment=natural_emissions_adjustment,
             )
-        return conc_n2o[-2:].mean() - input_obs[specie][-1]
-        # return conc_n2o[-2:].mean() - input_obs["N2O"][-2]
-        # mean of 2018 and 2019 tbs ; 2018 timepoint
+        return conc_projected[-2:].mean() - input_obs[specie][-1]
+        # mean of 2021 and 2022 timebounds ; 2021 timepoint
 
-    rootsol = scipy.optimize.root(find_scale_factor, 1.1)
+    rootsol = scipy.optimize.root(find_scale_factor, 1)
 
     parameters = {}
     parameters["best_fit"] = {"scale": rootsol.x[0]}
 
-    emissions_scalings[renames[specie]] = parameters["best_fit"]["scale"]
+    lifetime_scalings[renames[specie]] = parameters["best_fit"]["scale"]
 
-# these are the emissions scaling values that we apply
-# they should be pretty indistinguishable from one except for N2O and C6F14
-# N2O from PRIMAP so likely biased low
-# C6F14 in the concentration time series includes both n- and i- variants
-# in the emissions time series only the n- variant
-df = pd.DataFrame(emissions_scalings, index=["historical_best"])
+df = pd.DataFrame(lifetime_scalings, index=["historical_best"])
 os.makedirs(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
     exist_ok=True,
 )
 df.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-    "emissions_scalings.csv"
+    "lifetime_scalings.csv"
 )
