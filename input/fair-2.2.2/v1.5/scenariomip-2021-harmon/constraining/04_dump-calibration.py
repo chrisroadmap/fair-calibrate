@@ -143,6 +143,7 @@ minor_ghgs = [
     "forcing_scale[CH3Cl]",
     "forcing_scale[CH3CCl3]",
     "forcing_scale[CH3Br]",
+    "forcing_scale[Halon-1202]",
     "forcing_scale[Halon-1211]",
     "forcing_scale[Halon-1301]",
     "forcing_scale[Halon-2402]",
@@ -180,7 +181,7 @@ params_out = pd.concat(
         df_aci.loc[valid_all, :].rename(columns=aci_renames),
         df_ozone.loc[valid_all, :].rename(columns=ozone_renames),
         df_scaling.loc[valid_all, :].rename(columns=scaling_renames),
-        pd.DataFrame((df_scaling.loc[valid_all, "minorGHG"].values * np.ones((40, 1))).T, index=valid_all, columns=minor_ghgs),
+        pd.DataFrame((df_scaling.loc[valid_all, "minorGHG"].values * np.ones((41, 1))).T, index=valid_all, columns=minor_ghgs),
         df_1750co2.loc[valid_all, :].rename(
             columns={"co2_concentration": "baseline_concentration[CO2]"}
         ),

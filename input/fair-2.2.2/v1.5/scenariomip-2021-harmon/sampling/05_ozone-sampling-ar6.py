@@ -115,9 +115,8 @@ print("2019-1750 ozone ERF from Skeie:", o3total[269])
 print("2014-1850 ozone ERF from Skeie:", o3total[264] - o3total[100])
 
 df_emis = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "slcf_emissions_1750-2022.csv",
-    index_col=0,
+    f"../../../../../data/emissions/"
+    "historical_emissions_1750-2021.csv"
 )
 df_conc = pd.read_csv(
     "../../../../../data/concentrations/ghg_concentrations_1750-2023.csv", index_col=0
@@ -176,17 +175,17 @@ hc_species = [
     "Halon-2402",
 ]
 
-name_conv = {specie: specie for specie in emitted_species}
-name_conv["VOC"] = "NMVOC"
+#name_conv = {specie: specie for specie in emitted_species}
+#name_conv["VOC"] = "NMVOC"
 
 species_out = {}
 for ispec, species in enumerate(emitted_species):
-    species_out[species] = df_emis[name_conv[species]].values
+    species_out[species] = df_emis.loc[df_emis["variable"] == f"Emissions|{species}", '1750':'2021'].values.squeeze()
 
 for ispec, species in enumerate(concentration_species):
-    species_out[species] = df_conc[species].values[:273]
+    species_out[species] = df_conc[species].values[:272]
 
-species_df = pd.DataFrame(species_out, index=range(1750, 2023))
+species_df = pd.DataFrame(species_out, index=range(1750, 2022))
 
 
 def calculate_eesc(
@@ -358,7 +357,7 @@ forcing = (
 
 if plots:
     pl.figure(figsize=(9 / 2.54, 9 / 2.54))
-    pl.plot(np.arange(1750.5, 2023), forcing, label="best estimate fit", color="0.5")
+    pl.plot(np.arange(1750.5, 2022), forcing, label="best estimate fit", color="0.5")
     pl.plot(np.arange(1750.5, 2021), o3total, label="Skeie et al. 2020 mean", color="k")
     pl.legend()
     pl.title("Ozone forcing (no feedbacks)")

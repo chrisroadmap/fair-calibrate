@@ -17,29 +17,28 @@ constraint_set = os.getenv("CONSTRAINT_SET")
 
 
 def run_fair(cfg):
-    scenarios = ["ssp245"]
+    scenarios = ["SSP2 - Medium Emissions"]
     batch_start = cfg["batch_start"]
     batch_end = cfg["batch_end"]
     batch_size = batch_end - batch_start
 
     species, properties = read_properties()
-    species.remove("Halon-1202")
     species.remove("NOx aviation")
     species.remove("Contrails")
 
     da_emissions = xr.load_dataarray(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-        "ssps_harmonized_1750-2499.nc"
+        "scenario_subset_1750-2100.nc"
     )
 
     f = FAIR(ch4_method="Thornhill2021")
-    f.define_time(1750, 2024, 1)
+    f.define_time(1750, 2022, 1)
     f.define_scenarios(scenarios)
     f.define_configs(list(range(batch_start, batch_end)))
     f.define_species(species, properties)
     f.allocate()
 
-    da = da_emissions.loc[dict(config="unspecified", scenario="ssp245")][:274, ...]
+    da = da_emissions.loc[dict(config="unspecified", scenario="SSP2 - Medium Emissions")][:272, ...]
     fe = da.expand_dims(dim=["scenario", "config"], axis=(1, 2))
     f.emissions = fe.drop("config") * np.ones((1, 1, batch_size, 1))
 
@@ -124,25 +123,24 @@ def run_fair(cfg):
     )
 
     # Reconstructed emissions adjustments for all species to match first timepoint
-    fill(f.species_configs["baseline_emissions"], 38.246125, specie="CH4")
-    fill(f.species_configs["baseline_emissions"], 19.4161560482574, specie="NOx")
-    fill(f.species_configs["baseline_emissions"], 2.33734884056534, specie="Sulfur")
-    fill(f.species_configs["baseline_emissions"], 348.407245294964, specie="CO")
-    fill(f.species_configs["baseline_emissions"], 60.8518470507444, specie="VOC")
-    fill(f.species_configs["baseline_emissions"], 2.10109609969206, specie="BC")
-    fill(f.species_configs["baseline_emissions"], 15.4562184847567, specie="OC")
-    fill(f.species_configs["baseline_emissions"], 6.62111901830797, specie="NH3")
-    fill(f.species_configs["baseline_emissions"], 1.0084689176671, specie="N2O")
-    fill(f.species_configs["baseline_emissions"], 0.0212991700111209, specie="CCl4")
-    fill(f.species_configs["baseline_emissions"], 202.725123119312, specie="CHCl3")
-    fill(f.species_configs["baseline_emissions"], 211.009553651382, specie="CH2Cl2")
-    fill(f.species_configs["baseline_emissions"], 4544.51905557473, specie="CH3Cl")
-    fill(f.species_configs["baseline_emissions"], 111.492023749739, specie="CH3Br")
-    fill(f.species_configs["baseline_emissions"], 0.0081460061580666, specie="Halon-1211")
-    fill(f.species_configs["baseline_emissions"], 0.0000105541552162291, specie="SO2F2")
-    fill(f.species_configs["baseline_emissions"], 0.0106232742096882, specie="CF4")
-    fill(f.species_configs["baseline_emissions"], 3.15281828400321E-09, specie="C2F6")
-    fill(f.species_configs["baseline_emissions"], 3.30939166837664E-06, specie="HFC-227ea")
+    # nice to not hardcode this :)
+    fill(f.species_configs["baseline_emissions"], 41.85717381, specie="CH4")
+    fill(f.species_configs["baseline_emissions"], 19.41630683, specie="NOx")
+    fill(f.species_configs["baseline_emissions"], 2.337202898, specie="Sulfur")
+    fill(f.species_configs["baseline_emissions"], 348.3998523, specie="CO")
+    fill(f.species_configs["baseline_emissions"], 60.85061064, specie="VOC")
+    fill(f.species_configs["baseline_emissions"], 2.103349413, specie="BC")
+    fill(f.species_configs["baseline_emissions"], 15.47674192, specie="OC")
+    fill(f.species_configs["baseline_emissions"], 6.621228655, specie="NH3")
+    fill(f.species_configs["baseline_emissions"], 0.900303351, specie="N2O")
+    fill(f.species_configs["baseline_emissions"], 0.02129917, specie="CCl4")
+    fill(f.species_configs["baseline_emissions"], 261.0325378, specie="CHCl3")
+    fill(f.species_configs["baseline_emissions"], 250.4037033, specie="CH2Cl2")
+    fill(f.species_configs["baseline_emissions"], 4584.31331, specie="CH3Cl")
+    fill(f.species_configs["baseline_emissions"], 115.9835504, specie="CH3Br")
+    fill(f.species_configs["baseline_emissions"], 0.008146006, specie="Halon-1211")
+    fill(f.species_configs["baseline_emissions"], 0.010623274, specie="CF4")
+    fill(f.species_configs["baseline_emissions"], 3.15E-09, specie="C2F6")
     fill(f.species_configs["baseline_emissions"], 0.0003729417896147, specie="HFC-32")
 
     # aerosol indirect
@@ -182,6 +180,7 @@ def run_fair(cfg):
         "CH3Cl",
         "CH3CCl3",
         "CH3Br",
+        "Halon-1202",
         "Halon-1211",
         "Halon-1301",
         "Halon-2402",
@@ -271,14 +270,14 @@ def run_fair(cfg):
         f.temperature[100:, 0, :, 0],
         f.ocean_heat_content_change[270:272, 0, :].mean(axis=0)
         - f.ocean_heat_content_change[221:223, 0, :].mean(axis=0),
-        f.concentration[273:275, 0, :, 2].mean(axis=0),
+        f.concentration[271:273, 0, :, 2].mean(axis=0),
         np.average(
-            f.forcing[255:266, 0, :, 54],
+            f.forcing[255:266, 0, :, 55],
             weights=np.array([0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]),
             axis=0,
         ),
         np.average(
-            f.forcing[255:266, 0, :, 55],
+            f.forcing[255:266, 0, :, 56],
             weights=np.array([0.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]),
             axis=0,
         ),

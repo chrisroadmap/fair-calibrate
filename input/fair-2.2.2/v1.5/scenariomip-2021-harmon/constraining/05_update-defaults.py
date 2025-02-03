@@ -101,7 +101,6 @@ if update_lapsi == True:
 # Volcanic: tune down volcanic efficiency
 df_species_configs.loc["Volcanic", "forcing_efficacy"] = 0.6
 
-df_species_configs.drop(index=["Halon-1202"], inplace=True)
 df_species_configs.drop(index=["NOx aviation"], inplace=True)
 df_species_configs.drop(index=["Contrails"], inplace=True)
 
@@ -109,7 +108,7 @@ df_species_configs.drop(index=["Contrails"], inplace=True)
 # read the default baseline_emissions file: the baseline emissions for the specified species
 # will be updated in the config_species_properties
 df_emissions = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/all_scaled_1750-2024.csv"
+    f"../../../../../data/emissions/historical_emissions_1750-2021.csv"
 )
 
 for specie in df_emissions.variable:

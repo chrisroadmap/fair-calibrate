@@ -246,15 +246,14 @@ erfaci_sample = scipy.stats.trapezoid.rvs(
 
 # Sampling with updated emissions.
 df_emis_obs = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "slcf_emissions_1750-2022.csv",
-    index_col=0,
+    f"../../../../../data/emissions/"
+    "historical_emissions_1750-2021.csv"
 )
 
 # overwrite RCMIP
-so2 = df_emis_obs["SO2"].values
-bc = df_emis_obs["BC"].values
-oc = df_emis_obs["OC"].values
+so2 = df_emis_obs.loc[df_emis_obs["variable"] == "Emissions|Sulfur", '1750':'2021'].values.squeeze()
+bc = df_emis_obs.loc[df_emis_obs["variable"] == "Emissions|BC", '1750':'2021'].values.squeeze()
+oc = df_emis_obs.loc[df_emis_obs["variable"] == "Emissions|OC", '1750':'2021'].values.squeeze()
 
 beta = np.zeros(samples)
 # erfaci = np.zeros((273, samples))

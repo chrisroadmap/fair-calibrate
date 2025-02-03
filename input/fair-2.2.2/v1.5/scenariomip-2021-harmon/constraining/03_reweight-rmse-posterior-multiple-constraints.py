@@ -50,7 +50,7 @@ assert input_ensemble_size > output_ensemble_size
 
 temp_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-    "temperature_1850-2024.npy"
+    "temperature_1850-2022.npy"
 )
 ohc_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
@@ -66,7 +66,7 @@ faci_in = np.load(
 )
 co2_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-    "concentration_co2_2023.npy"
+    "concentration_co2_2021.npy"
 )
 ecs_in = np.load(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/ecs.npy"
@@ -86,7 +86,10 @@ def opt(x, q05_desired, q50_desired, q95_desired):
 
 
 ecs_params = scipy.optimize.root(opt, [1, 1, 1], args=(2, 3, 5)).x
-gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(0.90, 1.05, 1.16)).x
+
+# note this is my assessment! IGCC 2023 for 2004-23, minus 0.04C for median and ranges, based 
+# on the timeseries, to estimate 2002-21.
+gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(0.86, 1.01, 1.12)).x
 
 samples = {}
 samples["ECS"] = scipy.stats.skewnorm.rvs(
@@ -105,7 +108,7 @@ samples["TCR"] = scipy.stats.norm.rvs(
 samples["OHC"] = scipy.stats.norm.rvs(
     loc=465.3, scale=108.5 / NINETY_TO_ONESIGMA, size=10**5, random_state=43178
 )
-samples["temperature 2004-2023"] = scipy.stats.skewnorm.rvs(
+samples["temperature 2002-2021"] = scipy.stats.skewnorm.rvs(
     gsat_params[0],
     loc=gsat_params[1],
     scale=gsat_params[2],
@@ -124,8 +127,10 @@ samples["ERFaer"] = scipy.stats.norm.rvs(
     size=10**5,
     random_state=3916153,
 )
+
+# IGCC 2023, for 2021
 samples["CO2 concentration"] = scipy.stats.norm.rvs(
-    loc=419.3, scale=0.4, size=10**5, random_state=81693
+    loc=414.7, scale=0.4, size=10**5, random_state=81693
 )
 
 ar_distributions = {}
@@ -133,7 +138,7 @@ for constraint in [
     "ECS",
     "TCR",
     "OHC",
-    "temperature 2004-2023",
+    "temperature 2002-2021",
     "ERFari",
     "ERFaci",
     "ERFaer",
@@ -157,8 +162,8 @@ accepted = pd.DataFrame(
         "ECS": ecs_in[valid_temp],
         "TCR": tcr_in[valid_temp],
         "OHC": ohc_in[valid_temp] / 1e21,
-        "temperature 2004-2023": np.average(
-            temp_in[154:175, valid_temp], weights=weights_20yr, axis=0
+        "temperature 2002-2021": np.average(
+            temp_in[152:173, valid_temp], weights=weights_20yr, axis=0
         )
         - np.average(temp_in[:52, valid_temp], weights=weights_51yr, axis=0),
         "ERFari": fari_in[valid_temp],
@@ -299,16 +304,16 @@ prior_tcr = scipy.stats.gaussian_kde(tcr_in)
 post1_tcr = scipy.stats.gaussian_kde(tcr_in[valid_temp])
 post2_tcr = scipy.stats.gaussian_kde(draws[0]["TCR"])
 
-target_temp = scipy.stats.gaussian_kde(samples["temperature 2004-2023"])
+target_temp = scipy.stats.gaussian_kde(samples["temperature 2002-2021"])
 prior_temp = scipy.stats.gaussian_kde(
-    np.average(temp_in[154:175, :], weights=weights_20yr, axis=0)
+    np.average(temp_in[152:173, :], weights=weights_20yr, axis=0)
     - np.average(temp_in[:52, :], weights=weights_51yr, axis=0)
 )
 post1_temp = scipy.stats.gaussian_kde(
-    np.average(temp_in[154:175, valid_temp], weights=weights_20yr, axis=0)
+    np.average(temp_in[152:173, valid_temp], weights=weights_20yr, axis=0)
     - np.average(temp_in[:52, valid_temp], weights=weights_51yr, axis=0)
 )
-post2_temp = scipy.stats.gaussian_kde(draws[0]["temperature 2004-2023"])
+post2_temp = scipy.stats.gaussian_kde(draws[0]["temperature 2002-2021"])
 
 target_ohc = scipy.stats.gaussian_kde(samples["OHC"])
 prior_ohc = scipy.stats.gaussian_kde(ohc_in / 1e21)
@@ -595,7 +600,7 @@ if plots:
     ax[2, 0].set_ylabel("Probability density")
     ax[2, 0].set_title("CO$_2$ concentration")
     ax[2, 0].set_yticklabels([])
-    ax[2, 0].set_xlabel("ppm, 2023")
+    ax[2, 0].set_xlabel("ppm, 2021")
 
     start = 100
     stop = 900
@@ -688,7 +693,7 @@ print(
 )
 print(
     "Temperature 2004-2023 rel. 1850-1900:",
-    np.percentile(draws[0]["temperature 2004-2023"], (5, 50, 95)),
+    np.percentile(draws[0]["temperature 2002-2021"], (5, 50, 95)),
 )
 print(
     "Aerosol ERFari 2005-2014 rel. 1750:",
@@ -712,7 +717,7 @@ if plots:
 
     fig, ax = pl.subplots(figsize=(5, 5))
     ax.fill_between(
-        np.arange(1850, 2025),
+        np.arange(1850, 2023),
         np.min(
             temp_in[:, draws[0].index]
             - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
@@ -727,7 +732,7 @@ if plots:
         alpha=0.2,
     )
     ax.fill_between(
-        np.arange(1850, 2025),
+        np.arange(1850, 2023),
         np.percentile(
             temp_in[:, draws[0].index]
             - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
@@ -744,7 +749,7 @@ if plots:
         alpha=0.2,
     )
     ax.fill_between(
-        np.arange(1850, 2025),
+        np.arange(1850, 2023),
         np.percentile(
             temp_in[:, draws[0].index]
             - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
@@ -761,7 +766,7 @@ if plots:
         alpha=0.2,
     )
     ax.plot(
-        np.arange(1850, 2025),
+        np.arange(1850, 2023),
         np.median(
             temp_in[:, draws[0].index]
             - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
