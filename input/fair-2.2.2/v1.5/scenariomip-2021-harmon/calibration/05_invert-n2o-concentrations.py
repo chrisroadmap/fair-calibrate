@@ -68,9 +68,6 @@ for year in range(1751, 1850):
 df_conc_obs.sort_index(inplace=True)
 df_conc_obs.interpolate(inplace=True)
 
-# it's unclear whether the isomer of C6F14 should be included
-# Comparing to Meinshausen et al. 2017, I conclude it should be.
-# treat as a special case below
 obs_species = {specie: specie for specie in species}
 
 for specie in species:
