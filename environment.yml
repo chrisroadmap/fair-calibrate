@@ -21,3 +21,6 @@ dependencies:
   - scmdata
   - tqdm
   - xarray
+  - pip
+  - pip:
+    - aneris-iamc[units]==0.3.1
