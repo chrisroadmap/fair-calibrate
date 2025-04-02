@@ -34,7 +34,7 @@ temp_in = np.load(
     "temperature_1850-2025.npy"
 )
 
-df_gmst = pd.read_csv("../../../../../data/forcing/HadCRUT.5.0.2.0.analysis.summary_series.global.annual.rebased_1850-1900_2024.csv")
+df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2024.csv")
 gmst = df_gmst["gmst"].values
 
 

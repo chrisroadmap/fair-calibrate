@@ -129,7 +129,7 @@ ar6_colors = {
     "ssp585": "#980002",
 }
 
-df_gmst = pd.read_csv("../../../../../data/forcing/HadCRUT.5.0.2.0.analysis.summary_series.global.annual.rebased_1850-1900_2024.csv")
+df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2024.csv")
 gmst = df_gmst["gmst"].values
 
 if plots:
@@ -198,7 +198,7 @@ if plots:
             lw=1,
         )
         ax[i // 4, i % 4].plot(np.arange(1850.5, 2025), gmst, color="k", lw=1)
-        ax[i // 4, i % 4].set_xlim(1950, 2100)
+        ax[i // 4, i % 4].set_xlim(1950, 2200)
         ax[i // 4, i % 4].set_ylim(-1, 10)
         ax[i // 4, i % 4].axhline(0, color="k", ls=":", lw=0.5)
         ax[i // 4, i % 4].set_title(scenarios[i])
@@ -319,11 +319,11 @@ if plots:
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "toa_imbalance_message-ssp2-medium.png"
+        "toa_imbalance_ssp245.png"
     )
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-        "toa_imbalance_message-ssp2-medium.pdf"
+        "toa_imbalance_ssp245.pdf"
     )
     pl.close()
 
@@ -398,6 +398,27 @@ if plots:
     pl.savefig(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
         "co2_forcing_ssp585.png"
+    )
+    pl.close()
+
+    pl.fill_between(
+        np.arange(1750, 2302),
+        np.percentile(f.concentration[:, 7, :, 2], 5, axis=1),
+        np.percentile(f.concentration[:, 7, :, 2], 95, axis=1),
+        color="k",
+        alpha=0.3,
+    )
+    pl.plot(
+        np.arange(1750, 2301),
+        np.median(
+            f.concentration[:551, 7, :, 2],
+            axis=1,
+        ),
+        color="k",
+    )
+    pl.savefig(
+        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "co2_concentration_ssp585.png"
     )
     pl.close()
 

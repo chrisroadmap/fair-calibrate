@@ -88,9 +88,8 @@ def opt(x, q05_desired, q50_desired, q95_desired):
 ecs_params = scipy.optimize.root(opt, [1, 1, 1], args=(2, 3, 5)).x
 
 
-## note this is my assessment! IGCC 2023 for 2004-23, minus 0.04C for median and ranges, based 
-## on the timeseries, to estimate 2002-21.
-#gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(0.86, 1.01, 1.12)).x
+# Indicators 2024, in prep.
+gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(0.93, 1.09, 1.20)).x
 
 samples = {}
 samples["ECS"] = scipy.stats.skewnorm.rvs(
@@ -110,25 +109,20 @@ samples["TCR"] = scipy.stats.norm.rvs(
 samples["OHC"] = scipy.stats.norm.rvs(
     loc=465.3, scale=108.5 / NINETY_TO_ONESIGMA, size=10**5, random_state=43178
 )
-
-# while we wait for Blair, we do this based on HadCRUT5 to 2024
-# the standard deviation from HadCRUT5 is the square root of the sum of the squares of the
-# standard deviations in each year's observations from 2005 to 2024 in the original
-# HadCRUT5 dataset.
-
-#samples["temperature 2002-2021"] = scipy.stats.skewnorm.rvs(
-#    gsat_params[0],
-#    loc=gsat_params[1],
-#    scale=gsat_params[2],
-#    size=10**5,
-#    random_state=19387,
-#)
-samples["temperature 2005-2024"] = scipy.stats.norm.rvs(
-    loc = 1.103988,
-    scale = 0.076402,
+samples["temperature 2005-2024"] = scipy.stats.skewnorm.rvs(
+    gsat_params[0],
+    loc=gsat_params[1],
+    scale=gsat_params[2],
     size=10**5,
     random_state=19387,
 )
+# the below commented out bit is if we were to do temperature assessment using HadCRUT5 rather than Blair's assessment
+#samples["temperature 2005-2024"] = scipy.stats.norm.rvs(
+#    loc = 1.103988,
+#    scale = 0.076402,
+#    size=10**5,
+#    random_state=19387,
+#)
 samples["ERFari"] = scipy.stats.norm.rvs(
     loc=-0.3, scale=0.3 / NINETY_TO_ONESIGMA, size=10**5, random_state=70173
 )
@@ -581,8 +575,8 @@ if plots:
     ax[1, 2].set_yticklabels([])
     ax[1, 2].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
 
-    start = 415
-    stop = 423
+    start = 419
+    stop = 427
     ax[2, 0].plot(
         np.linspace(start, stop, 1000),
         target_co2(np.linspace(start, stop, 1000)),
@@ -728,7 +722,7 @@ print("OHC change 2020 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95)))
 print("*likely range")
 
 if plots:
-    df_gmst = pd.read_csv("../../../../../data/forcing/HadCRUT.5.0.2.0.analysis.summary_series.global.annual.rebased_1850-1900_2024.csv")
+    df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2024.csv")
     gmst = df_gmst["gmst"].values
 
     fig, ax = pl.subplots(figsize=(5, 5))
