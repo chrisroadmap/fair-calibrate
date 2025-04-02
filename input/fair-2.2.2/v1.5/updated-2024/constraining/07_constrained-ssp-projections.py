@@ -62,7 +62,7 @@ f.define_time(1750, 2301, 1)
 f.define_scenarios(scenarios)
 species, properties = read_properties(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
-    "species_configs_defaults.csv",
+    "species_configs_properties.csv",
 )
 f.define_species(species, properties)
 df_configs = pd.read_csv(
@@ -99,7 +99,7 @@ fill(
 # new convience for v2.2
 f.fill_species_configs(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
-    "species_configs_defaults.csv",
+    "species_configs_properties.csv",
 )
 f.override_defaults(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"

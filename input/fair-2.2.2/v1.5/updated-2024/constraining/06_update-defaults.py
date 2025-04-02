@@ -118,6 +118,6 @@ for specie in df_emissions.variable:
 
 df_species_configs.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
-    "species_configs_defaults.csv",
+    "species_configs_properties.csv",
     na_rep=np.nan
 )
