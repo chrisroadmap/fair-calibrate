@@ -35,7 +35,7 @@ print("Doing ozone sampling...")
 # now include temperature feedback
 # to update with 2024 when it comes in
 Tobs = pd.read_csv(
-    "../../../../../data/forcing/IGCC_GMST_1850-2023.csv", index_col=0
+    "../../../../../data/forcing/IGCC_GMST_1850-2024.csv", index_col=0
 ).values
 
 delta_gmst = [

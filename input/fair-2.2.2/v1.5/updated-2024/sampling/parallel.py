@@ -29,7 +29,7 @@ def run_fair(cfg):
 
     da_emissions = xr.load_dataarray(
         f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-        "ssps_harmonized_scaled_1750-2499.nc",
+        "ssps_harmonized_1750-2499.nc",
     )
 
     f = FAIR(ch4_method="Thornhill2021")
@@ -133,7 +133,7 @@ def run_fair(cfg):
     fill(f.species_configs["baseline_emissions"], 2.120093207, specie="BC")
     fill(f.species_configs["baseline_emissions"], 16.02045195, specie="OC")
     fill(f.species_configs["baseline_emissions"], 6.752105669, specie="NH3")
-    fill(f.species_configs["baseline_emissions"], 1.070038016, specie="N2O")
+    fill(f.species_configs["baseline_emissions"], 0.908671278, specie="N2O")
     fill(f.species_configs["baseline_emissions"], 261.0325378, specie="CHCl3")
     fill(f.species_configs["baseline_emissions"], 215.9731971, specie="CH2Cl2")
     fill(f.species_configs["baseline_emissions"], 4554.415615, specie="CH3Cl")
@@ -245,7 +245,8 @@ def run_fair(cfg):
         specie="Equivalent effective stratospheric chlorine",
     )
 
-    # don't tune down volcanic efficacy
+    # tune down volcanic efficacy
+    fill(f.species_configs["forcing_efficacy"], 0.6, specie="Volcanic")
 
     # CO2 in 1750
     fill(f.species_configs["baseline_concentration"], cfg["CO2_1750"], specie="CO2")

@@ -77,7 +77,7 @@ f.allocate()
 # run with harmonized emissions
 da_emissions = xr.load_dataarray(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "ssps_harmonized_scaled_1750-2499.nc"
+    "ssps_harmonized_1750-2499.nc"
 )
 
 da = da_emissions.loc[dict(config="unspecified")][:551, ...]

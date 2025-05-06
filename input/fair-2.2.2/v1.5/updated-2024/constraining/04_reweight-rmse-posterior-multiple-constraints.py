@@ -139,7 +139,7 @@ samples["ERFaer"] = scipy.stats.norm.rvs(
 # IGCC 2024 forthcoming
 # as this is not in yet I am doubling the uncertainty range
 samples["CO2 concentration"] = scipy.stats.norm.rvs(
-    loc=422.6, scale=0.4 * 2, size=10**5, random_state=81693
+    loc=422.77, scale=0.4, size=10**5, random_state=81693
 )
 
 ar_distributions = {}
