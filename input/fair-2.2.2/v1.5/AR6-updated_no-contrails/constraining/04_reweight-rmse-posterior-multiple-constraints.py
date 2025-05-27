@@ -88,6 +88,15 @@ def opt(x, q05_desired, q50_desired, q95_desired):
 ecs_params = scipy.optimize.root(opt, [1, 1, 1], args=(2, 3, 5)).x
 gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(0.67, 0.85, 0.98)).x
 
+
+# NOVEL: These are the aerosol ERF ranges that fair in AR6 reported; they are not the assessment
+# hitting AR6 results in no <1.5C scenarios in fair!
+# ARI and ACI from https://github.com/chrisroadmap/ar6/blob/main/notebooks/170_WG3_verify_constrained_output.ipynb
+# total aerosol ERF from https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_Chapter07_SM.pdf
+ari_params = scipy.optimize.root(opt, [1, 1, 1], args=(-0.56274191, -0.27518388,  0.00098477)).x
+aci_params = scipy.optimize.root(opt, [1, 1, 1], args=(-1.4144017 , -0.87263228, -0.32916643)).x 
+aer_params = scipy.optimize.root(opt, [1, 1, 1], args=(-1.68, -1.15, -0.60)).x
+
 samples = {}
 samples["ECS"] = scipy.stats.skewnorm.rvs(
     ecs_params[0],
@@ -112,21 +121,41 @@ samples["temperature 1995-2014"] = scipy.stats.skewnorm.rvs(
     size=10**5,
     random_state=19387,
 )
-samples["ERFari"] = scipy.stats.norm.rvs(
-    loc=-0.3, scale=0.3 / NINETY_TO_ONESIGMA, size=10**5, random_state=70173
-)
-samples["ERFaci"] = scipy.stats.norm.rvs(
-    loc=-1.0, scale=0.7 / NINETY_TO_ONESIGMA, size=10**5, random_state=91123
-)
-samples["ERFaer"] = scipy.stats.norm.rvs(
-    loc=-1.3,
-    scale=np.sqrt(0.7**2 + 0.3**2) / NINETY_TO_ONESIGMA,
+#samples["ERFari"] = scipy.stats.norm.rvs(
+#    loc=-0.3, scale=0.3 / NINETY_TO_ONESIGMA, size=10**5, random_state=70173
+#)
+#samples["ERFaci"] = scipy.stats.norm.rvs(
+#    loc=-1.0, scale=0.7 / NINETY_TO_ONESIGMA, size=10**5, random_state=91123
+#)
+#samples["ERFaer"] = scipy.stats.norm.rvs(
+#    loc=-1.3,
+#    scale=np.sqrt(0.7**2 + 0.3**2) / NINETY_TO_ONESIGMA,
+#    size=10**5,
+#    random_state=3916153,
+#)
+samples["ERFari"] = scipy.stats.skewnorm.rvs(
+    ari_params[0],
+    loc=ari_params[1],
+    scale=ari_params[2],
     size=10**5,
-    random_state=3916153,
+    random_state=70173
 )
-# IGCC paper: 417.1 +/- 0.4
-# IGCC dataset: 416.9
-# my assessment 417.0 +/- 0.5
+
+samples["ERFaci"] = scipy.stats.skewnorm.rvs(
+    aci_params[0],
+    loc=aci_params[1],
+    scale=aci_params[2],
+    size=10**5,
+    random_state=91123
+)
+
+samples["ERFaer"] = scipy.stats.skewnorm.rvs(
+    aer_params[0],
+    loc=aer_params[1],
+    scale=aer_params[2],
+    size=10**5,
+    random_state=3916153
+)
 samples["CO2 concentration"] = scipy.stats.norm.rvs(
     loc=397.55, scale=0.4, size=10**5, random_state=81693
 )
