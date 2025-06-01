@@ -50,16 +50,13 @@ scalings_df = pd.read_csv(
     index_col=0,
 )
 
-n2o_sf = scalings_df.loc["historical_best", "N2O"]
+for specie in scalings_df.columns:
+    sf = scalings_df.loc["historical_best", specie]
 
-print(n2o_sf)
+    df_emis.loc[(df_emis["variable"] == specie), "1750":] = df_emis.loc[(df_emis["variable"] == specie), "1750":] * sf
 
-print("Note! We are not applying this; leave N2O unscaled")
-
-#df_emis.loc[(df_emis["variable"] == "N2O"), "1750":] = df_emis.loc[(df_emis["variable"] == "N2O"), "1750":] * n2o_sf
-
-#df_emis.to_csv(
-#    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-#    "ssps_harmonized_scaled_1750-2499.csv",
-#    index=False
-#)
+df_emis.to_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "ssps_harmonized_scaled_1750-2499.csv",
+    index=False
+)

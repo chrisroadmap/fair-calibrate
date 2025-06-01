@@ -117,6 +117,7 @@ df_emis = pd.read_csv(
 #    index_col=[0, 1, 2, 3, 4]
 )
 
+
 renames = {specie: specie for specie in species}
 renames["HFC-43-10mee"] = "HFC-4310mee"
 renames["n-C4F10"] = "C4F10"
@@ -174,7 +175,8 @@ for specie in species:
         emis_ssp = df_emis.loc[
             (df_emis["variable"] == f"{renames[specie]}") & (df_emis["scenario"]==ssp), "1750":"2100"
         ].values.squeeze()
-
+#        print(f"{renames[specie]}")
+#        print(emis_ssp)
         natural_emissions_adjustment = emis_ssp[0]
         conc_ssp[ssp] = np.zeros(351)
         gas_boxes = 0

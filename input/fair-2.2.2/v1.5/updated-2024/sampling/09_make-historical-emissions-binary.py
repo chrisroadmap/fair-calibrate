@@ -84,6 +84,6 @@ f.emissions.to_netcdf(
 
 df_in.to_csv(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    "ssps_harmonized_fair_format_1750-2499.csv",
+    "ssps_harmonized_scaled_fair_format_1750-2499.csv",
     index=False
 )

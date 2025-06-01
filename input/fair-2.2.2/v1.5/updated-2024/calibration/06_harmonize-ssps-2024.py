@@ -102,30 +102,6 @@ history = (
     .timeseries(time_axis="year")
 )
 
-# temporarily substitute in the 2024 harmonization value
-harmonization = (
-    scmdata.ScmRun(
-        f"../../../../../data/emissions/"
-        "historical_harmonization_5yr_running_means_2014-2024.csv",
-        lowercase_cols=True,
-    )
-    .filter(region="World", variable=variables)
-    .interpolate(target_times=times_harmonization)
-    .timeseries(time_axis="year")
-)
-
-#harmonization_df = pd.read_csv(
-#    f"../../../../../data/emissions/"
-#    "historical_harmonization_5yr_running_means_2014-2024.csv"
-#)
-
-history_original = history.copy()
-history[harmonization_year] = harmonization[harmonization_year]
-
-print(history)
-print(harmonization[harmonization_year])
-
-
 future = (
     scmdata.ScmRun(
         "../../../../../data/emissions/rcmip-5-1-0-corrected-nox.csv",
@@ -167,13 +143,10 @@ variable_mapping['Emissions|CO2|AFOLU'] = 'CO2 AFOLU'
 variable_mapping['Emissions|CO2|Energy and Industrial Processes'] = 'CO2 FFI'
 
 # harmonize unit
-history = history.rename(index={'kt HFC43-10/yr': 'kt HFC4310mee/yr'})
-history_original = history_original.rename(index={'kt HFC43-10/yr': 'kt HFC4310mee/yr'})
+history = history.rename(index={'kt HFC4310/yr': 'kt HFC4310mee/yr'})
 future = future.rename(index=variable_mapping)
 future = future.rename(index={'Mt CO2/yr': 'Gt CO2/yr', 'kt N2O/yr': 'Mt N2O/yr'})
-
-
-print(future.head(54))
+#print(future.index.get_level_values('unit').unique())
 
 # start the harmonization
 history = history.reorder_levels(
@@ -285,15 +258,14 @@ with warnings.catch_warnings():
 
 scenarios_harmonised = pd.concat(scenarios_harmonised).reset_index()
 
-# now substitute the historical back in for 2024 and stitch historical and future together 
+# now stitch historical and future together 
 scenarios_harmonised = (
     scmdata.ScmRun(scenarios_harmonised)
     .interpolate(target_times=times_future[1:])
     .timeseries(time_axis="year")
 )
-#scenarios_harmonised_naked = scenarios_harmonised.droplevel(('model'), axis=0)
 
-history_naked = history_original.droplevel(('model', 'scenario'), axis=0)
+history_naked = history.droplevel(('model', 'scenario'), axis=0)
 combined_harmonised = history_naked.join(scenarios_harmonised).reorder_levels(("model", "scenario", "region", "variable", "unit")).sort_values(["scenario", "variable"])
 
 os.makedirs(
