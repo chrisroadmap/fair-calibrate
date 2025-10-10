@@ -44,18 +44,17 @@ scenarios = [
 
 
 df_solar = pd.read_csv(
-    "../../../../../data/forcing/solar_erf_timebounds.csv", index_col="year"
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/forcing/solar_forcing_timebounds.csv", index_col="year"
 )
 df_volcanic = pd.read_csv(
-    "../../../../../data/forcing/volcanic_ERF_annual_timebounds_1750-2025.csv",
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/forcing/volcanic_forcing_timebounds.csv",
     index_col="year",
 )
 
 solar_forcing = np.zeros(552)
 volcanic_forcing = np.zeros(552)
-volcanic_forcing[:276] = df_volcanic["volcanic_ERF"].values
-volcanic_forcing[276:287] = np.linspace(1, 0, 11) * volcanic_forcing[275]
-solar_forcing[:551] = df_solar["erf"].loc[1750:2300].values
+volcanic_forcing = df_volcanic["erf"].loc[1750:2301].values
+solar_forcing = df_solar["erf"].loc[1750:2301].values
 
 f = FAIR(ch4_method="Thornhill2021")
 f.define_time(1750, 2301, 1)

@@ -43,6 +43,7 @@ df_saod.drop(columns = ["Global mean SAOD 550nm",  "Global mean TOA ERF (W/m2)"]
 
 # get everything in right order
 df_saod = df_saod.sort_index()
+df_saod.index.name = "year"
 
 # save out
 os.makedirs(

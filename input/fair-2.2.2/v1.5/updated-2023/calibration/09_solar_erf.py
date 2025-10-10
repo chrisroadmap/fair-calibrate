@@ -75,9 +75,7 @@ solar_erf_trimmed_extended = np.zeros(752)
 solar_erf_trimmed_extended[101:551] = solar_erf
 
 df_solar = pd.DataFrame(index=np.arange(1750, 2502), columns=['erf'], data=solar_erf_trimmed_extended)
-
-pl.plot(df_solar)
-pl.show()
+df_solar.index.name = "year"
 
 # save out
 os.makedirs(

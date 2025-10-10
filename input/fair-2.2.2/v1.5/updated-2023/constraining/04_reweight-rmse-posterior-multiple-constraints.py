@@ -810,3 +810,10 @@ np.savetxt(
     sorted(draws[0].index),
     fmt="%d",
 )
+
+# warming baselines
+df_warming = pd.DataFrame(data=draws[0]["temperature 2004-2023"], index=draws[0].index, columns = ["temperature 2004-2023"]).sort_index()
+df_warming.to_csv(
+    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "warming_baselines.csv",
+)
