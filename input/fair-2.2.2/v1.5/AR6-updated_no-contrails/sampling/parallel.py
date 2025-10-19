@@ -220,9 +220,6 @@ def run_fair(cfg):
         specie="Equivalent effective stratospheric chlorine",
     )
 
-    # tune down volcanic efficacy
-    fill(f.species_configs["forcing_efficacy"], 0.6, specie="Volcanic")
-
     # CO2 in 1750
     fill(f.species_configs["baseline_concentration"], cfg["CO2_1750"], specie="CO2")
 

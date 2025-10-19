@@ -99,9 +99,6 @@ if update_lapsi == True:
         "historical_best", "BC"
     ]
 
-# Volcanic: tune down volcanic efficiency
-df_species_configs.loc["Volcanic", "forcing_efficacy"] = 0.6
-
 df_species_configs.drop(index=["NOx aviation"], inplace=True)
 df_species_configs.drop(index=["Contrails"], inplace=True)
 df_species_configs.drop(index=["Halon-1202"], inplace=True)
