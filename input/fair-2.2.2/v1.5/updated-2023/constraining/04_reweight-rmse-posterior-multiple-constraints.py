@@ -382,58 +382,60 @@ drawn_samples = accepted.sample(
 )
 draws.append((drawn_samples))
 
-target_ecs = scipy.stats.gaussian_kde(samples["ECS"])
-prior_ecs = scipy.stats.gaussian_kde(ecs_in)
-post1_ecs = scipy.stats.gaussian_kde(ecs_in[valid_temp_af])
-post2_ecs = scipy.stats.gaussian_kde(draws[0]["ECS"])
-
-target_tcr = scipy.stats.gaussian_kde(samples["TCR"])
-prior_tcr = scipy.stats.gaussian_kde(tcr_in)
-post1_tcr = scipy.stats.gaussian_kde(tcr_in[valid_temp_af])
-post2_tcr = scipy.stats.gaussian_kde(draws[0]["TCR"])
-
-target_temp = scipy.stats.gaussian_kde(samples["temperature 2004-2023"])
-prior_temp = scipy.stats.gaussian_kde(
-    np.average(temp_in[154:175, :], weights=weights_20yr, axis=0)
-    - np.average(temp_in[:52, :], weights=weights_51yr, axis=0)
-)
-post1_temp = scipy.stats.gaussian_kde(
-    np.average(temp_in[154:175, valid_temp_af], weights=weights_20yr, axis=0)
-    - np.average(temp_in[:52, valid_temp_af], weights=weights_51yr, axis=0)
-)
-post2_temp = scipy.stats.gaussian_kde(draws[0]["temperature 2004-2023"])
-
-target_ohc = scipy.stats.gaussian_kde(samples["OHC"])
-prior_ohc = scipy.stats.gaussian_kde(ohc_in / 1e21)
-post1_ohc = scipy.stats.gaussian_kde(ohc_in[valid_temp_af] / 1e21)
-post2_ohc = scipy.stats.gaussian_kde(draws[0]["OHC"])
-
-target_aer = scipy.stats.gaussian_kde(samples["ERFaer"])
-prior_aer = scipy.stats.gaussian_kde(faer_in)
-post1_aer = scipy.stats.gaussian_kde(faer_in[valid_temp_af])
-post2_aer = scipy.stats.gaussian_kde(draws[0]["ERFaer"])
-
-target_aci = scipy.stats.gaussian_kde(samples["ERFaci"])
-prior_aci = scipy.stats.gaussian_kde(faci_in)
-post1_aci = scipy.stats.gaussian_kde(faci_in[valid_temp_af])
-post2_aci = scipy.stats.gaussian_kde(draws[0]["ERFaci"])
-
-target_ari = scipy.stats.gaussian_kde(samples["ERFari"])
-prior_ari = scipy.stats.gaussian_kde(fari_in)
-post1_ari = scipy.stats.gaussian_kde(fari_in[valid_temp_af])
-post2_ari = scipy.stats.gaussian_kde(draws[0]["ERFari"])
-
-target_co2 = scipy.stats.gaussian_kde(samples["CO2 concentration"])
-prior_co2 = scipy.stats.gaussian_kde(co2_in)
-post1_co2 = scipy.stats.gaussian_kde(co2_in[valid_temp_af])
-post2_co2 = scipy.stats.gaussian_kde(draws[0]["CO2 concentration"])
-
-colors = {"prior": "#207F6E", "post1": "#684C94", "post2": "#EE696B", "target": "black"}
-
 if plots:
+    target_ecs = scipy.stats.gaussian_kde(samples["ECS"])
+    prior_ecs = scipy.stats.gaussian_kde(ecs_in)
+    post1_ecs = scipy.stats.gaussian_kde(ecs_in[valid_temp_af])
+    post2_ecs = scipy.stats.gaussian_kde(draws[0]["ECS"])
+
+    target_tcr = scipy.stats.gaussian_kde(samples["TCR"])
+    prior_tcr = scipy.stats.gaussian_kde(tcr_in)
+    post1_tcr = scipy.stats.gaussian_kde(tcr_in[valid_temp_af])
+    post2_tcr = scipy.stats.gaussian_kde(draws[0]["TCR"])
+
+    target_temp = scipy.stats.gaussian_kde(samples["temperature 2004-2023"])
+    prior_temp = scipy.stats.gaussian_kde(
+        np.average(temp_in[154:175, :], weights=weights_20yr, axis=0)
+        - np.average(temp_in[:52, :], weights=weights_51yr, axis=0)
+    )
+    post1_temp = scipy.stats.gaussian_kde(
+        np.average(temp_in[154:175, valid_temp_af], weights=weights_20yr, axis=0)
+        - np.average(temp_in[:52, valid_temp_af], weights=weights_51yr, axis=0)
+    )
+    post2_temp = scipy.stats.gaussian_kde(draws[0]["temperature 2004-2023"])
+
+    target_ohc = scipy.stats.gaussian_kde(samples["OHC"])
+    prior_ohc = scipy.stats.gaussian_kde(ohc_in / 1e21)
+    post1_ohc = scipy.stats.gaussian_kde(ohc_in[valid_temp_af] / 1e21)
+    post2_ohc = scipy.stats.gaussian_kde(draws[0]["OHC"])
+
+    target_aer = scipy.stats.gaussian_kde(samples["ERFaer"])
+    prior_aer = scipy.stats.gaussian_kde(faer_in)
+    post1_aer = scipy.stats.gaussian_kde(faer_in[valid_temp_af])
+    post2_aer = scipy.stats.gaussian_kde(draws[0]["ERFaer"])
+
+    target_aci = scipy.stats.gaussian_kde(samples["ERFaci"])
+    prior_aci = scipy.stats.gaussian_kde(faci_in)
+    post1_aci = scipy.stats.gaussian_kde(faci_in[valid_temp_af])
+    post2_aci = scipy.stats.gaussian_kde(draws[0]["ERFaci"])
+
+    target_ari = scipy.stats.gaussian_kde(samples["ERFari"])
+    prior_ari = scipy.stats.gaussian_kde(fari_in)
+    post1_ari = scipy.stats.gaussian_kde(fari_in[valid_temp_af])
+    post2_ari = scipy.stats.gaussian_kde(draws[0]["ERFari"])
+
+    target_co2 = scipy.stats.gaussian_kde(samples["CO2 concentration"])
+    prior_co2 = scipy.stats.gaussian_kde(co2_in)
+    post1_co2 = scipy.stats.gaussian_kde(co2_in[valid_temp_af])
+    post2_co2 = scipy.stats.gaussian_kde(draws[0]["CO2 concentration"])
+
+    colors = {"prior": "#207F6E", "post1": "#684C94", "post2": "#EE696B", "target": "black"}
+
     os.makedirs(
         f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
     )
+
+    # Plots 1
     fig, ax = pl.subplots(3, 3, figsize=(18 / 2.54, 18 / 2.54))
     start = 0
     stop = 8
@@ -747,8 +749,7 @@ if plots:
     )
     pl.close()
 
-
-if plots:
+    # Plots 2
     pl.scatter(draws[0]["TCR"], draws[0]["ECS"])
     pl.xlabel("TCR, °C")
     pl.ylabel("ECS, °C")
@@ -759,8 +760,7 @@ if plots:
     )
     pl.close()
 
-
-if plots:
+    # Plots 3
     pl.scatter(draws[0]["TCR"], draws[0]["ERFaci"] + draws[0]["ERFari"])
     pl.xlabel("TCR, °C")
     pl.ylabel("Aerosol ERF, W m$^{-2}$, 2005-2014 minus 1750")
@@ -771,35 +771,7 @@ if plots:
     )
     pl.close()
 
-
-# move these to the validation script
-print("Constrained, reweighted parameters:")
-print("ECS:", np.percentile(draws[0]["ECS"], (5, 50, 95)))
-print("TCR:", np.percentile(draws[0]["TCR"], (5, 50, 95)))
-print(
-    "CO2 concentration 2023:", np.percentile(draws[0]["CO2 concentration"], (5, 50, 95))
-)
-print(
-    "Temperature 2004-2023 rel. 1850-1900:",
-    np.percentile(draws[0]["temperature 2004-2023"], (5, 50, 95)),
-)
-print(
-    "Aerosol ERFari 2005-2014 rel. 1750:",
-    np.percentile(draws[0]["ERFari"], (5, 50, 95)),
-)
-print(
-    "Aerosol ERFaci 2005-2014 rel. 1750:",
-    np.percentile(draws[0]["ERFaci"], (5, 50, 95)),
-)
-print(
-    "Aerosol ERF 2005-2014 rel. 1750:",
-    np.percentile(draws[0]["ERFaci"] + draws[0]["ERFari"], (5, 50, 95)),
-)
-print("OHC change 2020 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95)))
-
-print("*likely range")
-
-if plots:
+    # Plots 4
     df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2024.csv")
     gmst = df_gmst["gmst"].values
 
@@ -882,6 +854,33 @@ if plots:
         "final_reweighted_historical.pdf"
     )
     pl.close()
+
+# move these to the validation script
+print("Constrained, reweighted parameters:")
+print("ECS:", np.percentile(draws[0]["ECS"], (5, 50, 95)))
+print("TCR:", np.percentile(draws[0]["TCR"], (5, 50, 95)))
+print(
+    "CO2 concentration 2023:", np.percentile(draws[0]["CO2 concentration"], (5, 50, 95))
+)
+print(
+    "Temperature 2004-2023 rel. 1850-1900:",
+    np.percentile(draws[0]["temperature 2004-2023"], (5, 50, 95)),
+)
+print(
+    "Aerosol ERFari 2005-2014 rel. 1750:",
+    np.percentile(draws[0]["ERFari"], (5, 50, 95)),
+)
+print(
+    "Aerosol ERFaci 2005-2014 rel. 1750:",
+    np.percentile(draws[0]["ERFaci"], (5, 50, 95)),
+)
+print(
+    "Aerosol ERF 2005-2014 rel. 1750:",
+    np.percentile(draws[0]["ERFaci"] + draws[0]["ERFari"], (5, 50, 95)),
+)
+print("OHC change 2020 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95)))
+
+print("*likely range")
 
 np.savetxt(
     f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
