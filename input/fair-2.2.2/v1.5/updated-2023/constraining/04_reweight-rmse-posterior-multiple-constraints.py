@@ -184,28 +184,62 @@ accepted = pd.DataFrame(
 
 print(accepted)
 
-def calculate_sample_weights(distributions, samples, niterations=50):
+
+def calculate_sample_weights(
+    distributions: dict, samples: pd.DataFrame, niterations: int=50
+) -> tuple:
+    """
+    Parameters
+    ----------
+    distributions (dict): for each parameter name key, we have historgram bins
+        and values of the desired distribution
+
+    samples (pd.DataFrame): each row contains the parameter sets
+        (column headings are parameter names) that have passed the previous
+        constraining steps
+
+    Returns
+    -------
+    np.array: weights associated with each parameter set (row of samples)
+
+    pd.DataFrame
+
+    pd.DataFrame
+    """
     weights = np.ones(samples.shape[0])
     gofs = []
     gofs_full = []
 
     unique_codes = list(distributions.keys())  # [::-1]
 
+    # in each iteration, we calculate a set of weights for each parameter
+    # but rather than updating the sample each time, we iteratively update
+    # the weights by multiplying the old weights with the new ones
     for k in tqdm(
         range(niterations), desc="Iterations", leave=False, disable=1 - progress
     ):
         gofs.append([])
+
+        # last iteration, store 2nd last iteration's weights
+        # and create holder for the final iteration's weights
         if k == (niterations - 1):
             weights_second_last_iteration = weights.copy()
             weights_to_average = []
 
         for j, unique_code in enumerate(unique_codes):
+            # for each parameter, create a set of weights based on
+            # the relative frequencies of the (weighted) sample and
+            # the desired distribution
             unique_code_weights, our_values_bin_idx = get_unique_code_weights(
                 unique_code, distributions, samples, weights, j, k
             )
+
+            # last iteration, store weights calculated after each parameter
+            # note that these weights still need to be applied to the input weights
             if k == (niterations - 1):
                 weights_to_average.append(unique_code_weights[our_values_bin_idx])
 
+            # update the weights for the next parameter / iteration
             weights *= unique_code_weights[our_values_bin_idx]
 
             gof = ((unique_code_weights[1:-1] - 1) ** 2).sum()
@@ -237,7 +271,49 @@ def calculate_sample_weights(distributions, samples, niterations=50):
     )
 
 
-def get_unique_code_weights(unique_code, distributions, samples, weights, j, k):
+def get_unique_code_weights(
+    unique_code: str,
+    distributions: dict,
+    samples: pd.DataFrame,
+    weights: np.array,
+    j: int,
+    k: int,
+) -> tuple:
+    """Make a set of weights based on the parameter of interest,
+    giving higher weights for parameters that have a higher
+    frequency in the desired distribution, as compared to the
+    (weighted) sample.
+
+    Parameters
+    ----------
+    unique_code (str): parameter name (e.g. "ECS")
+
+    distributions (dict): for each parameter name key, we have historgram bins
+        and values of the desired distribution
+
+    samples (pd.DataFrame): each row contains the parameter sets
+        (column headings are parameter names) that have passed the previous
+        constraining steps
+
+    weights (np.array): 1-d array with the length equal to the number of parameter sets,
+        containing values previously calculated in this function (if available, else ones)
+        mapped so that we have a weight per parameter set
+
+    j (int): parameter number associated with the unique_code
+        only to test the first parameter in the first iteration
+
+    k (int): iteration number
+        only to test the first parameter in the first iteration
+
+    Returns
+    -------
+    np.array: weights for each histogram bin, calculated based on the parameter
+        of interest, with larger weights if the desired distribution count is
+        high compared to the weighted sample count, and smaller weights if the
+        weighted sample count is high compared to the desired distribution count
+
+    np.array: mapping of indices (row indices of the samples DataFrame) to histogram bins
+    """
     bin_edges = distributions[unique_code]["bins"]
     our_values = samples[unique_code].copy()
 
@@ -297,6 +373,9 @@ print("Number of effective samples:", effective_samples)
 
 assert effective_samples >= output_ensemble_size
 
+# Use pandas.DataFrame method to select a new sample from the parameter sets
+# that have passed the previous constraining steps, according to the
+# weights that we have just calculated.
 draws = []
 drawn_samples = accepted.sample(
     n=output_ensemble_size, replace=False, weights=weights, random_state=10099
