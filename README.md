@@ -44,15 +44,10 @@ Since the calibration label information is now part of the package, you will als
 
 ### Create an `.env` file in the top directory
 
-The `.env` file contains environment variables that should be changed in order to produce the calibration. These are FaIR version, calibration version, constraints context and number of samples.
+The `.env` file contains machine-specific environment variables that should be changed in order to produce the calibration. These are FaIR version, calibration version, constraints context and number of samples.
 
 ```
 # example .env
-CALIBRATION_VERSION=1.4
-FAIR_VERSION=2.1.3
-CONSTRAINT_SET="all-2022"
-PRIOR_SAMPLES=1600000        # how many prior samples to draw
-POSTERIOR_SAMPLES=841        # final posterior ensemble size
 BATCH_SIZE=500               # how many scenarios to run in parallel
 WORKERS=40                   # how many cores to use for parallel runs
 FRONT_SERIAL=0               # for debugging, how many serial runs to do first
