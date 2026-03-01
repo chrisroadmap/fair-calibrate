@@ -12,21 +12,13 @@ import os
 
 import numpy as np
 import pandas as pd
-from dotenv import load_dotenv
 from fair.energy_balance_model import EnergyBalanceModel
 from fair.forcing.ghg import meinshausen2020
 
-load_dotenv()
-
 print("Converting EBM parameters to IRM parameters...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-
 df = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-    "4xCO2_cummins_ebm3_cmip6.csv"
+    "../../output/calibrations/4xCO2_cummins_ebm3_cmip6.csv"
 )
 
 models = df["model"].unique()
@@ -92,11 +84,6 @@ for model in models:
         ebm.emergent_parameters()
         params[model][run] = ebm.__dict__
 
-# reconstruct a data table and save
-# df_out = pd.DataFrame(
-#    columns=["model", "run", "ecs", "tcr", "tau1", "tau2", "tau3", "q1", "q2", "q3"]
-# )
-
 rows_to_add = []
 count = 0
 for model in models:
@@ -114,7 +101,6 @@ for model in models:
             "q3": params[model][run]["response_coefficients"][2],
         }
         row_to_add = pd.DataFrame(values_to_add, index=[count])
-        # df_out = pd.concat((df_out, row_to_add), axis=1)
         rows_to_add.append(row_to_add)
         count = count + 1
 
@@ -157,12 +143,12 @@ df_out = pd.concat(rows_to_add)
 df_out.sort_values(["model", "run"], inplace=True)
 
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
+    "../../output/calibrations/",
     exist_ok=True,
 )
 
 df_out.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+    "../../output/calibrations/"
     "4xCO2_impulse_response_ebm3_cmip6.csv",
     index=False,
 )

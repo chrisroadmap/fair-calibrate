@@ -6,23 +6,22 @@
 import glob
 import os
 from pathlib import PurePath
+import sys
 
 import pandas as pd
 from dotenv import load_dotenv
 from fair import __version__
 
+from fair_calibrate.parameters import FAIR_VERSION
+
 load_dotenv()
 
 print("Making nice 4xCO2 data...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-
-assert fair_v == __version__
+assert FAIR_VERSION == __version__
 
 available_files = glob.glob(
-    "../../../../../data/cmip6-hbf/cmip_data/*/abrupt-4xCO2/"
+    "../../data/cmip6-hbf/cmip_data/*/abrupt-4xCO2/"
     "*_abrupt-4xCO2_*_anomalies.txt"
 )
 
@@ -32,8 +31,8 @@ models = []
 runs = []
 lines = []
 for file in available_files:
-    model = PurePath(file).parts[8]
-    run = PurePath(file).parts[10].split("_")[2]
+    model = PurePath(file).parts[5]
+    run = PurePath(file).parts[7].split("_")[2]
     models.append(model)
     runs.append(run)
     df = pd.read_csv(file, index_col=0)
@@ -92,12 +91,11 @@ to_remove = [f"X{year}" for year in range(1850, 2000)]
 df.dropna(subset=to_remove, inplace=True)
 
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
+    "../../output/calibrations/",
     exist_ok=True,
 )
 
 df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/"
-    "calibrations/4xCO2_cmip6.csv",
+    "../../output/calibrations/4xCO2_cmip6.csv",
     index=False,
 )

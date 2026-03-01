@@ -40,9 +40,6 @@ load_dotenv()
 
 print("Calibrating methane lifetime...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
@@ -57,11 +54,11 @@ rcmip_file = pooch.retrieve(
 rcmip_df = pd.read_csv(rcmip_file)
 
 # assert fair_v == __version__
-pl.style.use("../../../../../defaults.mplstyle")
+pl.style.use("../../defaults.mplstyle")
 
 # Temperature data
 # Use observations 1850-2023 from IGCC, then use ssp370 projections from IPCC
-df_temp = pd.read_csv("../../../../../data/forcing/ssp_strawman_warming.csv")
+df_temp = pd.read_csv("../../data/forcing/ssp_strawman_warming.csv")
 gmst = df_temp["ssp370"].values
 
 # Get emissions and concentrations: from RCMIP for model tuning stage
@@ -481,14 +478,14 @@ if plots:
     pl.plot(np.arange(1750, 2025), input["CH4"][:275], color="k", label="obs")
     pl.legend()
     os.makedirs(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
+        "../../plots/", exist_ok=True
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "aerchemmip_tuning_ch4_conc_1750-2024.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "aerchemmip_tuning_ch4_conc_1750-2024.pdf"
     )
     pl.close()
@@ -498,22 +495,22 @@ if plots:
 # Find least squares sensible historical fit using updated emissions and
 # concentrations from CMIP7
 df_emis_obs = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    f"../../output/emissions/"
     "ssps_harmonized_1750-2499.csv",
     index_col=0,
 )
 df_conc_obs = pd.read_csv(
-    "../../../../../data/concentrations/ghg_concentrations_1750-2022_cmip7.csv"
+    "../../data/concentrations/ghg_concentrations_1750-2023_cmip7.csv"
 )
 input_obs = {}
-input_obs["CH4"] = df_conc_obs.loc[df_conc_obs["variable"]=="CH4", '1750':'2022'].values.squeeze()
-input_obs["N2O"] = df_conc_obs.loc[df_conc_obs["variable"]=="N2O", '1750':'2022'].values.squeeze()
-input_obs["VOC"] = df_emis_obs.loc[(df_emis_obs["variable"]=="VOC") & (df_emis_obs["scenario"]=='ssp370'), '1750':'2022'].values.squeeze()
-input_obs["NOx"] = df_emis_obs.loc[(df_emis_obs["variable"]=="NOx") & (df_emis_obs["scenario"]=='ssp370'), '1750':'2022'].values.squeeze()
-input_obs["temp"] = gmst[:273]
+input_obs["CH4"] = df_conc_obs.loc[df_conc_obs["variable"]=="CH4", '1750':'2023'].values.squeeze()
+input_obs["N2O"] = df_conc_obs.loc[df_conc_obs["variable"]=="N2O", '1750':'2023'].values.squeeze()
+input_obs["VOC"] = df_emis_obs.loc[(df_emis_obs["variable"]=="VOC") & (df_emis_obs["scenario"]=='ssp370'), '1750':'2023'].values.squeeze()
+input_obs["NOx"] = df_emis_obs.loc[(df_emis_obs["variable"]=="NOx") & (df_emis_obs["scenario"]=='ssp370'), '1750':'2023'].values.squeeze()
+input_obs["temp"] = gmst[:274]
 
 emis_ch4_obs = df_emis_obs.loc[
-    (df_emis_obs["variable"] == "CH4") & (df_emis_obs["scenario"] == 'ssp370'), "1750":"2022"
+    (df_emis_obs["variable"] == "CH4") & (df_emis_obs["scenario"] == 'ssp370'), "1750":"2023"
 ].values.squeeze()
 
 print(emis_ch4_obs)
@@ -523,7 +520,7 @@ total_eesc = 0
 
 for species in hc_species:
     hc_eesc[species] = calculate_eesc(
-        df_conc_obs.loc[df_conc_obs["variable"]==species, '1750':'2022'].values.squeeze(),
+        df_conc_obs.loc[df_conc_obs["variable"]==species, '1750':'2023'].values.squeeze(),
         fractional_release[species],
         fractional_release["CFC-11"],
         cl_atoms[species],
@@ -532,12 +529,12 @@ for species in hc_species:
     total_eesc = total_eesc + hc_eesc[species]
 
 total_eesc_1850 = total_eesc[100]
-input_obs["HC"] = total_eesc[:273]
+input_obs["HC"] = total_eesc[:274]
 
 if plots:
     pl.plot(input_obs["HC"])
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "eesc_from_observed_conc.png"
     )
     pl.close()
@@ -572,7 +569,7 @@ natural_emissions_adjustment = emis_ch4_obs[0]
 
 # def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase, rnat):
 def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
-    conc_ch4 = np.zeros(273)  # 1751-2023 timebounds
+    conc_ch4 = np.zeros(274)  # 1751-2023 timebounds
     gas_boxes = 0  # should use correct pi value for CMIP6
     airborne_emissions = 0
 
@@ -599,7 +596,7 @@ def fit_precursors(x, rch4, rnox, rvoc, rhc, rn2o, rtemp, rbase):
         params,
     )
 
-    for i in range(273):
+    for i in range(274):
         conc_ch4[i], gas_boxes, airborne_emissions = one_box(
             emis_ch4_obs[i],
             gas_boxes,
@@ -630,7 +627,7 @@ gap[5] = 0
 
 # natural bounds from global methane budget (part of GCP)
 p, cov = scipy.optimize.curve_fit(
-    fit_precursors, invect, input_obs["CH4"][:273], bounds=(low - gap, high + gap)
+    fit_precursors, invect, input_obs["CH4"][:274], bounds=(low - gap, high + gap)
 )
 
 parameters["best_fit"] = {
@@ -664,27 +661,27 @@ print("methane lifetime 1850:", parameters["best_fit"]["base"])
 
 if plots:
     pl.plot(
-        np.arange(1750, 2023),
+        np.arange(1750, 2024),
         lifetime_scaling["best_fit"] * parameters["best_fit"]["base"],
         label="best_fit",
     )
     pl.legend()
     pl.ylabel("CH4 chemical lifetime (yr)")
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "ch4_chemical_lifetime_best_fit.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "ch4_chemical_lifetime_best_fit.pdf"
     )
     pl.close()
 
-conc_ch4["best_fit"] = np.zeros(273)
+conc_ch4["best_fit"] = np.zeros(274)
 gas_boxes = 0
 airborne_emissions = 0
 
-for i in range(273):
+for i in range(274):
     conc_ch4["best_fit"][i], gas_boxes, airborne_emissions = one_box(
         #        emis_ch4_obs[i] + parameters["best_fit"]["nat"],
         emis_ch4_obs[i],
@@ -721,7 +718,7 @@ ar6_colors = {
 
 
 df_emis = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "../../output/emissions/"
     "ssps_harmonized_1750-2499.csv",
     index_col=[0, 1, 2, 3, 4]
 )
@@ -824,7 +821,7 @@ if plots:
             lw=1,
         )
     ax[0].plot(
-        np.arange(1750, 2023),
+        np.arange(1750, 2024),
         lifetime_scaling["best_fit"] * parameters["best_fit"]["base"],
         color="0.5",
         label="Best fit",
@@ -837,13 +834,13 @@ if plots:
     #    for model in models:
     #        ax[1].plot(np.arange(1750, 2101), conc_ch4[model], label=model)
     ax[1].plot(
-        np.arange(1750, 2023), conc_ch4["best_fit"], color="0.5", label="Best fit", lw=1
+        np.arange(1750, 2024), conc_ch4["best_fit"], color="0.5", label="Best fit", lw=1
     )
     ax[1].plot(
-        np.arange(1750, 2023), input_obs["CH4"], color="k", label="observations", lw=1
+        np.arange(1750, 2024), input_obs["CH4"], color="k", label="observations", lw=1
     )
     ax[1].set_ylabel("ppb")
-    ax[1].set_xlim(1750, 2023)
+    ax[1].set_xlim(1750, 2024)
     ax[1].legend(frameon=False)
     ax[1].set_title("(b) CH$_4$ concentration")
 
@@ -858,11 +855,11 @@ if plots:
 
     fig.tight_layout()
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "methane_calibrations.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "methane_calibrations.pdf"
     )
     pl.close()
@@ -881,10 +878,10 @@ df = pd.DataFrame(
     index=["historical_best"],
 )
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
+    f"../../output/calibrations/",
     exist_ok=True,
 )
 df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+    f"../../output/calibrations/"
     "CH4_lifetime.csv"
 )

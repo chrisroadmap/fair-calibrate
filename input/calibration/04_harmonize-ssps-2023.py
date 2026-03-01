@@ -25,17 +25,16 @@ from fair.interface import fill
 from fair.io import read_properties
 from tqdm.auto import tqdm
 
+from fair_calibrate.parameters import FAIR_VERSION, PRIOR_SAMPLES
+
 load_dotenv()
 
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
-assert fair_v == __version__
+assert __version__ == FAIR_VERSION
 
 harmonization_year = 2023
 
@@ -67,7 +66,7 @@ f.allocate()
 f.fill_from_rcmip()
 
 df_in = pd.read_csv(
-    f"../../../../../data/emissions/"
+    f"../../data/emissions/"
     "historical_emissions_1750-2023_cmip7.csv"
 )
 variables = list(df_in["variable"])
@@ -93,7 +92,7 @@ for year in years_harmonization:
 
 history = (
     scmdata.ScmRun(
-        f"../../../../../data/emissions/"
+        "../../data/emissions/"
         "historical_emissions_1750-2023_cmip7.csv",
         lowercase_cols=True,
     )
@@ -104,7 +103,7 @@ history = (
 
 future = (
     scmdata.ScmRun(
-        "../../../../../data/emissions/rcmip-5-1-0-corrected-nox.csv",
+        "../../data/emissions/rcmip-5-1-0-corrected-nox.csv",
         lowercase_cols=True,
     )
     .filter(scenario=scenarios, region="World")
@@ -269,11 +268,11 @@ history_naked = history.droplevel(('model', 'scenario'), axis=0)
 combined_harmonised = history_naked.join(scenarios_harmonised).reorder_levels(("model", "scenario", "region", "variable", "unit")).sort_values(["scenario", "variable"])
 
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/",
+    "../../output/emissions/",
     exist_ok=True,
 )
 
 combined_harmonised.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "../../output/emissions/"
     "ssps_harmonized_1750-2499.csv",
 )

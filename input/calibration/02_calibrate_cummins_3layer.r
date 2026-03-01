@@ -19,14 +19,8 @@ message("Running R script for 3 layer model calibrations...")
 # Use Donald Cummins' package
 library(EBM)
 
-# Get environment variable describing calibration version
-readRenviron("../../../../../.env")
-cal_v = paste("v", Sys.getenv("CALIBRATION_VERSION"), sep="")
-fair_v = paste("fair-", Sys.getenv("FAIR_VERSION"), sep="")
-constraint_set = Sys.getenv("CONSTRAINT_SET")
-
 # Get the precalculated 4xCO2 N and T data
-input_data = read.csv(file.path("..", "..", "..", "..", "..", "output", fair_v, cal_v, constraint_set, "calibrations", "4xCO2_cmip6.csv"))
+input_data = read.csv(file.path("..", "..", "output", "calibrations", "4xCO2_cmip6.csv"))
 
 # Initial guess for parameter values
 inits3 <- list(
@@ -143,6 +137,6 @@ colnames(output) <- names
 # save output
 write.csv(
 	output,
-	file.path("..", "..", "..", "..", "..", "output", fair_v, cal_v, constraint_set, "calibrations", "4xCO2_cummins_ebm3_cmip6.csv"),
+	file.path("..", "..", "output", "calibrations", "4xCO2_cummins_ebm3_cmip6.csv"),
 	row.names=FALSE
 )
