@@ -16,9 +16,9 @@ then
 fi
 
 > ziplist.txt
-find input/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET}/ -type d -name __pycache__ -prune -o -print >> ziplist.txt
-find output/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET} >> ziplist.txt
-find plots/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET} >> ziplist.txt
+find input -type d -name __pycache__ -prune -o -print >> ziplist.txt
+find output >> ziplist.txt
+find plots >> ziplist.txt
 find data >> ziplist.txt
 find r_scripts >> ziplist.txt
 ls -1 *.* >> ziplist.txt

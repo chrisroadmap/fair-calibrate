@@ -2,10 +2,11 @@ name: fair-calibrate
 channels:
   - chrisroadmap
   - conda-forge
+  - nodefaults
 dependencies:
   - python==3.11.10
   - black
-  - fair==2.2.2
+  - fair==2.2.4
   - flake8
   - h5py
   - isort
@@ -24,3 +25,4 @@ dependencies:
   - pip
   - pip:
     - aneris-iamc[units]==0.3.1
+    - -e .
