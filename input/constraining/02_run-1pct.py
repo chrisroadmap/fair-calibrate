@@ -14,32 +14,29 @@ from fair import __version__
 from parallel_1pct import run_fair
 from utils import _parallel_process
 
+from fair_calibrate.parameters import PRIOR_SAMPLES
+
 if __name__ == "__main__":
     print("Running 1pctCO2 scenarios...")
     load_dotenv()
 
-    cal_v = os.getenv("CALIBRATION_VERSION")
-    fair_v = os.getenv("FAIR_VERSION")
-    constraint_set = os.getenv("CONSTRAINT_SET")
-    samples = int(os.getenv("PRIOR_SAMPLES"))
+    samples = PRIOR_SAMPLES
     batch_size = int(os.getenv("BATCH_SIZE"))
     WORKERS = int(os.getenv("WORKERS"))
 
     # number of processors
     WORKERS = min(multiprocessing.cpu_count(), WORKERS)
 
-    assert fair_v == __version__
-
     df_cc = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+        "../../output/priors/"
         "carbon_cycle.csv"
     )
     df_cr = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+        "../../output/priors/"
         "climate_response_ebm3.csv"
     )
     df_scaling = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+        "../../output/priors/"
         "forcing_scaling.csv"
     )
 
@@ -48,7 +45,7 @@ if __name__ == "__main__":
 
     # we also only want to run ensembles that passed RMSE test
     rmse_pass = np.loadtxt(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+        "../../output/posteriors/"
         "runids_rmse_pass.csv"
     ).astype(int)
 
@@ -125,23 +122,23 @@ if __name__ == "__main__":
         temp_1000_out[batch_start:batch_end] = res[ibatch][2]
 
     os.makedirs(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/",
+        "../../output/prior_runs/",
         exist_ok=True,
     )
     np.save(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+        "../../output/prior_runs/"
         "temperature_1pctCO2_y70_y140_y210.npy",
         temp_2x4x8x_out,
         allow_pickle=True,
     )
     np.save(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+        "../../output/prior_runs/"
         "airborne_fraction_1pctCO2_y70_y140_y210.npy",
         af_out,
         allow_pickle=True,
     )
     np.save(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+        "../../output/prior_runs/"
         "temperature_1pctCO2_1000GtC.npy",
         temp_1000_out,
         allow_pickle=True,

@@ -4,18 +4,10 @@ import warnings
 
 import numpy as np
 import xarray as xr
-from dotenv import load_dotenv
 from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
 from scipy.interpolate import interp1d
-
-load_dotenv()
-
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-
 
 def run_fair(cfg):
     scenarios = ["1pctCO2"]
@@ -26,7 +18,7 @@ def run_fair(cfg):
     species, properties = read_properties()
 
     da_concentration = xr.load_dataarray(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../output/"
         "concentration/1pctCO2_concentration_1850-2060.nc"
     )
 
@@ -63,7 +55,7 @@ def run_fair(cfg):
 
     da = da_concentration.loc[dict(config="unspecified", scenario="1pctCO2")]
     fe = da.expand_dims(dim=["scenario", "config"], axis=(1, 2))
-    f.concentration = fe.drop("config") * np.ones((1, 1, batch_size, 1))
+    f.concentration = fe.drop_vars("config") * np.ones((1, 1, batch_size, 1))
 
     # climate response
     fill(

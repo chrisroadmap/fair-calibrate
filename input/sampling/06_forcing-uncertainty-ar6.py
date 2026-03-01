@@ -16,17 +16,13 @@ from dotenv import load_dotenv
 from fair import __version__
 from sklearn.preprocessing import QuantileTransformer
 
+from fair_calibrate.parameters import PRIOR_SAMPLES
+
 load_dotenv()
 
 print("Doing forcing uncertainty sampling...")
 
-
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
-
-assert fair_v == __version__
+samples = PRIOR_SAMPLES
 
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 NINETY_TO_ONESIGMA
@@ -61,6 +57,7 @@ def opt(x, q05_desired, q50_desired, q95_desired):
 # Asymmetric distributions we use skew-normal, fitting quantiles
 lapsi_params = scipy.optimize.root(opt, [1, 1, 1], args=(0, 1, 2.25)).x
 contrails_params = scipy.optimize.root(opt, [1, 1, 1], args=(19 / 57, 1, 98 / 57)).x
+irrigation_params = scipy.optimize.root(opt, [2, 1, 1], args=(-1, 1, 2)).x
 
 scalings["Light absorbing particles on snow and ice"] = scipy.stats.skewnorm.rvs(
     lapsi_params[0],
@@ -70,9 +67,17 @@ scalings["Light absorbing particles on snow and ice"] = scipy.stats.skewnorm.rvs
     random_state=3701584,
 )
 
+scalings["Irrigation"] = scipy.stats.skewnorm.rvs(
+    irrigation_params[0],
+    loc=irrigation_params[1],
+    scale=irrigation_params[2],
+    size=samples,
+    random_state=110632896,
+)
+
 # CO2 scaling is quantile mapping from ERF 4xCO2 and +/- 12%
 df_ebm = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    "../../output/priors/"
     "climate_response_ebm3.csv"
 )
 
@@ -85,7 +90,7 @@ scalings["CO2"] = trans.squeeze()
 df_out = pd.DataFrame(scalings, columns=scalings.keys())
 
 df_out.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    f"../../output/priors/"
     "forcing_scaling.csv",
     index=False,
 )

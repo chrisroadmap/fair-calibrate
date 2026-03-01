@@ -12,29 +12,26 @@ from dotenv import load_dotenv
 from fair import __version__
 from tqdm.auto import tqdm
 
+from fair_calibrate.parameters import PRIOR_SAMPLES
+
 pl.switch_backend("agg")
 
 load_dotenv()
-pl.style.use("../../../../../defaults.mplstyle")
+pl.style.use("../../defaults.mplstyle")
 
 print("Doing RMSE constraint...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
-assert fair_v == __version__
-
 
 temp_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-    "temperature_1850-2023.npy"
+    f"../../output/prior_runs/"
+    "temperature_1850-2024.npy"
 )
 
-df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2024.csv")
+df_gmst = pd.read_csv("../../data/forcing/IGCC_GMST_1850-2024.csv")
 gmst = df_gmst["gmst"].values
 
 
@@ -95,13 +92,13 @@ if plots:
     pl.title("Prior ensemble")
     pl.tight_layout()
     os.makedirs(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
+        f"../../plots/", exist_ok=True
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_historical.png"
+        f"../../plots/prior_historical.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_historical.pdf"
+        f"../../plots/prior_historical.pdf"
     )
     pl.close()
 
@@ -168,11 +165,11 @@ if plots:
     pl.title("Historical GMST")
     pl.tight_layout()
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "post_rsme_top10_bottom10_historical.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "post_rsme_top10_bottom10_historical.pdf"
     )
     pl.close()
@@ -247,22 +244,22 @@ if plots:
     pl.title("After RMSE constraint")
     pl.tight_layout()
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "post_rsme_historical.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "post_rsme_historical.pdf"
     )
     pl.close()
 
 valid_temp = np.arange(samples, dtype=int)[accept_temp]
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors",
+    "../../output/posteriors",
     exist_ok=True,
 )
 np.savetxt(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "../../output/posteriors/"
     "runids_rmse_pass.csv",
     valid_temp.astype(int),
     fmt="%d",

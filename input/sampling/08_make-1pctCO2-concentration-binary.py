@@ -5,6 +5,7 @@
 
 # 1pctCO2 from RCMIP
 # this is from CMIP6 and is also half a year out - does this matter?
+# since CMIP7 RCMIP doesn't look like it has been updated, we'll ignore this.
 
 import os
 
@@ -14,17 +15,13 @@ from dotenv import load_dotenv
 from fair import FAIR, __version__
 from fair.interface import fill
 
+from fair_calibrate.parameters import PRIOR_SAMPLES
+
 load_dotenv()
 
-
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
-
-assert fair_v == __version__
 
 print("Making 1pctCO2 concentration binary...")
 
@@ -90,11 +87,11 @@ for specie in species:
     fill(f.concentration, input[specie][:, None, None], specie=specie)
 
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/concentration/",
+    "../../output/concentration/",
     exist_ok=True,
 )
 
 f.concentration.to_netcdf(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/concentration/"
+    "../../output/concentration/"
     "1pctCO2_concentration_1850-2060.nc"
 )

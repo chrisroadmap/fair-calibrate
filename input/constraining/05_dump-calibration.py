@@ -7,51 +7,46 @@ import os
 
 import numpy as np
 import pandas as pd
-from dotenv import load_dotenv
 from fair import __version__
 
-load_dotenv()
+from fair_calibrate.parameters import PRIOR_SAMPLES, POSTERIOR_SAMPLES
 
 print("Dumping output...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
-output_ensemble_size = int(os.getenv("POSTERIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
+output_ensemble_size = POSTERIOR_SAMPLES
 
-assert fair_v == __version__
 
 df_cc = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    "../../output/priors/"
     "carbon_cycle.csv"
 )
 df_cr = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    "../../output/priors/"
     "climate_response_ebm3.csv"
 )
 df_aci = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    "../../output/priors/"
     "aerosol_cloud.csv"
 )
 df_ari = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    "../../output/priors/"
     "aerosol_radiation.csv"
 )
 df_ozone = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/ozone.csv"
+    "../../output/priors/ozone.csv"
 )
 df_scaling = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    "../../output/priors/"
     "forcing_scaling.csv"
 )
 df_1750co2 = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    "../../output/priors/"
     "co2_concentration_1750.csv"
 )
 
 valid_all = np.loadtxt(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "../../output/posteriors/"
     "runids_rmse_reweighted_pass.csv"
 ).astype(
     np.int64
@@ -113,6 +108,7 @@ scaling_renames = {
     "N2O": "forcing_scale[N2O]",
     "Stratospheric water vapour": "forcing_scale[Stratospheric water vapour]",
     "Land use": "forcing_scale[Land use]",
+    "Irrigation": "forcing_scale[Irrigation]",
     "Volcanic": "forcing_scale[Volcanic]",
     "solar_amplitude": "forcing_scale[Solar]",
     "Light absorbing particles on snow and ice": "forcing_scale[Light absorbing particles on snow and ice]",
@@ -184,6 +180,6 @@ params_out = pd.concat(
 params_out.drop(columns=['minorGHG'], inplace=True)
 
 params_out.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "../../output/posteriors/"
     "calibrated_constrained_parameters.csv"
 )

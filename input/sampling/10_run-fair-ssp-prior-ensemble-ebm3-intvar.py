@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""updated historical calibration of fair-2.2.2"""
+"""updated historical calibration of fair-2.2.4"""
 
 import multiprocessing
 import os
@@ -14,78 +14,55 @@ from fair import __version__
 from parallel import run_fair
 from utils import _parallel_process
 
+from fair_calibrate.parameters import PRIOR_SAMPLES
+
 if __name__ == "__main__":
     print("Running the priors (could take a while)...")
     load_dotenv()
 
-    cal_v = os.getenv("CALIBRATION_VERSION")
-    fair_v = os.getenv("FAIR_VERSION")
-    constraint_set = os.getenv("CONSTRAINT_SET")
-    samples = int(os.getenv("PRIOR_SAMPLES"))
+    samples = PRIOR_SAMPLES
     batch_size = int(os.getenv("BATCH_SIZE"))
     WORKERS = int(os.getenv("WORKERS"))
 
     # number of processors
     WORKERS = min(multiprocessing.cpu_count(), WORKERS)
 
-    assert fair_v == __version__
-
-    # CMIP7 solar... only 1850-2023
+    # CMIP7 solar
     df_solar = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/forcing/solar_forcing_timebounds.csv", index_col=0
+        "../../output/forcing/solar_forcing_timebounds_cmip7.csv", index_col=0
     )
-    # CMIP7 volcanic... does NOT include HTHH
+    # CMIP7 volcanic... does NOT include HTHH. My constructed dataset from Thomas' SAOD
     df_volcanic = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/forcing/volcanic_forcing_timebounds.csv",
-        index_col=0,
+        "../../data/forcing/volcanic_forcing_timebounds_cmip7.csv", index_col=0
     )
 
-    volcanic_forcing = df_volcanic["erf"].loc[1750:2024].values
-    solar_forcing = df_solar["erf"].loc[1750:2024].values
-
-    df_cc = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
-        "carbon_cycle.csv"
-    )
-    df_cr = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
-        "climate_response_ebm3.csv"
-    )
-    df_aci = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
-        "aerosol_cloud.csv"
-    )
-    df_ari = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
-        "aerosol_radiation.csv"
-    )
-    df_ozone = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
-        "ozone.csv"
-    )
-    df_scaling = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
-        "forcing_scaling.csv"
-    )
-    df_1750co2 = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
-        "co2_concentration_1750.csv"
-    )
-    df_methane = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-        "CH4_lifetime.csv",
-        index_col=0,
-    )
+    # new for this calibration: land use prescribed as timeseries and irrigation
     df_landuse = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-        "landuse_scale_factor.csv",
-        index_col=0,
+        "../../data/forcing/land_use_forcing_timebounds_cmip7.csv", index_col=0
     )
-    df_lapsi = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-        "lapsi_scale_factor.csv",
-        index_col=0,
+    df_irrigation = pd.read_csv(
+        "../../data/forcing/irrigation_forcing_timebounds_cmip7.csv", index_col=0
     )
+
+    volcanic_forcing = df_volcanic["volcanic_erf_rel_1850-2021"].loc[1750:2024].values
+    solar_forcing = df_solar["solar_erf_rel_1850-2019"].loc[1750:2024].values
+    landuse_forcing = df_landuse["VL"].loc[1750:2024].values
+    irrigation_forcing = df_irrigation["VL"].loc[1750:2024].values
+
+    df_cc = pd.read_csv("../../output/priors/carbon_cycle.csv")
+    df_cr = pd.read_csv("../../output/priors/climate_response_ebm3.csv")
+    df_aci = pd.read_csv("../../output/priors/aerosol_cloud.csv")
+    df_ari = pd.read_csv("../../output/priors/aerosol_radiation.csv")
+    df_ozone = pd.read_csv("../../output/priors/ozone.csv")
+    df_scaling = pd.read_csv("../../output/priors/forcing_scaling.csv")
+    df_1750co2 = pd.read_csv("../../output/priors/co2_concentration_1750.csv")
+    df_methane = pd.read_csv("../../output/calibrations/CH4_lifetime.csv", index_col=0)
+#    df_landuse = pd.read_csv(
+#        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+#        "landuse_scale_factor.csv",
+#        index_col=0,
+#    )
+    df_lapsi = pd.read_csv("../../output/calibrations/lapsi_scale_factor.csv", index_col=0)
 
     seedgen = 1355763
     seedstep = 399
@@ -109,6 +86,8 @@ if __name__ == "__main__":
         config[ibatch]["batch_end"] = batch_start + batch_size
         config[ibatch]["volcanic_forcing"] = volcanic_forcing
         config[ibatch]["solar_forcing"] = solar_forcing
+        config[ibatch]["landuse_forcing"] = landuse_forcing
+        config[ibatch]["irrigation_forcing"] = irrigation_forcing
         config[ibatch]["scaling_Volcanic"] = df_scaling.loc[
             batch_start : batch_end - 1, "Volcanic"
         ].values.squeeze()
@@ -191,6 +170,9 @@ if __name__ == "__main__":
         config[ibatch]["scaling_landuse"] = df_scaling.loc[
             batch_start : batch_end - 1, "Land use"
         ].values.squeeze()
+        config[ibatch]["scaling_irrigation"] = df_scaling.loc[
+             batch_start : batch_end - 1, "Irrigation"
+        ].values.squeeze()
         config[ibatch]["ari_BC"] = df_ari.loc[batch_start : batch_end - 1, "BC"]
         config[ibatch]["ari_CH4"] = df_ari.loc[batch_start : batch_end - 1, "CH4"]
         config[ibatch]["ari_N2O"] = df_ari.loc[batch_start : batch_end - 1, "N2O"]
@@ -220,9 +202,9 @@ if __name__ == "__main__":
         config[ibatch]["ch4_EESC"] = df_methane.loc["historical_best", "HC"]
         config[ibatch]["ch4_N2O"] = df_methane.loc["historical_best", "N2O"]
         config[ibatch]["ch4_temp"] = df_methane.loc["historical_best", "temp"]
-        config[ibatch]["landuse_factor"] = df_landuse.loc[
-            "historical_best", "CO2_AFOLU"
-        ]
+#        config[ibatch]["landuse_factor"] = df_landuse.loc[
+#            "historical_best", "CO2_AFOLU"
+#        ]
         config[ibatch]["lapsi_factor"] = df_lapsi.loc["historical_best", "BC"]
 
     parallel_process_kwargs = dict(
@@ -248,49 +230,49 @@ if __name__ == "__main__":
         tcr[batch_start:batch_end] = res[ibatch][6]
 
     os.makedirs(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/",
+        "../../output/prior_runs/",
         exist_ok=True,
     )
     np.save(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-        "temperature_1850-2023.npy",
+        "../../output/prior_runs/"
+        "temperature_1850-2024.npy",
         temp_out,
         allow_pickle=True,
     )
     # one question is whether we expect the non-ocean parts of the EEI to go beyond 2020
     # currently stuck in 2020 for this
     np.save(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+        "../../output/prior_runs/"
         "ocean_heat_content_2020_minus_1971.npy",
         ohc_out,
         allow_pickle=True,
     )
     np.save(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+        "../../output/prior_runs/"
         "concentration_co2_2023.npy",
         co2_out,
         allow_pickle=True,
     )
     np.save(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+        "../../output/prior_runs/"
         "forcing_ari_2005-2014_mean.npy",
         fari_out,
         allow_pickle=True,
     )
     np.save(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+        "../../output/prior_runs/"
         "forcing_aci_2005-2014_mean.npy",
         faci_out,
         allow_pickle=True,
     )
     np.save(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+        "../../output/prior_runs/"
         "ecs.npy",
         ecs,
         allow_pickle=True,
     )
     np.save(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+        "../../output/prior_runs/"
         "tcr.npy",
         tcr,
         allow_pickle=True,

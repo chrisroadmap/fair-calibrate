@@ -4,16 +4,9 @@ import warnings
 
 import numpy as np
 import xarray as xr
-from dotenv import load_dotenv
 from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
-
-load_dotenv()
-
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
 
 
 def run_fair(cfg):
@@ -22,13 +15,24 @@ def run_fair(cfg):
     batch_end = cfg["batch_end"]
     batch_size = batch_end - batch_start
 
-    species, properties = read_properties()
+    species, properties = read_properties(filename="../../data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv")
     species.remove("NOx aviation")
     species.remove("Contrails")
     species.remove("Halon-1202")
 
+#    species.append("Irrigation")
+#    properties["Irrigation"] = {
+#        'type': 'unspecified',  # see issue #179 of FAIR
+#        'input_mode': 'forcing',
+#        'greenhouse_gas': False,
+#        'aerosol_chemistry_from_emissions': False,
+#        'aerosol_chemistry_from_concentration': False
+#    }
+#    properties["Land use"]["input_mode"] = "forcing"
+
+
     da_emissions = xr.load_dataarray(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+        "../../output/emissions/"
         "ssps_harmonized_1750-2499.nc",
     )
 
@@ -41,9 +45,9 @@ def run_fair(cfg):
 
     da = da_emissions.loc[dict(config="unspecified", scenario="ssp245")][:274, ...]
     fe = da.expand_dims(dim=["scenario", "config"], axis=(1, 2))
-    f.emissions = fe.drop("config") * np.ones((1, 1, batch_size, 1))
+    f.emissions = fe.drop_vars("config") * np.ones((1, 1, batch_size, 1))
 
-    # solar and volcanic forcing
+    # solar, volcanic, land use and irrigation forcing
     fill(
         f.forcing,
         cfg["volcanic_forcing"][:, None, None] * cfg["scaling_Volcanic"],
@@ -53,6 +57,16 @@ def run_fair(cfg):
         f.forcing,
         cfg["solar_forcing"][:, None, None] * cfg["scaling_solar_amplitude"],
         specie="Solar",
+    )
+    fill(
+        f.forcing,
+        cfg["landuse_forcing"][:, None, None] * cfg["scaling_landuse"],
+        specie="Land use",
+    )
+    fill(
+        f.forcing,
+        cfg["irrigation_forcing"][:, None, None] * cfg["scaling_irrigation"],
+        specie="Irrigation",
     )
 
     # climate response
@@ -74,7 +88,7 @@ def run_fair(cfg):
     fill(f.climate_configs["forcing_4co2"], cfg["forcing_4co2"])
 
     # species level
-    f.fill_species_configs()
+    f.fill_species_configs(filename="../../data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv")
 
     # carbon cycle
     fill(f.species_configs["iirf_0"], cfg["iirf_0"], specie="CO2")
@@ -112,11 +126,11 @@ def run_fair(cfg):
     fill(f.species_configs["lifetime_temperature_sensitivity"], cfg["ch4_temp"])
 
     # correct land use  and LAPSI scale factor terms
-    fill(
-        f.species_configs["land_use_cumulative_emissions_to_forcing"],
-        cfg["landuse_factor"],
-        specie="CO2 AFOLU",
-    )
+#    fill(
+#        f.species_configs["land_use_cumulative_emissions_to_forcing"],
+#        cfg["landuse_factor"],
+#        specie="CO2 AFOLU",
+#    )
     fill(
         f.species_configs["lapsi_radiative_efficiency"],
         cfg["lapsi_factor"],
@@ -126,15 +140,15 @@ def run_fair(cfg):
     # Reconstructed emissions adjustments for all species to match first timepoint
     # nice to not hardcode this :)
     # note minor GHGs are NOT scaled
-    fill(f.species_configs["baseline_emissions"], 26.6237352, specie="CH4")
-    fill(f.species_configs["baseline_emissions"], 19.1961826, specie="NOx")
-    fill(f.species_configs["baseline_emissions"], 2.297550411, specie="Sulfur")
-    fill(f.species_configs["baseline_emissions"], 341.2760393, specie="CO")
-    fill(f.species_configs["baseline_emissions"], 59.42102486, specie="VOC")
-    fill(f.species_configs["baseline_emissions"], 2.081487993, specie="BC")
-    fill(f.species_configs["baseline_emissions"], 15.5693632, specie="OC")
-    fill(f.species_configs["baseline_emissions"], 6.616399733, specie="NH3")
-    fill(f.species_configs["baseline_emissions"], 0.999086659, specie="N2O")
+    fill(f.species_configs["baseline_emissions"], 26.62406681, specie="CH4")
+    fill(f.species_configs["baseline_emissions"], 19.19658896, specie="NOx")
+    fill(f.species_configs["baseline_emissions"], 2.297658643, specie="Sulfur")
+    fill(f.species_configs["baseline_emissions"], 341.3237253, specie="CO")
+    fill(f.species_configs["baseline_emissions"], 59.42636626, specie="VOC")
+    fill(f.species_configs["baseline_emissions"], 2.081797468, specie="BC")
+    fill(f.species_configs["baseline_emissions"], 15.57342645, specie="OC")
+    fill(f.species_configs["baseline_emissions"], 6.618696967, specie="NH3")
+    fill(f.species_configs["baseline_emissions"], 0.999096312, specie="N2O")
     fill(f.species_configs["baseline_emissions"], 261.0325378, specie="CHCl3")
     fill(f.species_configs["baseline_emissions"], 215.9731971, specie="CH2Cl2")
     fill(f.species_configs["baseline_emissions"], 4554.415615, specie="CH3Cl")
@@ -161,7 +175,7 @@ def run_fair(cfg):
         cfg["scaling_lapsi"],
         specie="Light absorbing particles on snow and ice",
     )
-    fill(f.species_configs["forcing_scale"], cfg["scaling_landuse"], specie="Land use")
+#    fill(f.species_configs["forcing_scale"], cfg["scaling_landuse"], specie="Land use")
 
     for specie in [
         "CFC-11",

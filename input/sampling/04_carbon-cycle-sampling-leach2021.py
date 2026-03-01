@@ -26,19 +26,16 @@ from dotenv import load_dotenv
 from fair import __version__
 from fair.structure.units import compound_convert
 
+from fair_calibrate.parameters import PRIOR_SAMPLES
+
 load_dotenv()
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
-pl.style.use("../../../../../defaults.mplstyle")
+pl.style.use("../../defaults.mplstyle")
 
 
 print("Making carbon cycle calibrations...")
-
-assert fair_v == __version__
 
 
 # NB: rU and rA are in GtC units, we need to convert to GtCO2
@@ -132,12 +129,12 @@ cc_sample_df = pd.DataFrame(
 )
 
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/",
+    "../../output/priors/",
     exist_ok=True,
 )
 
 cc_sample_df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    "../../output/priors/"
     "carbon_cycle.csv",
     index=False,
 )

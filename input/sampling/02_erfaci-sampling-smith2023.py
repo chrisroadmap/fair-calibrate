@@ -19,14 +19,13 @@ from dotenv import load_dotenv
 from scipy.optimize import curve_fit
 from tqdm import tqdm
 
+from fair_calibrate.parameters import PRIOR_SAMPLES
+
 load_dotenv()
 
-pl.style.use("../../../../../defaults.mplstyle")
+pl.style.use("../../defaults.mplstyle")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
@@ -34,7 +33,7 @@ datadir = os.getenv("DATADIR")
 print("Sampling aerosol cloud interactions...")
 
 
-files = glob.glob("../../../../../data/smith2023aerosol/*.csv")
+files = glob.glob("../../data/smith2023aerosol/*.csv")
 
 ari = {}
 aci = {}
@@ -54,7 +53,7 @@ models = list(models_runs.keys())
 for model in models:
     nruns = 0
     for run in models_runs[model]:
-        file = f"../../../../../data/smith2023aerosol/{model}_{run}_aerosol_forcing.csv"
+        file = f"../../data/smith2023aerosol/{model}_{run}_aerosol_forcing.csv"
         df = pd.read_csv(file, index_col=0)
         if nruns == 0:
             ari_temp = df["ERFari"].values.squeeze()
@@ -201,14 +200,14 @@ if plots:
 
     fig.tight_layout()
     os.makedirs(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}", exist_ok=True
+        "../../plots/", exist_ok=True
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "aci_calibration.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "aci_calibration.pdf"
     )
     pl.close()
@@ -216,7 +215,7 @@ if plots:
 df_params = pd.DataFrame(param_fits, index=["aci_scale", "Sulfur", "BC", "OC"]).T
 
 df_params.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+    f"../../output/calibrations/"
     "aerosol_cloud.csv"
 )
 
@@ -246,7 +245,7 @@ erfaci_sample = scipy.stats.trapezoid.rvs(
 
 # Sampling with updated emissions.
 df_emis_obs = pd.read_csv(
-    f"../../../../../data/emissions/"
+    "../../data/emissions/"
     "historical_emissions_1750-2023_cmip7.csv"
 )
 
@@ -286,12 +285,12 @@ df = pd.DataFrame(
 )
 
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/",
+    "../../output/priors/",
     exist_ok=True,
 )
 
 df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    f"../../output/priors/"
     "aerosol_cloud.csv",
     index=False,
 )

@@ -19,20 +19,17 @@ from fair.earth_params import mass_atmosphere, molecular_weight_air
 from matplotlib.lines import Line2D
 from tqdm.auto import tqdm
 
+from fair_calibrate.parameters import PRIOR_SAMPLES, POSTERIOR_SAMPLES
+
 pl.switch_backend("agg")
 
 load_dotenv()
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
-output_ensemble_size = int(os.getenv("POSTERIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
+output_ensemble_size = POSTERIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
-pl.style.use("../../../../../defaults.mplstyle")
+pl.style.use("../../defaults.mplstyle")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
-
-assert fair_v == __version__
 
 print("Doing reweighting...")
 
@@ -40,7 +37,7 @@ print("Doing reweighting...")
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 
 valid_temp_af = np.loadtxt(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    f"../../output/posteriors/"
     "runids_rmse_af_pass.csv"
 ).astype(np.int64)
 
@@ -49,30 +46,30 @@ input_ensemble_size = len(valid_temp_af)
 assert input_ensemble_size > output_ensemble_size
 
 temp_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
-    "temperature_1850-2023.npy"
+    "../../output/prior_runs/"
+    "temperature_1850-2024.npy"
 )
 ohc_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+    "../../output/prior_runs/"
     "ocean_heat_content_2020_minus_1971.npy"
 )
 fari_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+    "../../output/prior_runs/"
     "forcing_ari_2005-2014_mean.npy"
 )
 faci_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+    "../../output/prior_runs/"
     "forcing_aci_2005-2014_mean.npy"
 )
 co2_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+    "../../output/prior_runs/"
     "concentration_co2_2023.npy"
 )
 ecs_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/ecs.npy"
+    "../../output/prior_runs/ecs.npy"
 )
 tcr_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/tcr.npy"
+    f"../../output/prior_runs/tcr.npy"
 )
 faer_in = fari_in + faci_in
 
@@ -373,25 +370,24 @@ print("Number of effective samples:", effective_samples)
 
 assert effective_samples >= output_ensemble_size
 
-# Use pandas.DataFrame method to select a new sample from the parameter sets
+# Use numpy.random.choice because pandas has broken itself again
+# This selects a new sample from the parameter sets
 # that have passed the previous constraining steps, according to the
 # weights that we have just calculated.
-draws = []
-drawn_samples = accepted.sample(
-    n=output_ensemble_size, replace=False, weights=weights, random_state=10099
-)
-draws.append((drawn_samples))
+np.random.seed(10099)
+chosen = np.random.choice(accepted.index, size=841, replace=False, p=weights/np.sum(weights))
+draws = accepted.loc[chosen]
 
 if plots:
     target_ecs = scipy.stats.gaussian_kde(samples["ECS"])
     prior_ecs = scipy.stats.gaussian_kde(ecs_in)
     post1_ecs = scipy.stats.gaussian_kde(ecs_in[valid_temp_af])
-    post2_ecs = scipy.stats.gaussian_kde(draws[0]["ECS"])
+    post2_ecs = scipy.stats.gaussian_kde(draws["ECS"])
 
     target_tcr = scipy.stats.gaussian_kde(samples["TCR"])
     prior_tcr = scipy.stats.gaussian_kde(tcr_in)
     post1_tcr = scipy.stats.gaussian_kde(tcr_in[valid_temp_af])
-    post2_tcr = scipy.stats.gaussian_kde(draws[0]["TCR"])
+    post2_tcr = scipy.stats.gaussian_kde(draws["TCR"])
 
     target_temp = scipy.stats.gaussian_kde(samples["temperature 2004-2023"])
     prior_temp = scipy.stats.gaussian_kde(
@@ -402,37 +398,37 @@ if plots:
         np.average(temp_in[154:175, valid_temp_af], weights=weights_20yr, axis=0)
         - np.average(temp_in[:52, valid_temp_af], weights=weights_51yr, axis=0)
     )
-    post2_temp = scipy.stats.gaussian_kde(draws[0]["temperature 2004-2023"])
+    post2_temp = scipy.stats.gaussian_kde(draws["temperature 2004-2023"])
 
     target_ohc = scipy.stats.gaussian_kde(samples["OHC"])
     prior_ohc = scipy.stats.gaussian_kde(ohc_in / 1e21)
     post1_ohc = scipy.stats.gaussian_kde(ohc_in[valid_temp_af] / 1e21)
-    post2_ohc = scipy.stats.gaussian_kde(draws[0]["OHC"])
+    post2_ohc = scipy.stats.gaussian_kde(draws["OHC"])
 
     target_aer = scipy.stats.gaussian_kde(samples["ERFaer"])
     prior_aer = scipy.stats.gaussian_kde(faer_in)
     post1_aer = scipy.stats.gaussian_kde(faer_in[valid_temp_af])
-    post2_aer = scipy.stats.gaussian_kde(draws[0]["ERFaer"])
+    post2_aer = scipy.stats.gaussian_kde(draws["ERFaer"])
 
     target_aci = scipy.stats.gaussian_kde(samples["ERFaci"])
     prior_aci = scipy.stats.gaussian_kde(faci_in)
     post1_aci = scipy.stats.gaussian_kde(faci_in[valid_temp_af])
-    post2_aci = scipy.stats.gaussian_kde(draws[0]["ERFaci"])
+    post2_aci = scipy.stats.gaussian_kde(draws["ERFaci"])
 
     target_ari = scipy.stats.gaussian_kde(samples["ERFari"])
     prior_ari = scipy.stats.gaussian_kde(fari_in)
     post1_ari = scipy.stats.gaussian_kde(fari_in[valid_temp_af])
-    post2_ari = scipy.stats.gaussian_kde(draws[0]["ERFari"])
+    post2_ari = scipy.stats.gaussian_kde(draws["ERFari"])
 
     target_co2 = scipy.stats.gaussian_kde(samples["CO2 concentration"])
     prior_co2 = scipy.stats.gaussian_kde(co2_in)
     post1_co2 = scipy.stats.gaussian_kde(co2_in[valid_temp_af])
-    post2_co2 = scipy.stats.gaussian_kde(draws[0]["CO2 concentration"])
+    post2_co2 = scipy.stats.gaussian_kde(draws["CO2 concentration"])
 
     colors = {"prior": "#207F6E", "post1": "#684C94", "post2": "#EE696B", "target": "black"}
 
     os.makedirs(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
+        "../../plots/", exist_ok=True
     )
 
     # Plots 1
@@ -740,52 +736,52 @@ if plots:
 
     fig.tight_layout()
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "constraints.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "constraints.pdf"
     )
     pl.close()
 
     # Plots 2
-    pl.scatter(draws[0]["TCR"], draws[0]["ECS"])
+    pl.scatter(draws["TCR"], draws["ECS"])
     pl.xlabel("TCR, °C")
     pl.ylabel("ECS, °C")
     pl.tight_layout()
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "ecs_tcr_constrained.png"
     )
     pl.close()
 
     # Plots 3
-    pl.scatter(draws[0]["TCR"], draws[0]["ERFaci"] + draws[0]["ERFari"])
+    pl.scatter(draws["TCR"], draws["ERFaci"] + draws["ERFari"])
     pl.xlabel("TCR, °C")
     pl.ylabel("Aerosol ERF, W m$^{-2}$, 2005-2014 minus 1750")
     pl.tight_layout()
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "tcr_aer_constrained.png"
     )
     pl.close()
 
     # Plots 4
-    df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2024.csv")
+    df_gmst = pd.read_csv("../../data/forcing/IGCC_GMST_1850-2024.csv")
     gmst = df_gmst["gmst"].values
 
     fig, ax = pl.subplots(figsize=(5, 5))
     ax.fill_between(
         np.arange(1850, 2025),
         np.min(
-            temp_in[:, draws[0].index]
-            - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
+            temp_in[:, draws.index]
+            - np.average(temp_in[:52, draws.index], weights=weights_51yr, axis=0),
             axis=1,
         ),
         np.max(
-            temp_in[:, draws[0].index]
-            - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
+            temp_in[:, draws.index]
+            - np.average(temp_in[:52, draws.index], weights=weights_51yr, axis=0),
             axis=1,
         ),
         color="#000000",
@@ -794,14 +790,14 @@ if plots:
     ax.fill_between(
         np.arange(1850, 2025),
         np.percentile(
-            temp_in[:, draws[0].index]
-            - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
+            temp_in[:, draws.index]
+            - np.average(temp_in[:52, draws.index], weights=weights_51yr, axis=0),
             5,
             axis=1,
         ),
         np.percentile(
-            temp_in[:, draws[0].index]
-            - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
+            temp_in[:, draws.index]
+            - np.average(temp_in[:52, draws.index], weights=weights_51yr, axis=0),
             95,
             axis=1,
         ),
@@ -811,14 +807,14 @@ if plots:
     ax.fill_between(
         np.arange(1850, 2025),
         np.percentile(
-            temp_in[:, draws[0].index]
-            - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
+            temp_in[:, draws.index]
+            - np.average(temp_in[:52, draws.index], weights=weights_51yr, axis=0),
             16,
             axis=1,
         ),
         np.percentile(
-            temp_in[:, draws[0].index]
-            - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
+            temp_in[:, draws.index]
+            - np.average(temp_in[:52, draws.index], weights=weights_51yr, axis=0),
             84,
             axis=1,
         ),
@@ -828,8 +824,8 @@ if plots:
     ax.plot(
         np.arange(1850, 2025),
         np.median(
-            temp_in[:, draws[0].index]
-            - np.average(temp_in[:52, draws[0].index], weights=weights_51yr, axis=0),
+            temp_in[:, draws.index]
+            - np.average(temp_in[:52, draws.index], weights=weights_51yr, axis=0),
             axis=1,
         ),
         color="#000000",
@@ -846,52 +842,52 @@ if plots:
     pl.title("Constrained, reweighted posterior")
     pl.tight_layout()
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "final_reweighted_historical.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "final_reweighted_historical.pdf"
     )
     pl.close()
 
 # move these to the validation script
 print("Constrained, reweighted parameters:")
-print("ECS:", np.percentile(draws[0]["ECS"], (5, 50, 95)))
-print("TCR:", np.percentile(draws[0]["TCR"], (5, 50, 95)))
+print("ECS:", np.percentile(draws["ECS"], (5, 50, 95)))
+print("TCR:", np.percentile(draws["TCR"], (5, 50, 95)))
 print(
-    "CO2 concentration 2023:", np.percentile(draws[0]["CO2 concentration"], (5, 50, 95))
+    "CO2 concentration 2023:", np.percentile(draws["CO2 concentration"], (5, 50, 95))
 )
 print(
     "Temperature 2004-2023 rel. 1850-1900:",
-    np.percentile(draws[0]["temperature 2004-2023"], (5, 50, 95)),
+    np.percentile(draws["temperature 2004-2023"], (5, 50, 95)),
 )
 print(
     "Aerosol ERFari 2005-2014 rel. 1750:",
-    np.percentile(draws[0]["ERFari"], (5, 50, 95)),
+    np.percentile(draws["ERFari"], (5, 50, 95)),
 )
 print(
     "Aerosol ERFaci 2005-2014 rel. 1750:",
-    np.percentile(draws[0]["ERFaci"], (5, 50, 95)),
+    np.percentile(draws["ERFaci"], (5, 50, 95)),
 )
 print(
     "Aerosol ERF 2005-2014 rel. 1750:",
-    np.percentile(draws[0]["ERFaci"] + draws[0]["ERFari"], (5, 50, 95)),
+    np.percentile(draws["ERFaci"] + draws["ERFari"], (5, 50, 95)),
 )
-print("OHC change 2020 rel. 1971:", np.percentile(draws[0]["OHC"], (5, 50, 95)))
+print("OHC change 2020 rel. 1971:", np.percentile(draws["OHC"], (5, 50, 95)))
 
 print("*likely range")
 
 np.savetxt(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "../../output/posteriors/"
     "runids_rmse_reweighted_pass.csv",
-    sorted(draws[0].index),
+    sorted(draws.index),
     fmt="%d",
 )
 
 # warming baselines
-df_warming = pd.DataFrame(data=draws[0]["temperature 2004-2023"], index=draws[0].index, columns = ["temperature 2004-2023"]).sort_index()
+df_warming = pd.DataFrame(data=draws["temperature 2004-2023"], index=draws.index, columns = ["temperature 2004-2023"]).sort_index()
 df_warming.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "../../output/posteriors/"
     "warming_baselines.csv",
 )

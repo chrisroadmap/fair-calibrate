@@ -7,26 +7,18 @@ import os
 
 import numpy as np
 import pandas as pd
-from dotenv import load_dotenv
 from fair import __version__
 from tqdm.auto import tqdm
 
-load_dotenv()
 print("Doing AF constraint...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-
-assert fair_v == __version__
-
 af_in = np.load(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/prior_runs/"
+    "../../output/prior_runs/"
     "airborne_fraction_1pctCO2_y70_y140_y210.npy"
 )
 
 valid_temp = np.loadtxt(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "../../output/posteriors/"
     "runids_rmse_pass.csv"
 ).astype(np.int64)
 
@@ -45,11 +37,11 @@ print(np.min(af_out, axis=1))
 
 print("Passing RMSE & AF constraint:", len(valid_temp_af))
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors",
+    "../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors",
     exist_ok=True,
 )
 np.savetxt(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "../../output/posteriors/"
     "runids_rmse_af_pass.csv",
     valid_temp_af.astype(int),
     fmt="%d",

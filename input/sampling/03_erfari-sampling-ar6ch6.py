@@ -22,21 +22,20 @@ import pandas as pd
 import scipy.stats
 from dotenv import load_dotenv
 
+from fair_calibrate.parameters import PRIOR_SAMPLES
+
 load_dotenv()
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
 df_emis = pd.read_csv(
-    f"../../../../../data/emissions/"
+    "../../data/emissions/"
     "historical_emissions_1750-2023_cmip7.csv"
 )
 df_conc = pd.read_csv(
-    "../../../../../data/concentrations/ghg_concentrations_1750-2022_cmip7.csv"
+    "../../data/concentrations/ghg_concentrations_1750-2023_cmip7.csv"
 )
 
 # these are the present day ERFari which comes from AR6 WG1
@@ -46,7 +45,7 @@ df_conc = pd.read_csv(
 # Calculate a radiative efficiency for each species from CEDS and updated
 # concentrations.
 df_ari_emitted_mean = pd.read_csv(
-    "../../../../../data/forcing/table_mean_thornhill_collins_orignames.csv",
+    "../../data/forcing/table_mean_thornhill_collins_orignames.csv",
     index_col=0,
 )
 erfari_emitted = pd.Series(df_ari_emitted_mean["Aerosol"])
@@ -56,7 +55,7 @@ erfari_emitted.rename(
 )
 
 df_ari_emitted_std = pd.read_csv(
-    "../../../../../data/forcing/table_std_thornhill_collins_orignames.csv", index_col=0
+    "../../data/forcing/table_std_thornhill_collins_orignames.csv", index_col=0
 )
 erfari_emitted_std = pd.Series(df_ari_emitted_std["Aerosol_sd"])
 erfari_emitted_std.rename_axis(None, inplace=True)
@@ -123,12 +122,12 @@ hc_species = [
 
 species_out = {}
 for ispec, species in enumerate(emitted_species):
-    species_out[species] = df_emis.loc[df_emis["variable"] == f"{species}", '1750':'2022'].values.squeeze()
+    species_out[species] = df_emis.loc[df_emis["variable"] == f"{species}", '1750':'2023'].values.squeeze()
 
 for ispec, species in enumerate(concentration_species):
-    species_out[species] = df_conc.loc[df_conc["variable"] == species, '1750':'2022'].values.squeeze()
+    species_out[species] = df_conc.loc[df_conc["variable"] == species, '1750':'2023'].values.squeeze()
 
-species_df = pd.DataFrame(species_out, index=range(1750, 2023))
+species_df = pd.DataFrame(species_out, index=range(1750, 2024))
 
 
 def calculate_eesc(
@@ -212,7 +211,7 @@ br_atoms = {
 }
 
 hc_eesc = {}
-total_eesc = np.zeros(273)
+total_eesc = np.zeros(274)
 for species in cl_atoms:
     hc_eesc[species] = calculate_eesc(
         species_df.loc[:, species],
@@ -308,12 +307,12 @@ erfari_re_samples = pd.DataFrame(
 print(erfari_re_samples)
 
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/",
+    "../../output/priors/",
     exist_ok=True,
 )
 
 erfari_re_samples.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    "../../output/priors/"
     "aerosol_radiation.csv",
     index=False,
 )

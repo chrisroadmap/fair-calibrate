@@ -14,17 +14,14 @@ from fair import FAIR, __version__
 from fair.interface import fill
 from fair.io import read_properties
 
+from fair_calibrate.parameters import PRIOR_SAMPLES
+
 load_dotenv()
 
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
-
-assert fair_v == __version__
 
 print("Making SSP emissions binary and CSV...")
 
@@ -44,6 +41,15 @@ species.remove("NOx aviation")
 species.remove("Contrails")
 species.remove("Halon-1202")
 
+species.append("Irrigation")
+properties["Irrigation"] = {
+    'type': 'unspecified',  # see issue #179 of FAIR
+    'input_mode': 'forcing', 
+    'greenhouse_gas': False, 
+    'aerosol_chemistry_from_emissions': False, 
+    'aerosol_chemistry_from_concentration': False
+}
+
 f = FAIR(ch4_method="thornhill2021")
 f.define_time(1750, 2500, 1)
 f.define_configs(["unspecified"])
@@ -53,7 +59,7 @@ f.define_species(species, properties)
 f.allocate()
 
 df_in = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "../../output/emissions/"
     "ssps_harmonized_1750-2499.csv",
 )
 # finally bash 1202
@@ -80,12 +86,12 @@ print(df_in)
 
 
 f.emissions.to_netcdf(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "../../output/emissions/"
     "ssps_harmonized_1750-2499.nc"
 )
 
 df_in.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "../../output/emissions/"
     "ssps_harmonized_scaled_fair_format_1750-2499.csv",
     index=False
 )

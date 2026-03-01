@@ -23,23 +23,22 @@ from dotenv import load_dotenv
 from fair.energy_balance_model import EnergyBalanceModel
 from tqdm import tqdm
 
+from fair_calibrate.parameters import PRIOR_SAMPLES
+
 warnings.simplefilter("error", RuntimeWarning)
 
 load_dotenv()
 
 print("Making climate response calibrations...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
-pl.style.use("../../../../../defaults.mplstyle")
+pl.style.use("../../defaults.mplstyle")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
 df = pd.read_csv(
     os.path.join(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+        "../../output/calibrations/"
         "4xCO2_cummins_ebm3_cmip6.csv"
     )
 )
@@ -114,14 +113,14 @@ if plots:
     pl.tight_layout()
     pl.subplots_adjust(wspace=0, hspace=0)
     os.makedirs(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/", exist_ok=True
+        "../../plots/", exist_ok=True
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "ebm3_distributions.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "ebm3_distributions.pdf"
     )
     pl.close()
@@ -200,12 +199,12 @@ ebm_sample_df = pd.DataFrame(
 assert len(ebm_sample_df) >= samples
 
 os.makedirs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/",
+    f"../../output/priors/",
     exist_ok=True,
 )
 
 ebm_sample_df.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/priors/"
+    f"../../output/priors/"
     "climate_response_ebm3.csv",
     index=False,
 )

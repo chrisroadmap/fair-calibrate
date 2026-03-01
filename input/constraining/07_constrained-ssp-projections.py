@@ -15,18 +15,17 @@ from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
+from fair_calibrate.parameters import POSTERIOR_SAMPLES
+
 pl.switch_backend("agg")
 
 load_dotenv()
 
-pl.style.use("../../../../../defaults.mplstyle")
+pl.style.use("../../defaults.mplstyle")
 
 print("Running SSP scenarios...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-output_ensemble_size = int(os.getenv("POSTERIOR_SAMPLES"))
+output_ensemble_size = POSTERIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
@@ -44,28 +43,29 @@ scenarios = [
 
 
 df_solar = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/forcing/solar_forcing_timebounds.csv", index_col="year"
+    "../../output/forcing/solar_forcing_timebounds_cmip7.csv", index_col=0
 )
 df_volcanic = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/forcing/volcanic_forcing_timebounds.csv",
-    index_col="year",
+    "../../data/forcing/volcanic_forcing_timebounds_cmip7.csv", index_col=0
 )
 
 solar_forcing = np.zeros(552)
 volcanic_forcing = np.zeros(552)
-volcanic_forcing = df_volcanic["erf"].loc[1750:2301].values
-solar_forcing = df_solar["erf"].loc[1750:2301].values
+volcanic_forcing = df_volcanic["volcanic_erf_rel_1850-2021"].loc[1750:2301].values
+solar_forcing = df_solar["solar_erf_rel_1850-2019"].loc[1750:2301].values
 
 f = FAIR(ch4_method="Thornhill2021")
 f.define_time(1750, 2301, 1)
 f.define_scenarios(scenarios)
 species, properties = read_properties(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "../../output/posteriors/"
     "species_configs_properties.csv",
 )
+species.remove("Irrigation")
+properties["Land use"]["input_mode"] = "calculated"
 f.define_species(species, properties)
 df_configs = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "../../output/posteriors/"
     "calibrated_constrained_parameters.csv",
     index_col=0,
 )
@@ -75,13 +75,14 @@ f.allocate()
 
 # run with harmonized emissions
 da_emissions = xr.load_dataarray(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
+    "../../output/emissions/"
     "ssps_harmonized_1750-2499.nc"
 )
+da_emissions = da_emissions.drop_sel(specie="Irrigation")
 
 da = da_emissions.loc[dict(config="unspecified")][:551, ...]
 fe = da.expand_dims(dim=["config"], axis=(2))
-f.emissions = fe.drop("config") * np.ones((1, 1, output_ensemble_size, 1))
+f.emissions = fe.drop_vars("config") * np.ones((1, 1, output_ensemble_size, 1))
 
 # solar and volcanic forcing
 fill(
@@ -97,11 +98,11 @@ fill(
 
 # new convience for v2.2
 f.fill_species_configs(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    f"../../output/posteriors/"
     "species_configs_properties.csv",
 )
 f.override_defaults(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    f"../../output/posteriors/"
     "calibrated_constrained_parameters.csv",
 )
 
@@ -128,7 +129,7 @@ ar6_colors = {
     "ssp585": "#980002",
 }
 
-df_gmst = pd.read_csv("../../../../../data/forcing/IGCC_GMST_1850-2024.csv")
+df_gmst = pd.read_csv("../../data/forcing/IGCC_GMST_1850-2024.csv")
 gmst = df_gmst["gmst"].values
 
 if plots:
@@ -207,11 +208,11 @@ if plots:
     # pl.suptitle("SSP temperature anomalies")
     fig.tight_layout()
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "final_ssp_temperatures.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "final_ssp_temperatures.pdf"
     )
     pl.close()
@@ -317,11 +318,11 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "toa_imbalance_ssp245.png"
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        "../../plots/"
         "toa_imbalance_ssp245.pdf"
     )
     pl.close()
@@ -353,7 +354,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "ghg_forcing_ssp245.png"
     )
     pl.close()
@@ -374,7 +375,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "aerosol_forcing_ssp245.png"
     )
     pl.close()
@@ -395,7 +396,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "co2_forcing_ssp585.png"
     )
     pl.close()
@@ -416,7 +417,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "co2_concentration_ssp585.png"
     )
     pl.close()
@@ -437,7 +438,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "ozone_ssp245.png"
     )
     pl.close()
@@ -458,7 +459,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "lapsi_ssp245.png"
     )
     pl.close()
@@ -479,7 +480,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "stratH2O_ssp245.png"
     )
     pl.close()
@@ -500,7 +501,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../../../../plots/fair-{fair_v}/v{cal_v}/{constraint_set}/"
+        f"../../plots/"
         "landuse_ssp245.png"
     )
     pl.close()

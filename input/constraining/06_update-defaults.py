@@ -9,21 +9,16 @@ import os
 
 import numpy as np
 import pandas as pd
-from dotenv import load_dotenv
 from fair import __version__
 import fair.defaults.data.ar6
 
-load_dotenv()
+from fair_calibrate.parameters import PRIOR_SAMPLES, POSTERIOR_SAMPLES
 
 print("Updating defaults...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-samples = int(os.getenv("PRIOR_SAMPLES"))
-output_ensemble_size = int(os.getenv("POSTERIOR_SAMPLES"))
+samples = PRIOR_SAMPLES
+output_ensemble_size = POSTERIOR_SAMPLES
 
-assert fair_v == __version__
 
 ch4_lifetime_species = [
     "CH4",
@@ -36,14 +31,13 @@ n_gasboxes = 4
 update_landuse = True
 update_lapsi = True
 
-defaults_path = fair.defaults.data.ar6.__path__[0]
-df_species_configs = pd.read_csv(os.path.join(defaults_path, 'species_configs_properties.csv'), index_col=0)
+df_species_configs = pd.read_csv('../../data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv', index_col=0)
 
 
 # read the methane lifetime calibration file and rename the HC column for easing
 # later reinitialization of values
 df_methane = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+    "../../output/calibrations/"
     "CH4_lifetime.csv",
     index_col=0,
 )
@@ -54,7 +48,7 @@ df_methane = df_methane.rename(
 # read the landuse emissions scaling if required
 if update_landuse == True:
     df_landuse = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+        "../../output/calibrations/"
         "landuse_scale_factor.csv",
         index_col=0,
     )
@@ -62,7 +56,7 @@ if update_landuse == True:
 # read the lapsi calibration file if required
 if update_lapsi == True:
     df_lapsi = pd.read_csv(
-        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
+        "../../output/calibrations/"
         "lapsi_scale_factor.csv",
         index_col=0,
     )
@@ -109,8 +103,8 @@ df_species_configs.drop(index=["Halon-1202"], inplace=True)
 # read the default baseline_emissions file: the baseline emissions for the specified species
 # will be updated in the config_species_properties
 df_emissions = pd.read_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/emissions/"
-    f"ssps_harmonized_1750-2499.csv"
+    "../../output/emissions/"
+    "ssps_harmonized_1750-2499.csv"
 )
 
 for specie in df_emissions.variable:
@@ -121,7 +115,7 @@ for specie in df_emissions.variable:
 df_species_configs.drop(index=["Halon-1202"], inplace=True)
 
 df_species_configs.to_csv(
-    f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors/"
+    "../../output/posteriors/"
     "species_configs_properties.csv",
     na_rep=np.nan
 )
