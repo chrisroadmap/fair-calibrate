@@ -32,11 +32,13 @@ R
 > install.packages("./EBM_1.1.0.tar.gz", repos = NULL)
 ```
 
-### if you need to add a new package
+### if you need to add a new package or update the calibration version
 Edit the `environment.yml` file and add the package you require to the list. If it is conda installable and available under the list of channels provided, it should be picked up. To then update the environment, run
 ```
 conda env update -f environment.yml --prune
 ```
+
+Since the calibration label information is now part of the package, you will also need to run this step if doing a new calibration.
 
 ## How to run
 
@@ -63,11 +65,13 @@ DATADIR=/path/to/datadir     # A local location to download large external
                              # datafiles (a cache directory)
 ```
 
-The output will be produced in `output/fair-X.X.X/vY.Y.Y/Z/` where X is the FaIR version, Y is the calibration version and Z is the constraint set used. Multiple constraint philosphies can be applied for the same set of calibrations (e.g. AR6, 2022 observations, etc.). No posterior data will be committed to Git owing to size, but the intention is that the full output data will be on Zenodo.
+Then, if necessary, edit the file in `src/fair_calibrate/parameters.py` and `setup.py` to point to the correct version and label.
+
+The output will be produced in `output/`. No posterior data will be committed to Git owing to size, but the intention is that the full output data will be on Zenodo.
 
 ### To run the workflow
 1. Create the `.env` file - see above
-2. Set up environments for python and R (see above)
+2. Set up environments for python and R (see above). Note that if making a new calibration (if you have edited `src/fair_calibrate/parameters.py` and `setup.py`) you will need to run `conda env update -f environment.yml --prune`
 3. Check the recipe inside the `run` bash script
 4. `./run`
 
@@ -79,15 +83,16 @@ Under the existing pattern -- which you are free to change in the `run` recipe -
 - `constraining/`
 
 ### To produce a new calibration
-1. Create your workflow scripts inside `input/fair-X.X.X/vY.Y/Z` (copy an existing calibration to get started)
+1. Create your workflow scripts inside `input/` (copy an existing calibration to get started)
 2. Set up environments for python and R (see above)
-3. Update your `.env` file to point to the correct fair version (X.X.X), calibration version (vY.Y) and constraint set (Z)
-4. Check the recipe inside the `run` bash script
-5. `./run`
-6. Check output. Ensure the performance metrics are documented and diagnostic plots look sensible.
-7. If releasing a new calibration: update the relevant sections of the [Wiki](https://github.com/chrisroadmap/fair-calibrate/wiki)
-8. `./create_zenodo_zip`
-9. Upload to Zenodo
+3. Update your `.env` file
+4. run `conda env update -f environment.yml --prune`
+5. Check the recipe inside the `run` bash script
+6. `./run`
+7. Check output. Ensure the performance metrics are documented and diagnostic plots look sensible.
+8. If releasing a new calibration: update the relevant sections of the [Wiki](https://github.com/chrisroadmap/fair-calibrate/wiki)
+9. `./create_zenodo_zip`
+10. Upload to Zenodo
 
 ## Notes
 1. I get different results from the 3-layer model calibration between using pre-compiled R binary for for Mac compared to building the R binary from source on CentOS7; both using R-4.1.1, and again using the Arc4 HPC. The Arc4 results are used. A future **TODO** would be to switch to ``py-bobyqa`` which is the optimizer used in the R code, and remove dependence on R, which *may* improve performace.
