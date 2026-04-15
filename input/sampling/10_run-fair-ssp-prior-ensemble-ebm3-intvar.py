@@ -249,7 +249,7 @@ if __name__ == "__main__":
     )
     np.save(
         "../../output/prior_runs/"
-        "concentration_co2_2023.npy",
+        "concentration_co2_2014-2023.npy",
         co2_out,
         allow_pickle=True,
     )

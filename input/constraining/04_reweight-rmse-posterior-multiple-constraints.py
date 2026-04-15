@@ -33,7 +33,7 @@ progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
 print("Doing reweighting...")
 
-
+OHC_CONVERSION = 1 / 1e21 * 0.91  # J to ZJ, and EEI to ocean component
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 
 valid_temp_af = np.loadtxt(
@@ -65,12 +65,15 @@ co2_in = np.load(
     "../../output/prior_runs/"
     "concentration_co2_2023.npy"
 )
+
+# we are not constraining ECS and TCR in RCMIP3, but want to know how it looks.
 ecs_in = np.load(
     "../../output/prior_runs/ecs.npy"
 )
 tcr_in = np.load(
     f"../../output/prior_runs/tcr.npy"
 )
+
 faer_in = fari_in + faci_in
 
 
@@ -82,44 +85,33 @@ def opt(x, q05_desired, q50_desired, q95_desired):
     return (q05 - q05_desired, q50 - q50_desired, q95 - q95_desired)
 
 
-ecs_params = scipy.optimize.root(opt, [1, 1, 1], args=(2, 3, 5)).x
-
-
-# Indicators 2023
-gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(0.90, 1.05, 1.16)).x
+# Romero-Prieto et al. target
+gsat_params = scipy.optimize.root(opt, [1, 1, 1], args=(1.00, 1.19, 1.4)).x
 
 samples = {}
-samples["ECS"] = scipy.stats.skewnorm.rvs(
-    ecs_params[0],
-    loc=ecs_params[1],
-    scale=ecs_params[2],
-    size=10**5,
-    random_state=91603,
-)
-samples["TCR"] = scipy.stats.norm.rvs(
-    loc=1.8, scale=0.6 / NINETY_TO_ONESIGMA, size=10**5, random_state=18196
-)
-# note fair produces, and we here report, total earth energy uptake, not just ocean
-# this value from IGCC 2024. Use new uncertainties for ocean, assume same uncertainties
-# for land, atmosphere and cryopshere.
-# looking at new 2024 data from Matt Palmer, it seems unchanged from 1971-2020.
-samples["OHC"] = scipy.stats.norm.rvs(
-    loc=465.3, scale=108.5 / NINETY_TO_ONESIGMA, size=10**5, random_state=43178
-)
-samples["temperature 2004-2023"] = scipy.stats.skewnorm.rvs(
+
+# Romero-Prieto ask for ocean component of total energy uptake, so we multiply our
+# total by 0.91 (or conversely, we scale up by 1/0.91
+
+# Also the Romero-Prieto bounds are asymmetic so use the skewnorm approach
+ohc_params = scipy.optimize.root(opt, [0, 350, 70], args=(315.8, 435.1, 560.5)).x
+
+samples["temperature 2014-2023"] = scipy.stats.skewnorm.rvs(
     gsat_params[0],
     loc=gsat_params[1],
     scale=gsat_params[2],
     size=10**5,
     random_state=19387,
 )
-# the below commented out bit is if we were to do temperature assessment using HadCRUT5 rather than Blair's assessment
-#samples["temperature 2005-2024"] = scipy.stats.norm.rvs(
-#    loc = 1.103988,
-#    scale = 0.076402,
-#    size=10**5,
-#    random_state=19387,
-#)
+
+samples["OHC"] = scipy.stats.skewnorm.rvs(
+    ohc_params[0],
+    loc=ohc_params[1],
+    scale=ohc_params[2],
+    size=10**5,
+    random_state=19388,
+)
+
 samples["ERFari"] = scipy.stats.norm.rvs(
     loc=-0.3, scale=0.3 / NINETY_TO_ONESIGMA, size=10**5, random_state=70173
 )
@@ -133,17 +125,28 @@ samples["ERFaer"] = scipy.stats.norm.rvs(
     random_state=3916153,
 )
 
-# IGCC 2024, using 2023 concentration
+# Romero-Prieto
 samples["CO2 concentration"] = scipy.stats.norm.rvs(
-    loc=419.36, scale=0.4, size=10**5, random_state=81693
+    loc=408.65, scale=1.6/NINETY_TO_ONESIGMA, size=10**5, random_state=81693
+)
+
+# We do not constrain ECS and TCR but still want to plot their distributions
+ecs_params = scipy.optimize.root(opt, [1, 1, 1], args=(2, 3, 5)).x
+samples["ECS"] = scipy.stats.skewnorm.rvs(
+    ecs_params[0],
+    loc=ecs_params[1],
+    scale=ecs_params[2],
+    size=10**5,
+    random_state=91603,
+)
+samples["TCR"] = scipy.stats.norm.rvs(
+    loc=1.8, scale=0.6 / NINETY_TO_ONESIGMA, size=10**5, random_state=18196
 )
 
 ar_distributions = {}
 for constraint in [
-    "ECS",
-    "TCR",
     "OHC",
-    "temperature 2004-2023",
+    "temperature 2014-2023",
     "ERFari",
     "ERFaci",
     "ERFaer",
@@ -155,9 +158,9 @@ for constraint in [
     )[1]
     ar_distributions[constraint]["values"] = samples[constraint]
 
-weights_20yr = np.ones(21)
-weights_20yr[0] = 0.5
-weights_20yr[-1] = 0.5
+weights_10yr = np.ones(11)
+weights_10yr[0] = 0.5
+weights_10yr[-1] = 0.5
 weights_51yr = np.ones(52)
 weights_51yr[0] = 0.5
 weights_51yr[-1] = 0.5
@@ -166,9 +169,9 @@ accepted = pd.DataFrame(
     {
         "ECS": ecs_in[valid_temp_af],
         "TCR": tcr_in[valid_temp_af],
-        "OHC": ohc_in[valid_temp_af] / 1e21,
-        "temperature 2004-2023": np.average(
-            temp_in[154:175, valid_temp_af], weights=weights_20yr, axis=0
+        "OHC": ohc_in[valid_temp_af] * OHC_CONVERSION,
+        "temperature 2014-2023": np.average(
+            temp_in[164:175, valid_temp_af], weights=weights_10yr, axis=0
         )
         - np.average(temp_in[:52, valid_temp_af], weights=weights_51yr, axis=0),
         "ERFari": fari_in[valid_temp_af],
@@ -180,7 +183,6 @@ accepted = pd.DataFrame(
 )
 
 print(accepted)
-
 
 def calculate_sample_weights(
     distributions: dict, samples: pd.DataFrame, niterations: int=50
@@ -375,7 +377,7 @@ assert effective_samples >= output_ensemble_size
 # that have passed the previous constraining steps, according to the
 # weights that we have just calculated.
 np.random.seed(10099)
-chosen = np.random.choice(accepted.index, size=841, replace=False, p=weights/np.sum(weights))
+chosen = np.random.choice(accepted.index, size=POSTERIOR_SAMPLES, replace=False, p=weights/np.sum(weights))
 draws = accepted.loc[chosen]
 
 if plots:
@@ -389,20 +391,20 @@ if plots:
     post1_tcr = scipy.stats.gaussian_kde(tcr_in[valid_temp_af])
     post2_tcr = scipy.stats.gaussian_kde(draws["TCR"])
 
-    target_temp = scipy.stats.gaussian_kde(samples["temperature 2004-2023"])
+    target_temp = scipy.stats.gaussian_kde(samples["temperature 2014-2023"])
     prior_temp = scipy.stats.gaussian_kde(
-        np.average(temp_in[154:175, :], weights=weights_20yr, axis=0)
+        np.average(temp_in[164:175, :], weights=weights_10yr, axis=0)
         - np.average(temp_in[:52, :], weights=weights_51yr, axis=0)
     )
     post1_temp = scipy.stats.gaussian_kde(
-        np.average(temp_in[154:175, valid_temp_af], weights=weights_20yr, axis=0)
+        np.average(temp_in[164:175, valid_temp_af], weights=weights_10yr, axis=0)
         - np.average(temp_in[:52, valid_temp_af], weights=weights_51yr, axis=0)
     )
-    post2_temp = scipy.stats.gaussian_kde(draws["temperature 2004-2023"])
+    post2_temp = scipy.stats.gaussian_kde(draws["temperature 2014-2023"])
 
     target_ohc = scipy.stats.gaussian_kde(samples["OHC"])
-    prior_ohc = scipy.stats.gaussian_kde(ohc_in / 1e21)
-    post1_ohc = scipy.stats.gaussian_kde(ohc_in[valid_temp_af] / 1e21)
+    prior_ohc = scipy.stats.gaussian_kde(ohc_in * OHC_CONVERSION)
+    post1_ohc = scipy.stats.gaussian_kde(ohc_in[valid_temp_af] * OHC_CONVERSION)
     post2_ohc = scipy.stats.gaussian_kde(draws["OHC"])
 
     target_aer = scipy.stats.gaussian_kde(samples["ERFaer"])
@@ -506,8 +508,8 @@ if plots:
     ax[0, 1].set_yticklabels([])
     ax[0, 1].set_xlabel("°C")
 
-    start = 0.65
-    stop = 1.45
+    start = 0.75
+    stop = 1.55
     ax[0, 2].plot(
         np.linspace(start, stop, 1000),
         target_temp(np.linspace(start, stop, 1000)),
@@ -537,10 +539,10 @@ if plots:
         lw=2,
     )
     ax[0, 2].set_xlim(start, stop)
-    ax[0, 2].set_ylim(0, 6)
+    ax[0, 2].set_ylim(0, 5)
     ax[0, 2].set_title("Temperature anomaly")
     ax[0, 2].set_yticklabels([])
-    ax[0, 2].set_xlabel("°C, 2004-2023 minus 1850-1900")
+    ax[0, 2].set_xlabel("°C, 2014-2023 minus 1850-1900")
 
     start = -1.0
     stop = 0.4
@@ -651,8 +653,8 @@ if plots:
     ax[1, 2].set_yticklabels([])
     ax[1, 2].set_xlabel("W m$^{-2}$, 2005-2014 minus 1750")
 
-    start = 417
-    stop = 425
+    start = 404
+    stop = 412
     ax[2, 0].plot(
         np.linspace(start, stop, 1000),
         target_co2(np.linspace(start, stop, 1000)),
@@ -686,7 +688,7 @@ if plots:
     ax[2, 0].set_ylabel("Probability density")
     ax[2, 0].set_title("CO$_2$ concentration")
     ax[2, 0].set_yticklabels([])
-    ax[2, 0].set_xlabel("ppm, 2023")
+    ax[2, 0].set_xlabel("ppm, 2014-2023")
 
     start = 100
     stop = 900
@@ -856,11 +858,11 @@ print("Constrained, reweighted parameters:")
 print("ECS:", np.percentile(draws["ECS"], (5, 50, 95)))
 print("TCR:", np.percentile(draws["TCR"], (5, 50, 95)))
 print(
-    "CO2 concentration 2023:", np.percentile(draws["CO2 concentration"], (5, 50, 95))
+    "CO2 concentration 2014-2023:", np.percentile(draws["CO2 concentration"], (5, 50, 95))
 )
 print(
-    "Temperature 2004-2023 rel. 1850-1900:",
-    np.percentile(draws["temperature 2004-2023"], (5, 50, 95)),
+    "Temperature 2014-2023 rel. 1850-1900:",
+    np.percentile(draws["temperature 2014-2023"], (5, 50, 95)),
 )
 print(
     "Aerosol ERFari 2005-2014 rel. 1750:",
@@ -886,7 +888,7 @@ np.savetxt(
 )
 
 # warming baselines
-df_warming = pd.DataFrame(data=draws["temperature 2004-2023"], index=draws.index, columns = ["temperature 2004-2023"]).sort_index()
+df_warming = pd.DataFrame(data=draws["temperature 2014-2023"], index=draws.index, columns = ["temperature 2014-2023"]).sort_index()
 df_warming.to_csv(
     "../../output/posteriors/"
     "warming_baselines.csv",
