@@ -21,6 +21,7 @@ find output >> ziplist.txt
 find plots >> ziplist.txt
 find data >> ziplist.txt
 find r_scripts >> ziplist.txt
+find src/fair_calibrate -type d -name __pycache__ -prune -o -print >> ziplist.txt
 ls -1 *.* >> ziplist.txt
 ls -1 run >> ziplist.txt
 ls -1 .env >> ziplist.txt
