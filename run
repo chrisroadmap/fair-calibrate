@@ -13,7 +13,7 @@ fi
 script_dir=$PWD
 
 for pipeline in calibration sampling constraining; do
-    cd ${script_dir}/input/fair-${FAIR_VERSION}/v${CALIBRATION_VERSION}/${CONSTRAINT_SET}/${pipeline}
+    cd ${script_dir}/input/${pipeline}
     file_array=( $(\ls [0-9][0-9]_*.*) )
     for file in "${file_array[@]}"; do
         chmod +x ${file};
