@@ -1,0 +1,40 @@
+[workspace]
+name = "fair-calibrate"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64"]
+
+[dependencies]
+python = "3.11.*"
+black = "*"
+flake8 = "*"
+h5py = "*"
+isort = "*"
+matplotlib = "*"
+mscorefonts = "*"
+netcdf4 = "*"
+numpy = "*"
+pandas = "*"
+pooch = "*"
+python-dotenv = "*"
+scikit-learn = "*"
+scipy = "*"
+scmdata = "*"
+tqdm = "*"
+xarray = "*"
+# R stack for the Cummins calibration
+r-base = ">=4.4"
+cmake = ">=3.2"
+r-expm = "*"
+r-nloptr = "*"
+r-numderiv = "*"
+
+[pypi-dependencies]
+fair = "==2.2.4"
+aneris-iamc = { version = "==0.3.1", extras = ["units"] }
+fair_calibrate = { path = ".", editable = true }
+
+[tasks]
+install-ebm = "Rscript r_scripts/setup.r"
+run = "./run"
+checks = "make checks"
+format = "make format"

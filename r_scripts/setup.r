@@ -1,8 +1,15 @@
 #!/usr/bin/env Rscript
 
-# Run with R 4.1.1+
-# and cmake 3.2 or higher 
+# Run through pixi: `pixi run install-ebm`
+# The pixi environment provides R >= 4.4, cmake, expm, nloptr and numDeriv.
+# FKF is not on conda-forge, so it comes from CRAN; EBM is Donald Cummins'
+# package, pinned to v1.1.0.
 
-install.packages("devtools")
-devtools::install_github("donaldcummins/EBM")
+repos <- "https://cloud.r-project.org"
+install.packages("FKF", repos = repos)
+install.packages(
+  "https://github.com/donaldcummins/EBM/archive/refs/tags/v1.1.0.tar.gz",
+  repos = NULL,
+  type = "source"
+)
 library(EBM)
