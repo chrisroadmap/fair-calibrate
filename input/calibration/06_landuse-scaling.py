@@ -16,9 +16,6 @@ load_dotenv()
 
 print("Calculating land use + irrigation scale factor...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
 datadir = os.getenv("DATADIR")
 
 target_forcing = -0.2
@@ -43,7 +40,7 @@ df = pd.DataFrame(
     index=["historical_best"],
 )
 os.makedirs(
-    "../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
+    "../../output/calibrations/",
     exist_ok=True,
 )
 df.to_csv(

@@ -6,17 +6,11 @@
 # we don't constrain on these as they are model-based assessments, but we want to add
 # to the table.
 
-import os
-
 import numpy as np
 from dotenv import load_dotenv
 from fair.earth_params import mass_atmosphere, molecular_weight_air
 
 load_dotenv()
-
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
 
 af = np.load(
     f"../../output/"
