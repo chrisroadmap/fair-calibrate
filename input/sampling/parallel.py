@@ -9,6 +9,7 @@ from fair.interface import fill, initialise
 from fair.io import read_properties
 
 from fair_calibrate.layers import fill_layers
+from fair_calibrate.paths import ROOT
 
 
 def run_fair(cfg):
@@ -17,7 +18,7 @@ def run_fair(cfg):
     batch_end = cfg["batch_end"]
     batch_size = batch_end - batch_start
 
-    species, properties = read_properties(filename="../../data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv")
+    species, properties = read_properties(filename=f"{ROOT}/data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv")
     species.remove("NOx aviation")
     species.remove("Contrails")
     species.remove("Halon-1202")
@@ -34,7 +35,7 @@ def run_fair(cfg):
 
 
     da_emissions = xr.load_dataarray(
-        "../../output/emissions/"
+        f"{ROOT}/output/emissions/"
         "ssps_harmonized_1750-2499.nc",
     )
 
@@ -83,7 +84,7 @@ def run_fair(cfg):
     fill(f.climate_configs["forcing_4co2"], cfg["forcing_4co2"])
 
     # species level
-    f.fill_species_configs(filename="../../data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv")
+    f.fill_species_configs(filename=f"{ROOT}/data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv")
 
     # carbon cycle
     fill(f.species_configs["iirf_0"], cfg["iirf_0"], specie="CO2")

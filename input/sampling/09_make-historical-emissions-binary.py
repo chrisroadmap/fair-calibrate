@@ -15,6 +15,7 @@ from fair.interface import fill
 from fair.io import read_properties
 
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
@@ -59,7 +60,7 @@ f.define_species(species, properties)
 f.allocate()
 
 df_in = pd.read_csv(
-    "../../output/emissions/"
+    f"{ROOT}/output/emissions/"
     "ssps_harmonized_1750-2499.csv",
 )
 # finally bash 1202
@@ -86,12 +87,12 @@ print(df_in)
 
 
 f.emissions.to_netcdf(
-    "../../output/emissions/"
+    f"{ROOT}/output/emissions/"
     "ssps_harmonized_1750-2499.nc"
 )
 
 df_in.to_csv(
-    "../../output/emissions/"
+    f"{ROOT}/output/emissions/"
     "ssps_harmonized_scaled_fair_format_1750-2499.csv",
     index=False
 )

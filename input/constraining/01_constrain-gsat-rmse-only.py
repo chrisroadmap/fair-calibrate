@@ -13,11 +13,12 @@ from fair import __version__
 from tqdm.auto import tqdm
 
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 pl.switch_backend("agg")
 
 load_dotenv()
-pl.style.use("../../defaults.mplstyle")
+pl.style.use(f"{ROOT}/defaults.mplstyle")
 
 print("Doing RMSE constraint...")
 
@@ -27,11 +28,11 @@ progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
 
 temp_in = np.load(
-    f"../../output/prior_runs/"
+    f"{ROOT}/output/prior_runs/"
     "temperature_1850-2024.npy"
 )
 
-df_gmst = pd.read_csv("../../data/forcing/IGCC_GMST_1850-2024.csv")
+df_gmst = pd.read_csv(f"{ROOT}/data/forcing/IGCC_GMST_1850-2024.csv")
 gmst = df_gmst["gmst"].values
 
 
@@ -92,13 +93,13 @@ if plots:
     pl.title("Prior ensemble")
     pl.tight_layout()
     os.makedirs(
-        f"../../plots/", exist_ok=True
+        f"{ROOT}/plots/", exist_ok=True
     )
     pl.savefig(
-        f"../../plots/prior_historical.png"
+        f"{ROOT}/plots/prior_historical.png"
     )
     pl.savefig(
-        f"../../plots/prior_historical.pdf"
+        f"{ROOT}/plots/prior_historical.pdf"
     )
     pl.close()
 
@@ -165,11 +166,11 @@ if plots:
     pl.title("Historical GMST")
     pl.tight_layout()
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "post_rsme_top10_bottom10_historical.png"
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "post_rsme_top10_bottom10_historical.pdf"
     )
     pl.close()
@@ -244,22 +245,22 @@ if plots:
     pl.title("After RMSE constraint")
     pl.tight_layout()
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "post_rsme_historical.png"
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "post_rsme_historical.pdf"
     )
     pl.close()
 
 valid_temp = np.arange(samples, dtype=int)[accept_temp]
 os.makedirs(
-    "../../output/posteriors",
+    f"{ROOT}/output/posteriors",
     exist_ok=True,
 )
 np.savetxt(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "runids_rmse_pass.csv",
     valid_temp.astype(int),
     fmt="%d",

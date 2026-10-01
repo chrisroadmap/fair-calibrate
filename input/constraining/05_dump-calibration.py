@@ -17,6 +17,7 @@ from fair_calibrate.layers import (
     get_n_layers,
 )
 from fair_calibrate.parameters import PRIOR_SAMPLES, POSTERIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 n_layers = get_n_layers()
@@ -28,34 +29,34 @@ output_ensemble_size = POSTERIOR_SAMPLES
 
 
 df_cc = pd.read_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "carbon_cycle.csv"
 )
 df_cr = pd.read_csv(
-    "../../output/priors/" + climate_response_file(n_layers)
+    f"{ROOT}/output/priors/" + climate_response_file(n_layers)
 )
 df_aci = pd.read_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "aerosol_cloud.csv"
 )
 df_ari = pd.read_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "aerosol_radiation.csv"
 )
 df_ozone = pd.read_csv(
-    "../../output/priors/ozone.csv"
+    f"{ROOT}/output/priors/ozone.csv"
 )
 df_scaling = pd.read_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "forcing_scaling.csv"
 )
 df_1750co2 = pd.read_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "co2_concentration_1750.csv"
 )
 
 valid_all = np.loadtxt(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "runids_rmse_reweighted_pass.csv"
 ).astype(
     np.int64
@@ -177,6 +178,6 @@ params_out = pd.concat(
 params_out.drop(columns=['minorGHG'], inplace=True)
 
 params_out.to_csv(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "calibrated_constrained_parameters.csv"
 )

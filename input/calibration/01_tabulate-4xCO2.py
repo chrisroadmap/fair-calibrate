@@ -10,13 +10,14 @@ import sys
 
 import pandas as pd
 from dotenv import load_dotenv
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
 print("Making nice 4xCO2 data...")
 
 available_files = glob.glob(
-    "../../data/cmip6-hbf/cmip_data/*/abrupt-4xCO2/"
+    f"{ROOT}/data/cmip6-hbf/cmip_data/*/abrupt-4xCO2/"
     "*_abrupt-4xCO2_*_anomalies.txt"
 )
 
@@ -26,8 +27,8 @@ models = []
 runs = []
 lines = []
 for file in available_files:
-    model = PurePath(file).parts[5]
-    run = PurePath(file).parts[7].split("_")[2]
+    model = PurePath(file).parent.parent.name
+    run = PurePath(file).name.split("_")[2]
     models.append(model)
     runs.append(run)
     df = pd.read_csv(file, index_col=0)
@@ -86,11 +87,11 @@ to_remove = [f"X{year}" for year in range(1850, 2000)]
 df.dropna(subset=to_remove, inplace=True)
 
 os.makedirs(
-    "../../output/calibrations/",
+    f"{ROOT}/output/calibrations/",
     exist_ok=True,
 )
 
 df.to_csv(
-    "../../output/calibrations/4xCO2_cmip6.csv",
+    f"{ROOT}/output/calibrations/4xCO2_cmip6.csv",
     index=False,
 )

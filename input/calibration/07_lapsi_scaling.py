@@ -8,6 +8,7 @@
 import os
 
 import pandas as pd
+from fair_calibrate.paths import ROOT
 
 print("Calculating LAPSI scale factor...")
 
@@ -16,7 +17,7 @@ base_year = 1750
 assessment_year = 2019
 
 df_emis = pd.read_csv(
-    "../../data/emissions/"
+    f"{ROOT}/data/emissions/"
     "historical_emissions_1750-2023_cmip7.csv"
 )
 bc = (
@@ -32,10 +33,10 @@ df = pd.DataFrame(
     index=["historical_best"],
 )
 os.makedirs(
-    "../../output/calibrations/",
+    f"{ROOT}/output/calibrations/",
     exist_ok=True,
 )
 df.to_csv(
-    "../../output/calibrations/"
+    f"{ROOT}/output/calibrations/"
     "lapsi_scale_factor.csv"
 )
