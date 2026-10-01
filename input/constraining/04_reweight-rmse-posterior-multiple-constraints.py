@@ -376,7 +376,7 @@ assert effective_samples >= output_ensemble_size
 # that have passed the previous constraining steps, according to the
 # weights that we have just calculated.
 np.random.seed(10099)
-chosen = np.random.choice(accepted.index, size=841, replace=False, p=weights/np.sum(weights))
+chosen = np.random.choice(accepted.index, size=output_ensemble_size, replace=False, p=weights/np.sum(weights))
 draws = accepted.loc[chosen]
 
 if plots:
