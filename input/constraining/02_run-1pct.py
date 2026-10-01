@@ -16,6 +16,7 @@ from utils import _parallel_process
 
 from fair_calibrate.layers import climate_response_file, get_n_layers, layer_config
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 if __name__ == "__main__":
     print("Running 1pctCO2 scenarios...")
@@ -30,14 +31,14 @@ if __name__ == "__main__":
     WORKERS = min(multiprocessing.cpu_count(), WORKERS)
 
     df_cc = pd.read_csv(
-        "../../output/priors/"
+        f"{ROOT}/output/priors/"
         "carbon_cycle.csv"
     )
     df_cr = pd.read_csv(
-        "../../output/priors/" + climate_response_file(n_layers)
+        f"{ROOT}/output/priors/" + climate_response_file(n_layers)
     )
     df_scaling = pd.read_csv(
-        "../../output/priors/"
+        f"{ROOT}/output/priors/"
         "forcing_scaling.csv"
     )
 
@@ -46,7 +47,7 @@ if __name__ == "__main__":
 
     # we also only want to run ensembles that passed RMSE test
     rmse_pass = np.loadtxt(
-        "../../output/posteriors/"
+        f"{ROOT}/output/posteriors/"
         "runids_rmse_pass.csv"
     ).astype(int)
 
@@ -114,23 +115,23 @@ if __name__ == "__main__":
         temp_1000_out[batch_start:batch_end] = res[ibatch][2]
 
     os.makedirs(
-        "../../output/prior_runs/",
+        f"{ROOT}/output/prior_runs/",
         exist_ok=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "temperature_1pctCO2_y70_y140_y210.npy",
         temp_2x4x8x_out,
         allow_pickle=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "airborne_fraction_1pctCO2_y70_y140_y210.npy",
         af_out,
         allow_pickle=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "temperature_1pctCO2_1000GtC.npy",
         temp_1000_out,
         allow_pickle=True,
