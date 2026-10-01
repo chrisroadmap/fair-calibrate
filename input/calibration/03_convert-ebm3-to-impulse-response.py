@@ -15,10 +15,15 @@ import pandas as pd
 from fair.energy_balance_model import EnergyBalanceModel
 from fair.forcing.ghg import meinshausen2020
 
-print("Converting EBM parameters to IRM parameters...")
+# Number of ocean layers in the calibration to convert: 2 or 3 (N_LAYERS in .env)
+n_layers = int(os.getenv("N_LAYERS", "3"))
+if n_layers not in (2, 3):
+    raise SystemExit(f"N_LAYERS must be 2 or 3, got {n_layers}")
+
+print(f"Converting {n_layers}-layer EBM parameters to IRM parameters...")
 
 df = pd.read_csv(
-    "../../output/calibrations/4xCO2_cummins_ebm3_cmip6.csv"
+    f"../../output/calibrations/4xCO2_cummins_ebm{n_layers}_cmip6.csv"
 )
 
 models = df["model"].unique()
@@ -33,10 +38,10 @@ for model in models:
             0
         ]
         params[model][run]["ocean_heat_capacity"] = df.loc[
-            condition, "C1":"C3"
+            condition, "C1":f"C{n_layers}"
         ].values.squeeze()
         params[model][run]["ocean_heat_transfer"] = df.loc[
-            condition, "kappa1":"kappa3"
+            condition, "kappa1":f"kappa{n_layers}"
         ].values.squeeze()
         params[model][run]["deep_ocean_efficacy"] = df.loc[condition, "epsilon"].values[
             0
@@ -93,13 +98,11 @@ for model in models:
             "run": run,
             "ecs": params[model][run]["ecs"],
             "tcr": params[model][run]["tcr"],
-            "tau1": params[model][run]["timescales"][0],
-            "tau2": params[model][run]["timescales"][1],
-            "tau3": params[model][run]["timescales"][2],
-            "q1": params[model][run]["response_coefficients"][0],
-            "q2": params[model][run]["response_coefficients"][1],
-            "q3": params[model][run]["response_coefficients"][2],
         }
+        for i in range(n_layers):
+            values_to_add[f"tau{i + 1}"] = params[model][run]["timescales"][i]
+        for i in range(n_layers):
+            values_to_add[f"q{i + 1}"] = params[model][run]["response_coefficients"][i]
         row_to_add = pd.DataFrame(values_to_add, index=[count])
         rows_to_add.append(row_to_add)
         count = count + 1
@@ -118,7 +121,9 @@ multi_runs = {
     "CNRM-ESM2-1": "r1i1p1f2",
 }
 
-for model in sorted(list(models)):
+# the table layout is the three-layer one, so it is skipped for two layers
+table_models = sorted(list(models)) if n_layers == 3 else []
+for model in table_models:
     if model in multi_runs:
         run = multi_runs[model]
     else:
@@ -149,6 +154,6 @@ os.makedirs(
 
 df_out.to_csv(
     "../../output/calibrations/"
-    "4xCO2_impulse_response_ebm3_cmip6.csv",
+    f"4xCO2_impulse_response_ebm{n_layers}_cmip6.csv",
     index=False,
 )
