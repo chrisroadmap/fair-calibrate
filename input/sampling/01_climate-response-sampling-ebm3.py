@@ -21,8 +21,8 @@ import scipy.linalg
 import scipy.stats
 from dotenv import load_dotenv
 from fair.energy_balance_model import EnergyBalanceModel
-from tqdm import tqdm
 
+from fair_calibrate.chunks import map_chunks, n_workers
 from fair_calibrate.layers import (
     calibration_file,
     climate_response_columns,
@@ -163,38 +163,49 @@ ebm_sample = ebm_sample[:, ~mask]
 
 # check that covariance matrix is positive semidefinite and if not, remove param combo.
 # to do: change away from sparse, once we move away from R
-for isample in tqdm(range(len(ebm_sample.T)), disable=1 - progress):
-    ebm = EnergyBalanceModel(
-        ocean_heat_capacity=ebm_sample[1 : n_layers + 1, isample],
-        ocean_heat_transfer=ebm_sample[i_kappa1:i_epsilon, isample],
-        deep_ocean_efficacy=ebm_sample[i_epsilon, isample],
-        gamma_autocorrelation=ebm_sample[0, isample],
-        sigma_xi=ebm_sample[i_sigma_xi, isample],
-        sigma_eta=ebm_sample[i_sigma_eta, isample],
-        forcing_4co2=ebm_sample[i_f4xco2, isample],
-        stochastic_run=True,
-    )
-    eb_matrix = ebm._eb_matrix()
-    n_state = n_layers + 1
-    q_mat = np.zeros((n_state, n_state))
-    q_mat[0, 0] = ebm.sigma_eta**2
-    q_mat[1, 1] = (ebm.sigma_xi / ebm.ocean_heat_capacity[0]) ** 2
-    h_mat = np.zeros((2 * n_state, 2 * n_state))
-    h_mat[:n_state, :n_state] = -eb_matrix
-    h_mat[:n_state, n_state:] = q_mat
-    h_mat[n_state:, n_state:] = eb_matrix.T
-    g_mat = scipy.sparse.linalg.expm(h_mat)
-    q_mat_d = g_mat[n_state:, n_state:].T @ g_mat[:n_state, n_state:]
-    q_mat_d = q_mat_d.astype(np.float64)
 
-    # I can't work out exactly what checks scipy is doing to decide the param
-    # set is a fail. Best to just let it tell me if it likes it or not.
-    try:
-        scipy.stats.multivariate_normal.rvs(
-            size=1, mean=np.zeros(n_state), cov=q_mat_d
+def psd_check_failed(start, stop):
+    """Flag samples in [start, stop) whose discretised noise covariance fails."""
+    failed = np.zeros(stop - start, dtype=bool)
+    for isample in range(start, stop):
+        ebm = EnergyBalanceModel(
+            ocean_heat_capacity=ebm_sample[1 : n_layers + 1, isample],
+            ocean_heat_transfer=ebm_sample[i_kappa1:i_epsilon, isample],
+            deep_ocean_efficacy=ebm_sample[i_epsilon, isample],
+            gamma_autocorrelation=ebm_sample[0, isample],
+            sigma_xi=ebm_sample[i_sigma_xi, isample],
+            sigma_eta=ebm_sample[i_sigma_eta, isample],
+            forcing_4co2=ebm_sample[i_f4xco2, isample],
+            stochastic_run=True,
         )
-    except:  # noqa: E722
-        ebm_sample[:, isample] = np.nan
+        eb_matrix = ebm._eb_matrix()
+        n_state = n_layers + 1
+        q_mat = np.zeros((n_state, n_state))
+        q_mat[0, 0] = ebm.sigma_eta**2
+        q_mat[1, 1] = (ebm.sigma_xi / ebm.ocean_heat_capacity[0]) ** 2
+        h_mat = np.zeros((2 * n_state, 2 * n_state))
+        h_mat[:n_state, :n_state] = -eb_matrix
+        h_mat[:n_state, n_state:] = q_mat
+        h_mat[n_state:, n_state:] = eb_matrix.T
+        g_mat = scipy.sparse.linalg.expm(h_mat)
+        q_mat_d = g_mat[n_state:, n_state:].T @ g_mat[:n_state, n_state:]
+        q_mat_d = q_mat_d.astype(np.float64)
+
+        # I can't work out exactly what checks scipy is doing to decide the param
+        # set is a fail. Best to just let it tell me if it likes it or not.
+        try:
+            scipy.stats.multivariate_normal.rvs(
+                size=1, mean=np.zeros(n_state), cov=q_mat_d
+            )
+        except:  # noqa: E722
+            failed[isample - start] = True
+    return failed
+
+
+failed = np.concatenate(
+    map_chunks(psd_check_failed, len(ebm_sample.T), n_workers(), progress=progress)
+)
+ebm_sample[:, failed] = np.nan
 
 mask = np.all(np.isnan(ebm_sample), axis=0)
 ebm_sample = ebm_sample[:, ~mask]
