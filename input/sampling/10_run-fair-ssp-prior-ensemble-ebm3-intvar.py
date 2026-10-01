@@ -59,11 +59,6 @@ if __name__ == "__main__":
     df_scaling = pd.read_csv("../../output/priors/forcing_scaling.csv")
     df_1750co2 = pd.read_csv("../../output/priors/co2_concentration_1750.csv")
     df_methane = pd.read_csv("../../output/calibrations/CH4_lifetime.csv", index_col=0)
-#    df_landuse = pd.read_csv(
-#        f"../../../../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/"
-#        "landuse_scale_factor.csv",
-#        index_col=0,
-#    )
     df_lapsi = pd.read_csv("../../output/calibrations/lapsi_scale_factor.csv", index_col=0)
 
     seedgen = 1355763
