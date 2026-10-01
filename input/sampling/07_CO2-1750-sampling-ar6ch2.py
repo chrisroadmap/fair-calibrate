@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from fair import __version__
 
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
@@ -33,7 +34,7 @@ co2_1750_conc = scipy.stats.norm.rvs(
 df = pd.DataFrame({"co2_concentration": co2_1750_conc})
 
 df.to_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "co2_concentration_1750.csv",
     index=False,
 )

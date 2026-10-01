@@ -21,6 +21,7 @@
 # (v1.1.0). Zenodo. https://doi.org/10.5281/zenodo.5217975
 
 import os
+from fair_calibrate.paths import ROOT
 
 # One fit is a long loop over small matrices, which multithreaded BLAS cannot speed
 # up. With several worker processes the BLAS thread pools oversubscribe the CPUs
@@ -233,7 +234,7 @@ if __name__ == "__main__":
     print(f"Running Python script for {n_layers} layer model calibrations...")
 
     # Get the precalculated 4xCO2 N and T data
-    input_data = pd.read_csv("../../output/calibrations/4xCO2_cmip6.csv")
+    input_data = pd.read_csv(f"{ROOT}/output/calibrations/4xCO2_cmip6.csv")
     year_columns = input_data.columns[9 : 9 + N_YEARS]
 
     # iterate through runs of the same model for now, though we will probably
@@ -263,8 +264,8 @@ if __name__ == "__main__":
 
     output = pd.DataFrame([row for row in rows if row is not None], columns=COLUMNS)
 
-    os.makedirs("../../output/calibrations/", exist_ok=True)
+    os.makedirs(f"{ROOT}/output/calibrations/", exist_ok=True)
     output.to_csv(
-        f"../../output/calibrations/4xCO2_cummins_ebm{n_layers}_cmip6.csv",
+        f"{ROOT}/output/calibrations/4xCO2_cummins_ebm{n_layers}_cmip6.csv",
         index=False,
     )

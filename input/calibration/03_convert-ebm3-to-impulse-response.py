@@ -16,6 +16,7 @@ from fair.energy_balance_model import EnergyBalanceModel
 from fair.forcing.ghg import meinshausen2020
 
 from fair_calibrate.layers import get_n_layers
+from fair_calibrate.paths import ROOT
 
 # Number of ocean layers in the calibration to convert: N_LAYERS in parameters.py
 n_layers = get_n_layers()
@@ -23,7 +24,7 @@ n_layers = get_n_layers()
 print(f"Converting {n_layers}-layer EBM parameters to IRM parameters...")
 
 df = pd.read_csv(
-    f"../../output/calibrations/4xCO2_cummins_ebm{n_layers}_cmip6.csv"
+    f"{ROOT}/output/calibrations/4xCO2_cummins_ebm{n_layers}_cmip6.csv"
 )
 
 models = df["model"].unique()
@@ -148,12 +149,12 @@ df_out = pd.concat(rows_to_add)
 df_out.sort_values(["model", "run"], inplace=True)
 
 os.makedirs(
-    "../../output/calibrations/",
+    f"{ROOT}/output/calibrations/",
     exist_ok=True,
 )
 
 df_out.to_csv(
-    "../../output/calibrations/"
+    f"{ROOT}/output/calibrations/"
     f"4xCO2_impulse_response_ebm{n_layers}_cmip6.csv",
     index=False,
 )

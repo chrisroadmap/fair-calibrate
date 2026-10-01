@@ -30,6 +30,7 @@ from fair_calibrate.layers import (
     get_n_layers,
 )
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 warnings.simplefilter("error", RuntimeWarning)
 
@@ -40,10 +41,10 @@ print(f"Making {n_layers}-layer climate response calibrations...")
 
 samples = PRIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
-pl.style.use("../../defaults.mplstyle")
+pl.style.use(f"{ROOT}/defaults.mplstyle")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
-df = pd.read_csv("../../output/calibrations/" + calibration_file(n_layers))
+df = pd.read_csv(f"{ROOT}/output/calibrations/" + calibration_file(n_layers))
 
 # 02_calibrate_cummins.py marks fits to be wary of (epsilon outside 0.5-2.5, a
 # constraint on its bound, the two starts disagreeing or only one converging).
@@ -123,14 +124,14 @@ if plots:
     pl.tight_layout()
     pl.subplots_adjust(wspace=0, hspace=0)
     os.makedirs(
-        "../../plots/", exist_ok=True
+        f"{ROOT}/plots/", exist_ok=True
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         f"ebm{n_layers}_distributions.png"
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         f"ebm{n_layers}_distributions.pdf"
     )
     pl.close()
@@ -208,12 +209,12 @@ ebm_sample_df = pd.DataFrame(
 assert len(ebm_sample_df) >= samples
 
 os.makedirs(
-    f"../../output/priors/",
+    f"{ROOT}/output/priors/",
     exist_ok=True,
 )
 
 ebm_sample_df.to_csv(
-    "../../output/priors/" + climate_response_file(n_layers),
+    f"{ROOT}/output/priors/" + climate_response_file(n_layers),
     index=False,
 )
 

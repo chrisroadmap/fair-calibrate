@@ -35,6 +35,7 @@ import scipy.optimize
 import scipy.stats
 import xarray as xr
 from dotenv import load_dotenv
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
@@ -53,11 +54,11 @@ rcmip_file = pooch.retrieve(
 )
 rcmip_df = pd.read_csv(rcmip_file)
 
-pl.style.use("../../defaults.mplstyle")
+pl.style.use(f"{ROOT}/defaults.mplstyle")
 
 # Temperature data
 # Use observations 1850-2023 from IGCC, then use ssp370 projections from IPCC
-df_temp = pd.read_csv("../../data/forcing/ssp_strawman_warming.csv")
+df_temp = pd.read_csv(f"{ROOT}/data/forcing/ssp_strawman_warming.csv")
 gmst = df_temp["ssp370"].values
 
 # Get emissions and concentrations: from RCMIP for model tuning stage
@@ -477,14 +478,14 @@ if plots:
     pl.plot(np.arange(1750, 2025), input["CH4"][:275], color="k", label="obs")
     pl.legend()
     os.makedirs(
-        "../../plots/", exist_ok=True
+        f"{ROOT}/plots/", exist_ok=True
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "aerchemmip_tuning_ch4_conc_1750-2024.png"
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "aerchemmip_tuning_ch4_conc_1750-2024.pdf"
     )
     pl.close()
@@ -494,12 +495,12 @@ if plots:
 # Find least squares sensible historical fit using updated emissions and
 # concentrations from CMIP7
 df_emis_obs = pd.read_csv(
-    f"../../output/emissions/"
+    f"{ROOT}/output/emissions/"
     "ssps_harmonized_1750-2499.csv",
     index_col=0,
 )
 df_conc_obs = pd.read_csv(
-    "../../data/concentrations/ghg_concentrations_1750-2023_cmip7.csv"
+    f"{ROOT}/data/concentrations/ghg_concentrations_1750-2023_cmip7.csv"
 )
 input_obs = {}
 input_obs["CH4"] = df_conc_obs.loc[df_conc_obs["variable"]=="CH4", '1750':'2023'].values.squeeze()
@@ -533,7 +534,7 @@ input_obs["HC"] = total_eesc[:274]
 if plots:
     pl.plot(input_obs["HC"])
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "eesc_from_observed_conc.png"
     )
     pl.close()
@@ -667,11 +668,11 @@ if plots:
     pl.legend()
     pl.ylabel("CH4 chemical lifetime (yr)")
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "ch4_chemical_lifetime_best_fit.png"
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "ch4_chemical_lifetime_best_fit.pdf"
     )
     pl.close()
@@ -717,7 +718,7 @@ ar6_colors = {
 
 
 df_emis = pd.read_csv(
-    "../../output/emissions/"
+    f"{ROOT}/output/emissions/"
     "ssps_harmonized_1750-2499.csv",
     index_col=[0, 1, 2, 3, 4]
 )
@@ -854,11 +855,11 @@ if plots:
 
     fig.tight_layout()
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "methane_calibrations.png"
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "methane_calibrations.pdf"
     )
     pl.close()
@@ -877,10 +878,10 @@ df = pd.DataFrame(
     index=["historical_best"],
 )
 os.makedirs(
-    f"../../output/calibrations/",
+    f"{ROOT}/output/calibrations/",
     exist_ok=True,
 )
 df.to_csv(
-    f"../../output/calibrations/"
+    f"{ROOT}/output/calibrations/"
     "CH4_lifetime.csv"
 )

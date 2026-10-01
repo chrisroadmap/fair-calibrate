@@ -16,6 +16,7 @@ from utils import _parallel_process
 
 from fair_calibrate.layers import climate_response_file, get_n_layers, layer_config
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 if __name__ == "__main__":
     print("Running the priors (could take a while)...")
@@ -31,19 +32,19 @@ if __name__ == "__main__":
 
     # CMIP7 solar
     df_solar = pd.read_csv(
-        "../../output/forcing/solar_forcing_timebounds_cmip7.csv", index_col=0
+        f"{ROOT}/output/forcing/solar_forcing_timebounds_cmip7.csv", index_col=0
     )
     # CMIP7 volcanic... does NOT include HTHH. My constructed dataset from Thomas' SAOD
     df_volcanic = pd.read_csv(
-        "../../data/forcing/volcanic_forcing_timebounds_cmip7.csv", index_col=0
+        f"{ROOT}/data/forcing/volcanic_forcing_timebounds_cmip7.csv", index_col=0
     )
 
     # new for this calibration: land use prescribed as timeseries and irrigation
     df_landuse = pd.read_csv(
-        "../../data/forcing/land_use_forcing_timebounds_cmip7.csv", index_col=0
+        f"{ROOT}/data/forcing/land_use_forcing_timebounds_cmip7.csv", index_col=0
     )
     df_irrigation = pd.read_csv(
-        "../../data/forcing/irrigation_forcing_timebounds_cmip7.csv", index_col=0
+        f"{ROOT}/data/forcing/irrigation_forcing_timebounds_cmip7.csv", index_col=0
     )
 
     volcanic_forcing = df_volcanic["volcanic_erf_rel_1850-2021"].loc[1750:2024].values
@@ -51,15 +52,15 @@ if __name__ == "__main__":
     landuse_forcing = df_landuse["VL"].loc[1750:2024].values
     irrigation_forcing = df_irrigation["VL"].loc[1750:2024].values
 
-    df_cc = pd.read_csv("../../output/priors/carbon_cycle.csv")
-    df_cr = pd.read_csv("../../output/priors/" + climate_response_file(n_layers))
-    df_aci = pd.read_csv("../../output/priors/aerosol_cloud.csv")
-    df_ari = pd.read_csv("../../output/priors/aerosol_radiation.csv")
-    df_ozone = pd.read_csv("../../output/priors/ozone.csv")
-    df_scaling = pd.read_csv("../../output/priors/forcing_scaling.csv")
-    df_1750co2 = pd.read_csv("../../output/priors/co2_concentration_1750.csv")
-    df_methane = pd.read_csv("../../output/calibrations/CH4_lifetime.csv", index_col=0)
-    df_lapsi = pd.read_csv("../../output/calibrations/lapsi_scale_factor.csv", index_col=0)
+    df_cc = pd.read_csv(f"{ROOT}/output/priors/carbon_cycle.csv")
+    df_cr = pd.read_csv(f"{ROOT}/output/priors/" + climate_response_file(n_layers))
+    df_aci = pd.read_csv(f"{ROOT}/output/priors/aerosol_cloud.csv")
+    df_ari = pd.read_csv(f"{ROOT}/output/priors/aerosol_radiation.csv")
+    df_ozone = pd.read_csv(f"{ROOT}/output/priors/ozone.csv")
+    df_scaling = pd.read_csv(f"{ROOT}/output/priors/forcing_scaling.csv")
+    df_1750co2 = pd.read_csv(f"{ROOT}/output/priors/co2_concentration_1750.csv")
+    df_methane = pd.read_csv(f"{ROOT}/output/calibrations/CH4_lifetime.csv", index_col=0)
+    df_lapsi = pd.read_csv(f"{ROOT}/output/calibrations/lapsi_scale_factor.csv", index_col=0)
 
     seedgen = 1355763
     seedstep = 399
@@ -218,11 +219,11 @@ if __name__ == "__main__":
         tcr[batch_start:batch_end] = res[ibatch][6]
 
     os.makedirs(
-        "../../output/prior_runs/",
+        f"{ROOT}/output/prior_runs/",
         exist_ok=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "temperature_1850-2024.npy",
         temp_out,
         allow_pickle=True,
@@ -230,37 +231,37 @@ if __name__ == "__main__":
     # one question is whether we expect the non-ocean parts of the EEI to go beyond 2020
     # currently stuck in 2020 for this
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "ocean_heat_content_2020_minus_1971.npy",
         ohc_out,
         allow_pickle=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "concentration_co2_2023.npy",
         co2_out,
         allow_pickle=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "forcing_ari_2005-2014_mean.npy",
         fari_out,
         allow_pickle=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "forcing_aci_2005-2014_mean.npy",
         faci_out,
         allow_pickle=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "ecs.npy",
         ecs,
         allow_pickle=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "tcr.npy",
         tcr,
         allow_pickle=True,

@@ -23,6 +23,7 @@ import scipy.stats
 from dotenv import load_dotenv
 
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
@@ -31,11 +32,11 @@ progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
 
 df_emis = pd.read_csv(
-    "../../data/emissions/"
+    f"{ROOT}/data/emissions/"
     "historical_emissions_1750-2023_cmip7.csv"
 )
 df_conc = pd.read_csv(
-    "../../data/concentrations/ghg_concentrations_1750-2023_cmip7.csv"
+    f"{ROOT}/data/concentrations/ghg_concentrations_1750-2023_cmip7.csv"
 )
 
 # these are the present day ERFari which comes from AR6 WG1
@@ -45,7 +46,7 @@ df_conc = pd.read_csv(
 # Calculate a radiative efficiency for each species from CEDS and updated
 # concentrations.
 df_ari_emitted_mean = pd.read_csv(
-    "../../data/forcing/table_mean_thornhill_collins_orignames.csv",
+    f"{ROOT}/data/forcing/table_mean_thornhill_collins_orignames.csv",
     index_col=0,
 )
 erfari_emitted = pd.Series(df_ari_emitted_mean["Aerosol"])
@@ -55,7 +56,7 @@ erfari_emitted.rename(
 )
 
 df_ari_emitted_std = pd.read_csv(
-    "../../data/forcing/table_std_thornhill_collins_orignames.csv", index_col=0
+    f"{ROOT}/data/forcing/table_std_thornhill_collins_orignames.csv", index_col=0
 )
 erfari_emitted_std = pd.Series(df_ari_emitted_std["Aerosol_sd"])
 erfari_emitted_std.rename_axis(None, inplace=True)
@@ -307,12 +308,12 @@ erfari_re_samples = pd.DataFrame(
 print(erfari_re_samples)
 
 os.makedirs(
-    "../../output/priors/",
+    f"{ROOT}/output/priors/",
     exist_ok=True,
 )
 
 erfari_re_samples.to_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "aerosol_radiation.csv",
     index=False,
 )

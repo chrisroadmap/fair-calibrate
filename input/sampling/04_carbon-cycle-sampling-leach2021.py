@@ -27,12 +27,13 @@ from fair import __version__
 from fair.structure.units import compound_convert
 
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
 samples = PRIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
-pl.style.use("../../defaults.mplstyle")
+pl.style.use(f"{ROOT}/defaults.mplstyle")
 
 
 print("Making carbon cycle calibrations...")
@@ -129,12 +130,12 @@ cc_sample_df = pd.DataFrame(
 )
 
 os.makedirs(
-    "../../output/priors/",
+    f"{ROOT}/output/priors/",
     exist_ok=True,
 )
 
 cc_sample_df.to_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "carbon_cycle.csv",
     index=False,
 )
