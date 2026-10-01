@@ -16,6 +16,7 @@ from fair import FAIR, __version__
 from fair.interface import fill
 
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
@@ -87,11 +88,11 @@ for specie in species:
     fill(f.concentration, input[specie][:, None, None], specie=specie)
 
 os.makedirs(
-    "../../output/concentration/",
+    f"{ROOT}/output/concentration/",
     exist_ok=True,
 )
 
 f.concentration.to_netcdf(
-    "../../output/concentration/"
+    f"{ROOT}/output/concentration/"
     "1pctCO2_concentration_1850-2060.nc"
 )

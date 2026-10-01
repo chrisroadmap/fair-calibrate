@@ -10,6 +10,7 @@ from fair.io import read_properties
 from scipy.interpolate import interp1d
 
 from fair_calibrate.layers import fill_layers
+from fair_calibrate.paths import ROOT
 
 def run_fair(cfg):
     scenarios = ["1pctCO2"]
@@ -20,7 +21,7 @@ def run_fair(cfg):
     species, properties = read_properties()
 
     da_concentration = xr.load_dataarray(
-        "../../output/"
+        f"{ROOT}/output/"
         "concentration/1pctCO2_concentration_1850-2060.nc"
     )
 

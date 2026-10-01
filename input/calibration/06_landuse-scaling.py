@@ -11,6 +11,7 @@ import os
 
 import pandas as pd
 from dotenv import load_dotenv
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
@@ -23,7 +24,7 @@ base_year = 1750
 assessment_year = 2019
 
 df_emis = pd.read_csv(
-    f"../../data/emissions/"
+    f"{ROOT}/data/emissions/"
     "historical_emissions_1750-2023_cmip7.csv"
 )
 co2_afolu = df_emis.loc[
@@ -40,10 +41,10 @@ df = pd.DataFrame(
     index=["historical_best"],
 )
 os.makedirs(
-    "../../output/calibrations/",
+    f"{ROOT}/output/calibrations/",
     exist_ok=True,
 )
 df.to_csv(
-    "../../output/calibrations/"
+    f"{ROOT}/output/calibrations/"
     "landuse_scale_factor.csv"
 )

@@ -18,6 +18,7 @@ from sklearn.preprocessing import QuantileTransformer
 
 from fair_calibrate.layers import climate_response_file, get_n_layers
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
@@ -78,7 +79,7 @@ scalings["Irrigation"] = scipy.stats.skewnorm.rvs(
 
 # CO2 scaling is quantile mapping from ERF 4xCO2 and +/- 12%
 df_ebm = pd.read_csv(
-    "../../output/priors/" + climate_response_file(get_n_layers())
+    f"{ROOT}/output/priors/" + climate_response_file(get_n_layers())
 )
 
 qt = QuantileTransformer(output_distribution="normal", random_state=70601701)
@@ -90,7 +91,7 @@ scalings["CO2"] = trans.squeeze()
 df_out = pd.DataFrame(scalings, columns=scalings.keys())
 
 df_out.to_csv(
-    f"../../output/priors/"
+    f"{ROOT}/output/priors/"
     "forcing_scaling.csv",
     index=False,
 )

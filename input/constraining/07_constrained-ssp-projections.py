@@ -17,12 +17,13 @@ from fair.io import read_properties
 
 from fair_calibrate.layers import get_n_layers
 from fair_calibrate.parameters import POSTERIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 pl.switch_backend("agg")
 
 load_dotenv()
 
-pl.style.use("../../defaults.mplstyle")
+pl.style.use(f"{ROOT}/defaults.mplstyle")
 
 print("Running SSP scenarios...")
 
@@ -44,10 +45,10 @@ scenarios = [
 
 
 df_solar = pd.read_csv(
-    "../../output/forcing/solar_forcing_timebounds_cmip7.csv", index_col=0
+    f"{ROOT}/output/forcing/solar_forcing_timebounds_cmip7.csv", index_col=0
 )
 df_volcanic = pd.read_csv(
-    "../../data/forcing/volcanic_forcing_timebounds_cmip7.csv", index_col=0
+    f"{ROOT}/data/forcing/volcanic_forcing_timebounds_cmip7.csv", index_col=0
 )
 
 solar_forcing = np.zeros(552)
@@ -59,14 +60,14 @@ f = FAIR(n_layers=get_n_layers(), ch4_method="Thornhill2021")
 f.define_time(1750, 2301, 1)
 f.define_scenarios(scenarios)
 species, properties = read_properties(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "species_configs_properties.csv",
 )
 species.remove("Irrigation")
 properties["Land use"]["input_mode"] = "calculated"
 f.define_species(species, properties)
 df_configs = pd.read_csv(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "calibrated_constrained_parameters.csv",
     index_col=0,
 )
@@ -76,7 +77,7 @@ f.allocate()
 
 # run with harmonized emissions
 da_emissions = xr.load_dataarray(
-    "../../output/emissions/"
+    f"{ROOT}/output/emissions/"
     "ssps_harmonized_1750-2499.nc"
 )
 da_emissions = da_emissions.drop_sel(specie="Irrigation")
@@ -99,11 +100,11 @@ fill(
 
 # new convience for v2.2
 f.fill_species_configs(
-    f"../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "species_configs_properties.csv",
 )
 f.override_defaults(
-    f"../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "calibrated_constrained_parameters.csv",
 )
 
@@ -130,7 +131,7 @@ ar6_colors = {
     "ssp585": "#980002",
 }
 
-df_gmst = pd.read_csv("../../data/forcing/IGCC_GMST_1850-2024.csv")
+df_gmst = pd.read_csv(f"{ROOT}/data/forcing/IGCC_GMST_1850-2024.csv")
 gmst = df_gmst["gmst"].values
 
 if plots:
@@ -209,11 +210,11 @@ if plots:
     # pl.suptitle("SSP temperature anomalies")
     fig.tight_layout()
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "final_ssp_temperatures.png"
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "final_ssp_temperatures.pdf"
     )
     pl.close()
@@ -319,11 +320,11 @@ if plots:
         color="k",
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "toa_imbalance_ssp245.png"
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "toa_imbalance_ssp245.pdf"
     )
     pl.close()
@@ -355,7 +356,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "ghg_forcing_ssp245.png"
     )
     pl.close()
@@ -376,7 +377,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "aerosol_forcing_ssp245.png"
     )
     pl.close()
@@ -397,7 +398,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "co2_forcing_ssp585.png"
     )
     pl.close()
@@ -418,7 +419,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "co2_concentration_ssp585.png"
     )
     pl.close()
@@ -439,7 +440,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "ozone_ssp245.png"
     )
     pl.close()
@@ -460,7 +461,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "lapsi_ssp245.png"
     )
     pl.close()
@@ -481,7 +482,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "stratH2O_ssp245.png"
     )
     pl.close()
@@ -502,7 +503,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "landuse_ssp245.png"
     )
     pl.close()
