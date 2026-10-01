@@ -15,10 +15,10 @@ import pandas as pd
 from fair.energy_balance_model import EnergyBalanceModel
 from fair.forcing.ghg import meinshausen2020
 
-# Number of ocean layers in the calibration to convert: 2 or 3 (N_LAYERS in .env)
-n_layers = int(os.getenv("N_LAYERS", "3"))
-if n_layers not in (2, 3):
-    raise SystemExit(f"N_LAYERS must be 2 or 3, got {n_layers}")
+from fair_calibrate.layers import get_n_layers
+
+# Number of ocean layers in the calibration to convert: N_LAYERS in parameters.py
+n_layers = get_n_layers()
 
 print(f"Converting {n_layers}-layer EBM parameters to IRM parameters...")
 

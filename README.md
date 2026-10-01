@@ -60,13 +60,15 @@ GAMMA_MAX=10                 # optional: upper bound on gamma, the stochastic
 DEEP_MIN_RATIO=1             # optional: lower bound on the deepest layer's heat
                              # capacity over the one above (C3/C2 for three
                              # layers, C2/C1 for two). Default 1; "none" removes it.
-N_LAYERS=3                   # ocean layers in the Cummins model, 2 or 3. Sets
-                             # which of 4xCO2_cummins_ebm2/3_cmip6.csv is written.
+EXCLUDE_SUSPECT=False        # optional: leave out of the climate-response sample
+                             # the fits that 02_calibrate_cummins.py marked suspect
 ```
 
 `WORKERS` also sets how many model/run fits `02_calibrate_cummins.py` runs in parallel. The fit is a long loop over small matrices, so it is pinned to one BLAS thread per worker.
 
 Then, if necessary, edit the file in `src/fair_calibrate/parameters.py` and `setup.py` to point to the correct version and label.
+
+`parameters.py` also sets `N_LAYERS`, the number of ocean layers (2 or 3) in the energy balance model. Every step follows it: the Cummins fit, the impulse-response conversion, the climate-response sampling and the FaIR runs that use it. It lives there, not in `.env`, so that the layer count is committed with the calibration instead of depending on a machine-local file.
 
 The output will be produced in `output/`. No posterior data will be committed to Git owing to size, but the intention is that the full output data will be on Zenodo.
 
@@ -100,7 +102,7 @@ Under the existing pattern -- which you are free to change in the `run` recipe -
    - The deepest layer is constrained to be at least as large as the one above it (`DEEP_MIN_RATIO`, so `C3 >= C2` for three layers). Without it, three-layer fits could collapse `C3` to almost nothing while the deep-ocean efficacy `epsilon` ran to 100 or more. The `deep_at_bound` column marks fits that sit on the constraint, meaning the data would prefer a deepest layer smaller than the one above.
    - Every run is fitted from two starting points. The better result is kept, and the `start_gap` column records how far apart the two fits were; a large gap, or only one start converging, flags a fit to check.
    - The `suspect` and `suspect_reasons` columns mark fits to look at before using them: `epsilon` outside 0.5 to 2.5, `C3/C2` on its bound, the two starts disagreeing, or only one start converging. `epsilon` is flagged, not bounded.
-3. `N_LAYERS=2` fits the two-layer model and converts it (`03_convert-ebm3-to-impulse-response.py` reads `N_LAYERS` too), writing `4xCO2_cummins_ebm2_cmip6.csv` and `4xCO2_impulse_response_ebm2_cmip6.csv`. The later steps (`sampling/01_climate-response-sampling-ebm3.py`, `constraining/02_run-1pct.py` and `05_dump-calibration.py`, `sampling/06_forcing-uncertainty-ar6.py`, `sampling/10_run-fair-ssp-prior-ensemble-ebm3-intvar.py`) still read the three-layer files only, so a two-layer FaIR calibration needs those migrated.
+3. `N_LAYERS` in `parameters.py` (currently 2) sets the number of ocean layers for the whole pipeline. File names carry the layer count (`4xCO2_cummins_ebm2_cmip6.csv`, `climate_response_ebm2.csv`), and the scripts that build FaIR runs pass `n_layers` to `FAIR`. The helpers are in `src/fair_calibrate/layers.py`. Some script names still say `ebm3` (`01_climate-response-sampling-ebm3.py`, `03_convert-ebm3-to-impulse-response.py`, `10_run-fair-ssp-prior-ensemble-ebm3-intvar.py`); they were left alone so existing references keep working, and they follow `N_LAYERS`. The climate-response sampler draws four times the sample size and needs a quarter of the draws to survive its checks. With the current three-layer calibration only about 11% survive (75% once `EXCLUDE_SUSPECT=True` drops the 11 suspect fits), against about 92% with two layers.
 2. Related to above, scipy's multivariate normal and sparse matrix algebra routines seem fragile, and change between scipy versions (1.8, 1.9, 1.10). If anyone trying to reproduce this runs into "positive semidefinite" errors, raise an issue.
 
 ## Documentation

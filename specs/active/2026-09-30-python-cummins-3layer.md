@@ -207,6 +207,45 @@ Results, 66 runs, 114 s on 7 workers (three layers: 393 s):
 - Not migrated: the sampling and constraining scripts read the three-layer files
   only (list in the README notes).
 
+## Downstream pipeline follows N_LAYERS (2026-10-01)
+
+Eight scripts depended on the layer count, not the five first listed: the
+climate-response sampler (`sampling/01`), `sampling/06` (reads F_4xCO2 from it),
+`sampling/10` and its helper `sampling/parallel.py`, `constraining/02` and its
+helper `parallel_1pct.py`, `constraining/05` (dump) and `constraining/07`
+(projections, which builds `FAIR()` with the default three layers before loading
+the dumped parameters). They now read `N_LAYERS`, use
+`climate_response_ebm<N>.csv`, and build `FAIR(n_layers=N)`. Shared pieces are in
+`src/fair_calibrate/layers.py`. Script names were not changed (some still say
+`ebm3`) to keep references working.
+
+`N_LAYERS` is set in `src/fair_calibrate/parameters.py` (committed value 2), the
+one place all steps read it, including `02_calibrate_cummins.py` and `03_...`
+which first took it from `.env`. It is deliberately not an environment variable:
+a machine-local `.env` could silently contradict the committed calibration, and a
+test pins that `.env` cannot override it. To run two layer counts side by side,
+edit `parameters.py` between runs.
+
+Checks: 61 tests (15 new, `tests/test_layers.py`), including FaIR runs with two
+and three layers through `fill_layers` and `FAIR.override_defaults` accepting the
+dumped parameter names for both. The sampler's three-layer output is
+byte-identical to the original script's on the same input; the two-layer sample
+has the right columns and length. Not run end to end: 02, 05, 07 and 10 need the
+earlier pipeline outputs (carbon cycle, ERF, RMSE-passing runs, emissions), which
+are not in the working tree, and the full sample size is 1.6M.
+
+- `sampling/01` marks suspect fits from the calibration and, with
+  `EXCLUDE_SUSPECT=True`, leaves them out (if a model's preferred run is excluded
+  it falls back to another of that model's runs, where it used to fail).
+- Finding: the sampler draws 4x the sample size and the 11-dimensional KDE needs
+  25% to survive its unphysical-combination and stochastic-step checks. With the
+  current three-layer calibration 11% survive (so the real run would fail its
+  `assert len(ebm_sample_df) >= samples`); excluding the 11 suspect fits gives 75%.
+  Two layers: 92%, with the one suspect fit left in.
+- Other 4x-sized checks and the use of `scipy.sparse.linalg.expm` in the sampler's
+  stochastic-step test are unchanged; that expm is the same Van Loan route that
+  fails at high gamma, so it also decides which samples FaIR will accept.
+
 ## Out of scope / open
 
 - Results across R builds already differ (README note 1); the Python port

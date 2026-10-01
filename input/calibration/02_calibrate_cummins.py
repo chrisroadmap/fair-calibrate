@@ -4,7 +4,7 @@
 """Calibrate the Cummins energy balance model to CMIP6 4xCO2 runs."""
 
 # Goes through each of the models in turn and tunes the parameters of the
-# Cummins two or three layer model (N_LAYERS in .env, default 3). Python port of
+# Cummins two or three layer model (N_LAYERS in parameters.py). Python port of
 # the R script 02_calibrate_cummins_3layer.r, which used Donald Cummins' R package
 # (EBM); the R version is kept in alternatives/cummins/.
 #
@@ -36,20 +36,18 @@ from dotenv import load_dotenv  # noqa: E402
 
 from fair_calibrate.cummins_ebm import (  # noqa: E402
     START_TOL,
-    SUPPORTED_LAYERS,
     ConvergenceError,
     fit_kalman,
     suspect_reasons,
 )
+from fair_calibrate.layers import get_n_layers  # noqa: E402
 
 load_dotenv()
 
 workers = int(os.getenv("WORKERS", "1"))
 
-# Number of ocean layers in the energy balance model: 2 or 3.
-n_layers = int(os.getenv("N_LAYERS", "3"))
-if n_layers not in SUPPORTED_LAYERS:
-    raise SystemExit(f"N_LAYERS must be one of {SUPPORTED_LAYERS}, got {n_layers}")
+# Number of ocean layers in the energy balance model: N_LAYERS in parameters.py.
+n_layers = get_n_layers()
 
 # Upper bound on gamma, the stochastic forcing autocorrelation rate (yr-1). For
 # about a fifth of the CMIP6 runs the exact likelihood keeps improving as gamma

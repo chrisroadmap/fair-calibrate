@@ -8,6 +8,8 @@ from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
+from fair_calibrate.layers import fill_layers
+
 
 def run_fair(cfg):
     scenarios = ["ssp245"]
@@ -36,7 +38,7 @@ def run_fair(cfg):
         "ssps_harmonized_1750-2499.nc",
     )
 
-    f = FAIR(ch4_method="Thornhill2021")
+    f = FAIR(n_layers=cfg["n_layers"], ch4_method="Thornhill2021")
     f.define_time(1750, 2024, 1)
     f.define_scenarios(scenarios)
     f.define_configs(list(range(batch_start, batch_end)))
@@ -70,14 +72,7 @@ def run_fair(cfg):
     )
 
     # climate response
-    fill(
-        f.climate_configs["ocean_heat_capacity"],
-        np.array([cfg["c1"], cfg["c2"], cfg["c3"]]).T,
-    )
-    fill(
-        f.climate_configs["ocean_heat_transfer"],
-        np.array([cfg["kappa1"], cfg["kappa2"], cfg["kappa3"]]).T,
-    )
+    fill_layers(f, cfg)
     fill(f.climate_configs["deep_ocean_efficacy"], cfg["epsilon"])
     fill(f.climate_configs["gamma_autocorrelation"], cfg["gamma"])
     fill(f.climate_configs["sigma_eta"], cfg["sigma_eta"])
