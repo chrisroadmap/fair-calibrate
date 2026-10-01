@@ -8,18 +8,23 @@ Multiple strategies to calibrate the FaIR model.
 
 ### requirements
 - [`pixi`](https://pixi.sh) (installs Python, R, cmake and all packages in one locked environment; no separate `conda`, `python` or `R` install is needed)
-- a C/C++ compiler for building the `FKF` and `EBM` R packages (Xcode command line tools on macOS, `gcc` on Linux)
+- optional, only for the R reference implementation: a C/C++ compiler for building the `FKF` and `EBM` R packages (Xcode command line tools on macOS, `gcc` on Linux)
 
-### set up the environment for Python and R
+### set up the environment
 
 Install `pixi` (see https://pixi.sh), then from the top directory of this repository run
 
 ```
 pixi install
-pixi run install-ebm
 ```
 
-The first command creates the environment from `pixi.toml` and `pixi.lock`: `python` 3.11, `R>=4.4`, `cmake`, the R packages available on conda-forge (`expm`, `nloptr`, `numDeriv`) and the Python packages, including `fair` and this repository (editable). The second installs the two R packages that conda-forge does not provide: `FKF` from CRAN and Donald Cummins' [`EBM`](https://github.com/donaldcummins/EBM) v1.1.0 from GitHub. It only needs to be run once per environment.
+This creates the environment from `pixi.toml` and `pixi.lock`: `python` 3.11, the Python packages (including `fair`, `nlopt` and this repository, editable), and `R>=4.4` with `cmake`.
+
+The Cummins calibration (`input/calibration/02_calibrate_cummins.py`, two or three layers) is pure Python and does not need R. R is kept for the reference implementation in `alternatives/cummins/` and for regenerating the R test values in `tests/`. To use it, install the two R packages that conda-forge does not provide, `FKF` from CRAN and Donald Cummins' [`EBM`](https://github.com/donaldcummins/EBM) v1.1.0 from GitHub, once per environment:
+
+```
+pixi run install-ebm
+```
 
 To work interactively, either prefix commands with `pixi run` (e.g. `pixi run python script.py`) or open a shell inside the environment with `pixi shell`.
 
@@ -48,9 +53,22 @@ PROGRESS=False               # show progress bar? (good for interactive, bad
                              # on HPC batch jobs)
 DATADIR=/path/to/datadir     # A local location to download large external
                              # datafiles (a cache directory)
+
+GAMMA_MAX=10                 # optional: upper bound on gamma, the stochastic
+                             # forcing autocorrelation rate (1/yr), in the
+                             # three-layer fit. Default 10; "none" removes it.
+DEEP_MIN_RATIO=1             # optional: lower bound on the deepest layer's heat
+                             # capacity over the one above (C3/C2 for three
+                             # layers, C2/C1 for two). Default 1; "none" removes it.
+EXCLUDE_SUSPECT=False        # optional: leave out of the climate-response sample
+                             # the fits that 02_calibrate_cummins.py marked suspect
 ```
 
+`WORKERS` also sets how many model/run fits `02_calibrate_cummins.py` runs in parallel. The fit is a long loop over small matrices, so it is pinned to one BLAS thread per worker.
+
 Then, if necessary, edit the file in `src/fair_calibrate/parameters.py` and `setup.py` to point to the correct version and label.
+
+`parameters.py` also sets `N_LAYERS`, the number of ocean layers (2 or 3) in the energy balance model. Every step follows it: the Cummins fit, the impulse-response conversion, the climate-response sampling and the FaIR runs that use it. It lives there, not in `.env`, so that the layer count is committed with the calibration instead of depending on a machine-local file.
 
 The output will be produced in `output/`. No posterior data will be committed to Git owing to size, but the intention is that the full output data will be on Zenodo.
 
@@ -79,7 +97,12 @@ Under the existing pattern -- which you are free to change in the `run` recipe -
 9. Upload to Zenodo
 
 ## Notes
-1. I get different results from the 3-layer model calibration between using pre-compiled R binary for for Mac compared to building the R binary from source on CentOS7; both using R-4.1.1, and again using the Arc4 HPC. The Arc4 results are used. A future **TODO** would be to switch to ``py-bobyqa`` which is the optimizer used in the R code, and remove dependence on R, which *may* improve performace.
+1. The Cummins energy balance model calibration (two or three layers) is now fitted in Python (`src/fair_calibrate/cummins_ebm.py`), using NLopt's BOBYQA, the same library that R's `nloptr` wraps. Earlier versions used Donald Cummins' R package, and gave different results between a pre-compiled R binary on Mac and a source build on CentOS7 (both R-4.1.1) and again on the Arc4 HPC. The Python port reproduces the R fit to about 1e-6 for most runs (`pixi run test` checks it against stored R values), with two deliberate differences:
+   - For about a fifth of the CMIP6 runs the exact likelihood keeps improving as `gamma` grows without limit (the white-noise limit, which annual data cannot distinguish from a large finite `gamma`). R's fits for these runs stop at `gamma` of 24 to 30, apparently because its matrix exponential loses accuracy there (the likelihood also gets worse for R's fits than for the unbounded optimum), not because the data say so. The Python fit bounds `gamma` at `GAMMA_MAX` (default 10), and the `gamma_at_bound` column of the output marks the runs that end on it.
+   - The deepest layer is constrained to be at least as large as the one above it (`DEEP_MIN_RATIO`, so `C3 >= C2` for three layers). Without it, three-layer fits could collapse `C3` to almost nothing while the deep-ocean efficacy `epsilon` ran to 100 or more. The `deep_at_bound` column marks fits that sit on the constraint, meaning the data would prefer a deepest layer smaller than the one above.
+   - Every run is fitted from two starting points. The better result is kept, and the `start_gap` column records how far apart the two fits were; a large gap, or only one start converging, flags a fit to check.
+   - The `suspect` and `suspect_reasons` columns mark fits to look at before using them: `epsilon` outside 0.5 to 2.5, `C3/C2` on its bound, the two starts disagreeing, or only one start converging. `epsilon` is flagged, not bounded.
+3. `N_LAYERS` in `parameters.py` (currently 2) sets the number of ocean layers for the whole pipeline. File names carry the layer count (`4xCO2_cummins_ebm2_cmip6.csv`, `climate_response_ebm2.csv`), and the scripts that build FaIR runs pass `n_layers` to `FAIR`. The helpers are in `src/fair_calibrate/layers.py`. Some script names still say `ebm3` (`01_climate-response-sampling-ebm3.py`, `03_convert-ebm3-to-impulse-response.py`, `10_run-fair-ssp-prior-ensemble-ebm3-intvar.py`); they were left alone so existing references keep working, and they follow `N_LAYERS`. The climate-response sampler draws four times the sample size and needs a quarter of the draws to survive its checks. With the current three-layer calibration only about 11% survive (75% once `EXCLUDE_SUSPECT=True` drops the 11 suspect fits), against about 92% with two layers.
 2. Related to above, scipy's multivariate normal and sparse matrix algebra routines seem fragile, and change between scipy versions (1.8, 1.9, 1.10). If anyone trying to reproduce this runs into "positive semidefinite" errors, raise an issue.
 
 ## Documentation

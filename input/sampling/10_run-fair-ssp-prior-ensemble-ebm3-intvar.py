@@ -14,11 +14,13 @@ from fair import __version__
 from parallel import run_fair
 from utils import _parallel_process
 
+from fair_calibrate.layers import climate_response_file, get_n_layers, layer_config
 from fair_calibrate.parameters import PRIOR_SAMPLES
 
 if __name__ == "__main__":
     print("Running the priors (could take a while)...")
     load_dotenv()
+    n_layers = get_n_layers()
 
     samples = PRIOR_SAMPLES
     batch_size = int(os.getenv("BATCH_SIZE"))
@@ -50,7 +52,7 @@ if __name__ == "__main__":
     irrigation_forcing = df_irrigation["VL"].loc[1750:2024].values
 
     df_cc = pd.read_csv("../../output/priors/carbon_cycle.csv")
-    df_cr = pd.read_csv("../../output/priors/climate_response_ebm3.csv")
+    df_cr = pd.read_csv("../../output/priors/" + climate_response_file(n_layers))
     df_aci = pd.read_csv("../../output/priors/aerosol_cloud.csv")
     df_ari = pd.read_csv("../../output/priors/aerosol_radiation.csv")
     df_ozone = pd.read_csv("../../output/priors/ozone.csv")
@@ -94,18 +96,9 @@ if __name__ == "__main__":
         config[ibatch]["scaling_solar_amplitude"] = df_scaling.loc[
             batch_start : batch_end - 1, "solar_amplitude"
         ].values.squeeze()
-        config[ibatch]["c1"] = df_cr.loc[batch_start : batch_end - 1, "c1"].values
-        config[ibatch]["c2"] = df_cr.loc[batch_start : batch_end - 1, "c2"].values
-        config[ibatch]["c3"] = df_cr.loc[batch_start : batch_end - 1, "c3"].values
-        config[ibatch]["kappa1"] = df_cr.loc[
-            batch_start : batch_end - 1, "kappa1"
-        ].values
-        config[ibatch]["kappa2"] = df_cr.loc[
-            batch_start : batch_end - 1, "kappa2"
-        ].values
-        config[ibatch]["kappa3"] = df_cr.loc[
-            batch_start : batch_end - 1, "kappa3"
-        ].values
+        config[ibatch].update(
+            layer_config(df_cr, slice(batch_start, batch_end - 1), n_layers)
+        )
         config[ibatch]["epsilon"] = df_cr.loc[
             batch_start : batch_end - 1, "epsilon"
         ].values
