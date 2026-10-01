@@ -15,6 +15,7 @@ from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
+from fair_calibrate.layers import get_n_layers
 from fair_calibrate.parameters import POSTERIOR_SAMPLES
 
 pl.switch_backend("agg")
@@ -54,7 +55,7 @@ volcanic_forcing = np.zeros(552)
 volcanic_forcing = df_volcanic["volcanic_erf_rel_1850-2021"].loc[1750:2301].values
 solar_forcing = df_solar["solar_erf_rel_1850-2019"].loc[1750:2301].values
 
-f = FAIR(ch4_method="Thornhill2021")
+f = FAIR(n_layers=get_n_layers(), ch4_method="Thornhill2021")
 f.define_time(1750, 2301, 1)
 f.define_scenarios(scenarios)
 species, properties = read_properties(
