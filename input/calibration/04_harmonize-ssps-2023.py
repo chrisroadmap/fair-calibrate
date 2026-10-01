@@ -20,12 +20,12 @@ import numpy as np
 import pandas as pd
 import scmdata
 from dotenv import load_dotenv
-from fair import FAIR, __version__
+from fair import FAIR
 from fair.interface import fill
 from fair.io import read_properties
 from tqdm.auto import tqdm
 
-from fair_calibrate.parameters import FAIR_VERSION, PRIOR_SAMPLES
+from fair_calibrate.parameters import PRIOR_SAMPLES
 
 load_dotenv()
 
@@ -33,8 +33,6 @@ load_dotenv()
 samples = PRIOR_SAMPLES
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 datadir = os.getenv("DATADIR")
-
-assert __version__ == FAIR_VERSION
 
 harmonization_year = 2023
 

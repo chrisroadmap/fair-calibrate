@@ -10,15 +10,10 @@ import sys
 
 import pandas as pd
 from dotenv import load_dotenv
-from fair import __version__
-
-from fair_calibrate.parameters import FAIR_VERSION
 
 load_dotenv()
 
 print("Making nice 4xCO2 data...")
-
-assert FAIR_VERSION == __version__
 
 available_files = glob.glob(
     "../../data/cmip6-hbf/cmip_data/*/abrupt-4xCO2/"

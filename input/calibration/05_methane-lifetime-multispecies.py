@@ -53,7 +53,6 @@ rcmip_file = pooch.retrieve(
 )
 rcmip_df = pd.read_csv(rcmip_file)
 
-# assert fair_v == __version__
 pl.style.use("../../defaults.mplstyle")
 
 # Temperature data
