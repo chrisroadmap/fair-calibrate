@@ -40,6 +40,13 @@ n_layers = get_n_layers()  # N_LAYERS in parameters.py: 2 or 3
 print(f"Making {n_layers}-layer climate response calibrations...")
 
 samples = PRIOR_SAMPLES
+
+# Candidates drawn per prior sample. The unphysical-combination and covariance checks
+# discard some, and only the first `samples` survivors are kept. About 92% survive with
+# two layers (so 4 is ample) but only about 11% with three (75% with EXCLUDE_SUSPECT),
+# which needs 10. The covariance check stops once enough have passed, so a larger
+# factor costs little.
+DRAW_FACTOR = {2: 4, 3: 10}[n_layers]
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
 pl.style.use(f"{ROOT}/defaults.mplstyle")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
@@ -139,7 +146,7 @@ if plots:
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 
 kde = scipy.stats.gaussian_kde(params.T)
-ebm_sample = kde.resample(size=int(samples * 4), seed=2181882)
+ebm_sample = kde.resample(size=int(samples * DRAW_FACTOR), seed=2181882)
 
 # Row layout of the sample: gamma, C1..Cn, kappa1..kappan, epsilon, sigma_eta,
 # sigma_xi, F_4xCO2.
