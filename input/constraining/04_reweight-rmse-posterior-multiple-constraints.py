@@ -20,6 +20,7 @@ from matplotlib.lines import Line2D
 from tqdm.auto import tqdm
 
 from fair_calibrate.parameters import PRIOR_SAMPLES, POSTERIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 pl.switch_backend("agg")
 
@@ -28,7 +29,7 @@ load_dotenv()
 samples = PRIOR_SAMPLES
 output_ensemble_size = POSTERIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
-pl.style.use("../../defaults.mplstyle")
+pl.style.use(f"{ROOT}/defaults.mplstyle")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
 print("Doing reweighting...")
@@ -37,7 +38,7 @@ print("Doing reweighting...")
 NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 
 valid_temp_af = np.loadtxt(
-    f"../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "runids_rmse_af_pass.csv"
 ).astype(np.int64)
 
@@ -46,30 +47,30 @@ input_ensemble_size = len(valid_temp_af)
 assert input_ensemble_size > output_ensemble_size
 
 temp_in = np.load(
-    "../../output/prior_runs/"
+    f"{ROOT}/output/prior_runs/"
     "temperature_1850-2024.npy"
 )
 ohc_in = np.load(
-    "../../output/prior_runs/"
+    f"{ROOT}/output/prior_runs/"
     "ocean_heat_content_2020_minus_1971.npy"
 )
 fari_in = np.load(
-    "../../output/prior_runs/"
+    f"{ROOT}/output/prior_runs/"
     "forcing_ari_2005-2014_mean.npy"
 )
 faci_in = np.load(
-    "../../output/prior_runs/"
+    f"{ROOT}/output/prior_runs/"
     "forcing_aci_2005-2014_mean.npy"
 )
 co2_in = np.load(
-    "../../output/prior_runs/"
+    f"{ROOT}/output/prior_runs/"
     "concentration_co2_2023.npy"
 )
 ecs_in = np.load(
-    "../../output/prior_runs/ecs.npy"
+    f"{ROOT}/output/prior_runs/ecs.npy"
 )
 tcr_in = np.load(
-    f"../../output/prior_runs/tcr.npy"
+    f"{ROOT}/output/prior_runs/tcr.npy"
 )
 faer_in = fari_in + faci_in
 
@@ -375,7 +376,7 @@ assert effective_samples >= output_ensemble_size
 # that have passed the previous constraining steps, according to the
 # weights that we have just calculated.
 np.random.seed(10099)
-chosen = np.random.choice(accepted.index, size=841, replace=False, p=weights/np.sum(weights))
+chosen = np.random.choice(accepted.index, size=output_ensemble_size, replace=False, p=weights/np.sum(weights))
 draws = accepted.loc[chosen]
 
 if plots:
@@ -428,7 +429,7 @@ if plots:
     colors = {"prior": "#207F6E", "post1": "#684C94", "post2": "#EE696B", "target": "black"}
 
     os.makedirs(
-        "../../plots/", exist_ok=True
+        f"{ROOT}/plots/", exist_ok=True
     )
 
     # Plots 1
@@ -736,11 +737,11 @@ if plots:
 
     fig.tight_layout()
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "constraints.png"
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "constraints.pdf"
     )
     pl.close()
@@ -751,7 +752,7 @@ if plots:
     pl.ylabel("ECS, °C")
     pl.tight_layout()
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "ecs_tcr_constrained.png"
     )
     pl.close()
@@ -762,13 +763,13 @@ if plots:
     pl.ylabel("Aerosol ERF, W m$^{-2}$, 2005-2014 minus 1750")
     pl.tight_layout()
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "tcr_aer_constrained.png"
     )
     pl.close()
 
     # Plots 4
-    df_gmst = pd.read_csv("../../data/forcing/IGCC_GMST_1850-2024.csv")
+    df_gmst = pd.read_csv(f"{ROOT}/data/forcing/IGCC_GMST_1850-2024.csv")
     gmst = df_gmst["gmst"].values
 
     fig, ax = pl.subplots(figsize=(5, 5))
@@ -842,11 +843,11 @@ if plots:
     pl.title("Constrained, reweighted posterior")
     pl.tight_layout()
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "final_reweighted_historical.png"
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "final_reweighted_historical.pdf"
     )
     pl.close()
@@ -879,7 +880,7 @@ print("OHC change 2020 rel. 1971:", np.percentile(draws["OHC"], (5, 50, 95)))
 print("*likely range")
 
 np.savetxt(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "runids_rmse_reweighted_pass.csv",
     sorted(draws.index),
     fmt="%d",
@@ -888,6 +889,6 @@ np.savetxt(
 # warming baselines
 df_warming = pd.DataFrame(data=draws["temperature 2004-2023"], index=draws.index, columns = ["temperature 2004-2023"]).sort_index()
 df_warming.to_csv(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "warming_baselines.csv",
 )

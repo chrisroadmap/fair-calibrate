@@ -8,6 +8,9 @@ from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
+from fair_calibrate.layers import fill_layers
+from fair_calibrate.paths import ROOT
+
 
 def run_fair(cfg):
     scenarios = ["ssp245"]
@@ -15,7 +18,7 @@ def run_fair(cfg):
     batch_end = cfg["batch_end"]
     batch_size = batch_end - batch_start
 
-    species, properties = read_properties(filename="../../data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv")
+    species, properties = read_properties(filename=f"{ROOT}/data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv")
     species.remove("NOx aviation")
     species.remove("Contrails")
     species.remove("Halon-1202")
@@ -32,11 +35,11 @@ def run_fair(cfg):
 
 
     da_emissions = xr.load_dataarray(
-        "../../output/emissions/"
+        f"{ROOT}/output/emissions/"
         "ssps_harmonized_1750-2499.nc",
     )
 
-    f = FAIR(ch4_method="Thornhill2021")
+    f = FAIR(n_layers=cfg["n_layers"], ch4_method="Thornhill2021")
     f.define_time(1750, 2024, 1)
     f.define_scenarios(scenarios)
     f.define_configs(list(range(batch_start, batch_end)))
@@ -70,14 +73,7 @@ def run_fair(cfg):
     )
 
     # climate response
-    fill(
-        f.climate_configs["ocean_heat_capacity"],
-        np.array([cfg["c1"], cfg["c2"], cfg["c3"]]).T,
-    )
-    fill(
-        f.climate_configs["ocean_heat_transfer"],
-        np.array([cfg["kappa1"], cfg["kappa2"], cfg["kappa3"]]).T,
-    )
+    fill_layers(f, cfg)
     fill(f.climate_configs["deep_ocean_efficacy"], cfg["epsilon"])
     fill(f.climate_configs["gamma_autocorrelation"], cfg["gamma"])
     fill(f.climate_configs["sigma_eta"], cfg["sigma_eta"])
@@ -88,7 +84,7 @@ def run_fair(cfg):
     fill(f.climate_configs["forcing_4co2"], cfg["forcing_4co2"])
 
     # species level
-    f.fill_species_configs(filename="../../data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv")
+    f.fill_species_configs(filename=f"{ROOT}/data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv")
 
     # carbon cycle
     fill(f.species_configs["iirf_0"], cfg["iirf_0"], specie="CO2")

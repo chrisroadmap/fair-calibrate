@@ -9,6 +9,9 @@ from fair.interface import fill, initialise
 from fair.io import read_properties
 from scipy.interpolate import interp1d
 
+from fair_calibrate.layers import fill_layers
+from fair_calibrate.paths import ROOT
+
 def run_fair(cfg):
     scenarios = ["1pctCO2"]
     batch_start = cfg["batch_start"]
@@ -18,11 +21,11 @@ def run_fair(cfg):
     species, properties = read_properties()
 
     da_concentration = xr.load_dataarray(
-        "../../output/"
+        f"{ROOT}/output/"
         "concentration/1pctCO2_concentration_1850-2060.nc"
     )
 
-    f = FAIR()
+    f = FAIR(n_layers=cfg["n_layers"])
     f.define_time(1850, 2060, 1)
     f.define_scenarios(scenarios)
     species = ["CO2", "CH4", "N2O"]
@@ -58,14 +61,7 @@ def run_fair(cfg):
     f.concentration = fe.drop_vars("config") * np.ones((1, 1, batch_size, 1))
 
     # climate response
-    fill(
-        f.climate_configs["ocean_heat_capacity"],
-        np.array([cfg["c1"], cfg["c2"], cfg["c3"]]).T,
-    )
-    fill(
-        f.climate_configs["ocean_heat_transfer"],
-        np.array([cfg["kappa1"], cfg["kappa2"], cfg["kappa3"]]).T,
-    )
+    fill_layers(f, cfg)
     fill(f.climate_configs["deep_ocean_efficacy"], cfg["epsilon"])
     fill(f.climate_configs["gamma_autocorrelation"], cfg["gamma"])
     fill(f.climate_configs["stochastic_run"], False)

@@ -13,6 +13,7 @@ from fair import __version__
 import fair.defaults.data.ar6
 
 from fair_calibrate.parameters import PRIOR_SAMPLES, POSTERIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 print("Updating defaults...")
 
@@ -31,13 +32,13 @@ n_gasboxes = 4
 update_landuse = True
 update_lapsi = True
 
-df_species_configs = pd.read_csv('../../data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv', index_col=0)
+df_species_configs = pd.read_csv(f'{ROOT}/data/fair_parameters/species_configs_properties_landuse_forcing_irrigation.csv', index_col=0)
 
 
 # read the methane lifetime calibration file and rename the HC column for easing
 # later reinitialization of values
 df_methane = pd.read_csv(
-    "../../output/calibrations/"
+    f"{ROOT}/output/calibrations/"
     "CH4_lifetime.csv",
     index_col=0,
 )
@@ -48,7 +49,7 @@ df_methane = df_methane.rename(
 # read the landuse emissions scaling if required
 if update_landuse == True:
     df_landuse = pd.read_csv(
-        "../../output/calibrations/"
+        f"{ROOT}/output/calibrations/"
         "landuse_scale_factor.csv",
         index_col=0,
     )
@@ -56,7 +57,7 @@ if update_landuse == True:
 # read the lapsi calibration file if required
 if update_lapsi == True:
     df_lapsi = pd.read_csv(
-        "../../output/calibrations/"
+        f"{ROOT}/output/calibrations/"
         "lapsi_scale_factor.csv",
         index_col=0,
     )
@@ -103,7 +104,7 @@ df_species_configs.drop(index=["Halon-1202"], inplace=True)
 # read the default baseline_emissions file: the baseline emissions for the specified species
 # will be updated in the config_species_properties
 df_emissions = pd.read_csv(
-    "../../output/emissions/"
+    f"{ROOT}/output/emissions/"
     "ssps_harmonized_1750-2499.csv"
 )
 
@@ -115,7 +116,7 @@ for specie in df_emissions.variable:
 df_species_configs.drop(index=["Halon-1202"], inplace=True)
 
 df_species_configs.to_csv(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "species_configs_properties.csv",
     na_rep=np.nan
 )

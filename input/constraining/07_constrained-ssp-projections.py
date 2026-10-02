@@ -15,13 +15,15 @@ from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
+from fair_calibrate.layers import get_n_layers
 from fair_calibrate.parameters import POSTERIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 pl.switch_backend("agg")
 
 load_dotenv()
 
-pl.style.use("../../defaults.mplstyle")
+pl.style.use(f"{ROOT}/defaults.mplstyle")
 
 print("Running SSP scenarios...")
 
@@ -43,29 +45,34 @@ scenarios = [
 
 
 df_solar = pd.read_csv(
-    "../../output/forcing/solar_forcing_timebounds_cmip7.csv", index_col=0
+    f"{ROOT}/output/forcing/solar_forcing_timebounds_cmip7.csv", index_col=0
 )
 df_volcanic = pd.read_csv(
-    "../../data/forcing/volcanic_forcing_timebounds_cmip7.csv", index_col=0
+    f"{ROOT}/data/forcing/volcanic_forcing_timebounds_cmip7.csv", index_col=0
 )
 
-solar_forcing = np.zeros(552)
-volcanic_forcing = np.zeros(552)
-volcanic_forcing = df_volcanic["volcanic_erf_rel_1850-2021"].loc[1750:2301].values
-solar_forcing = df_solar["solar_erf_rel_1850-2019"].loc[1750:2301].values
+# The run goes to 2500 (solar and volcanic forcing cover 1750-2501, the harmonised
+# emissions 1750-2499). The tables and most plots below use fixed windows within it.
+END_YEAR = 2500
+years = np.arange(1750, END_YEAR + 1)  # timebounds
 
-f = FAIR(ch4_method="Thornhill2021")
-f.define_time(1750, 2301, 1)
+volcanic_forcing = df_volcanic["volcanic_erf_rel_1850-2021"].loc[1750:END_YEAR].values
+solar_forcing = df_solar["solar_erf_rel_1850-2019"].loc[1750:END_YEAR].values
+assert len(volcanic_forcing) == len(solar_forcing) == len(years)
+assert not (np.isnan(volcanic_forcing).any() or np.isnan(solar_forcing).any())
+
+f = FAIR(n_layers=get_n_layers(), ch4_method="Thornhill2021")
+f.define_time(1750, END_YEAR, 1)
 f.define_scenarios(scenarios)
 species, properties = read_properties(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "species_configs_properties.csv",
 )
 species.remove("Irrigation")
 properties["Land use"]["input_mode"] = "calculated"
 f.define_species(species, properties)
 df_configs = pd.read_csv(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "calibrated_constrained_parameters.csv",
     index_col=0,
 )
@@ -75,12 +82,12 @@ f.allocate()
 
 # run with harmonized emissions
 da_emissions = xr.load_dataarray(
-    "../../output/emissions/"
+    f"{ROOT}/output/emissions/"
     "ssps_harmonized_1750-2499.nc"
 )
 da_emissions = da_emissions.drop_sel(specie="Irrigation")
 
-da = da_emissions.loc[dict(config="unspecified")][:551, ...]
+da = da_emissions.loc[dict(config="unspecified")][: len(years) - 1, ...]
 fe = da.expand_dims(dim=["config"], axis=(2))
 f.emissions = fe.drop_vars("config") * np.ones((1, 1, output_ensemble_size, 1))
 
@@ -98,14 +105,13 @@ fill(
 
 # new convience for v2.2
 f.fill_species_configs(
-    f"../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "species_configs_properties.csv",
 )
 f.override_defaults(
-    f"../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "calibrated_constrained_parameters.csv",
 )
-
 
 # initial conditions
 initialise(f.concentration, f.species_configs["baseline_concentration"])
@@ -129,93 +135,72 @@ ar6_colors = {
     "ssp585": "#980002",
 }
 
-df_gmst = pd.read_csv("../../data/forcing/IGCC_GMST_1850-2024.csv")
+df_gmst = pd.read_csv(f"{ROOT}/data/forcing/IGCC_GMST_1850-2024.csv")
 gmst = df_gmst["gmst"].values
 
-if plots:
+def plot_ssp_grid(series, ylabel, filename, xlim, ylim=(None, None), obs=None):
+    """2x4 grid of the ensemble for each SSP: min-max, 5-95% and 16-84% bands, median.
+
+    ``series(i)`` returns the (time, config) array for scenario ``i`` on ``years``.
+    """
     fig, ax = pl.subplots(2, 4, figsize=(18 / 2.54, 8 / 2.54))
     for i in range(8):
-        ax[i // 4, i % 4].fill_between(
-            np.arange(1750, 2302),
-            np.min(
-                f.temperature[:, i, :, 0]
-                - f.temperature[100:151, i, :, 0].mean(axis=0),
-                axis=1,
-            ),
-            np.max(
-                f.temperature[:, i, :, 0]
-                - f.temperature[100:151, i, :, 0].mean(axis=0),
-                axis=1,
-            ),
-            color=ar6_colors[scenarios[i]],
-            alpha=0.2,
-            lw=0,
+        axis = ax[i // 4, i % 4]
+        data = series(i)
+        colour = ar6_colors[scenarios[i]]
+        axis.fill_between(
+            years, np.min(data, axis=1), np.max(data, axis=1),
+            color=colour, alpha=0.2, lw=0,
         )
-        ax[i // 4, i % 4].fill_between(
-            np.arange(1750, 2302),
-            np.percentile(
-                f.temperature[:, i, :, 0]
-                - f.temperature[100:151, i, :, 0].mean(axis=0),
-                5,
-                axis=1,
-            ),
-            np.percentile(
-                f.temperature[:, i, :, 0]
-                - f.temperature[100:151, i, :, 0].mean(axis=0),
-                95,
-                axis=1,
-            ),
-            color=ar6_colors[scenarios[i]],
-            alpha=0.2,
-            lw=0,
-        )
-        ax[i // 4, i % 4].fill_between(
-            np.arange(1750, 2302),
-            np.percentile(
-                f.temperature[:, i, :, 0]
-                - f.temperature[100:151, i, :, 0].mean(axis=0),
-                16,
-                axis=1,
-            ),
-            np.percentile(
-                f.temperature[:, i, :, 0]
-                - f.temperature[100:151, i, :, 0].mean(axis=0),
-                84,
-                axis=1,
-            ),
-            color=ar6_colors[scenarios[i]],
-            alpha=0.2,
-            lw=0,
-        )
-        ax[i // 4, i % 4].plot(
-            np.arange(1750, 2302),
-            np.median(
-                f.temperature[:, i, :, 0]
-                - f.temperature[100:151, i, :, 0].mean(axis=0),
-                axis=1,
-            ),
-            color=ar6_colors[scenarios[i]],
-            lw=1,
-        )
-        ax[i // 4, i % 4].plot(np.arange(1850.5, 2025), gmst, color="k", lw=1)
-        ax[i // 4, i % 4].set_xlim(1950, 2200)
-        ax[i // 4, i % 4].set_ylim(-1, 10)
-        ax[i // 4, i % 4].axhline(0, color="k", ls=":", lw=0.5)
-        ax[i // 4, i % 4].set_title(scenarios[i])
-
-    ax[0, 0].set_ylabel("°C since 1850-1900")
-    ax[1, 0].set_ylabel("°C since 1850-1900")
-    # pl.suptitle("SSP temperature anomalies")
+        for lower, upper in ((5, 95), (16, 84)):
+            axis.fill_between(
+                years,
+                np.percentile(data, lower, axis=1),
+                np.percentile(data, upper, axis=1),
+                color=colour, alpha=0.2, lw=0,
+            )
+        axis.plot(years, np.median(data, axis=1), color=colour, lw=1)
+        if obs is not None:
+            axis.plot(*obs, color="k", lw=1)
+            axis.axhline(0, color="k", ls=":", lw=0.5)
+        axis.set_xlim(*xlim)
+        axis.set_ylim(*ylim)
+        axis.set_title(scenarios[i])
+    ax[0, 0].set_ylabel(ylabel)
+    ax[1, 0].set_ylabel(ylabel)
     fig.tight_layout()
-    pl.savefig(
-        f"../../plots/"
-        "final_ssp_temperatures.png"
-    )
-    pl.savefig(
-        f"../../plots/"
-        "final_ssp_temperatures.pdf"
-    )
+    pl.savefig(f"{ROOT}/plots/{filename}.png")
+    pl.savefig(f"{ROOT}/plots/{filename}.pdf")
     pl.close()
+
+
+def temperature_anomaly(i):
+    """Temperature of scenario ``i`` relative to 1850-1900 (timebounds 100:151)."""
+    return f.temperature[:, i, :, 0] - f.temperature[100:151, i, :, 0].mean(axis=0)
+
+
+def co2_concentration(i):
+    return f.concentration[:, i, :, f.species.index("CO2")]
+
+
+if plots:
+    gmst_obs = (np.arange(1850.5, 2025), gmst)
+    for window, suffix in (((1950, 2200), ""), ((1950, END_YEAR), f"_to_{END_YEAR}")):
+        plot_ssp_grid(
+            temperature_anomaly,
+            "°C since 1850-1900",
+            f"final_ssp_temperatures{suffix}",
+            xlim=window,
+            ylim=(-1, 10) if suffix == "" else (-1, None),
+            obs=gmst_obs,
+        )
+        plot_ssp_grid(
+            co2_concentration,
+            "CO$_2$ concentration (ppm)",
+            f"final_ssp_co2_concentrations{suffix}",
+            xlim=window,
+            ylim=(250, None),
+        )
 
 # # Temperature diffs w.r.t. 1995-2014
 # Future periods are 2021-2040, 2041-2060, 2081-2100. Values are 5th, 50th, 95th
@@ -318,11 +303,11 @@ if plots:
         color="k",
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "toa_imbalance_ssp245.png"
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "toa_imbalance_ssp245.pdf"
     )
     pl.close()
@@ -354,7 +339,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "ghg_forcing_ssp245.png"
     )
     pl.close()
@@ -375,15 +360,15 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "aerosol_forcing_ssp245.png"
     )
     pl.close()
 
     pl.fill_between(
         np.arange(1750, 2302),
-        np.percentile(f.forcing[:, 7, :, 2], 5, axis=1),
-        np.percentile(f.forcing[:, 7, :, 2], 95, axis=1),
+        np.percentile(f.forcing[:552, 7, :, 2], 5, axis=1),
+        np.percentile(f.forcing[:552, 7, :, 2], 95, axis=1),
         color="k",
         alpha=0.3,
     )
@@ -396,15 +381,15 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "co2_forcing_ssp585.png"
     )
     pl.close()
 
     pl.fill_between(
         np.arange(1750, 2302),
-        np.percentile(f.concentration[:, 7, :, 2], 5, axis=1),
-        np.percentile(f.concentration[:, 7, :, 2], 95, axis=1),
+        np.percentile(f.concentration[:552, 7, :, 2], 5, axis=1),
+        np.percentile(f.concentration[:552, 7, :, 2], 95, axis=1),
         color="k",
         alpha=0.3,
     )
@@ -417,7 +402,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "co2_concentration_ssp585.png"
     )
     pl.close()
@@ -438,7 +423,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "ozone_ssp245.png"
     )
     pl.close()
@@ -459,7 +444,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "lapsi_ssp245.png"
     )
     pl.close()
@@ -480,7 +465,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "stratH2O_ssp245.png"
     )
     pl.close()
@@ -501,7 +486,7 @@ if plots:
         color="k",
     )
     pl.savefig(
-        f"../../plots/"
+        f"{ROOT}/plots/"
         "landuse_ssp245.png"
     )
     pl.close()

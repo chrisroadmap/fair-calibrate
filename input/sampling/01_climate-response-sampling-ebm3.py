@@ -21,27 +21,44 @@ import scipy.linalg
 import scipy.stats
 from dotenv import load_dotenv
 from fair.energy_balance_model import EnergyBalanceModel
-from tqdm import tqdm
 
+from fair_calibrate.chunks import map_chunks, n_workers
+from fair_calibrate.layers import (
+    calibration_file,
+    climate_response_columns,
+    climate_response_file,
+    get_n_layers,
+)
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 warnings.simplefilter("error", RuntimeWarning)
 
 load_dotenv()
+n_layers = get_n_layers()  # N_LAYERS in parameters.py: 2 or 3
 
-print("Making climate response calibrations...")
+print(f"Making {n_layers}-layer climate response calibrations...")
 
 samples = PRIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
-pl.style.use("../../defaults.mplstyle")
+pl.style.use(f"{ROOT}/defaults.mplstyle")
 progress = os.getenv("PROGRESS", "False").lower() in ("true", "1", "t")
 
-df = pd.read_csv(
-    os.path.join(
-        "../../output/calibrations/"
-        "4xCO2_cummins_ebm3_cmip6.csv"
-    )
-)
+df = pd.read_csv(f"{ROOT}/output/calibrations/" + calibration_file(n_layers))
+
+# 02_calibrate_cummins.py marks fits to be wary of (epsilon outside 0.5-2.5, a
+# constraint on its bound, the two starts disagreeing or only one converging).
+# By default they stay in the sample, with a warning; EXCLUDE_SUSPECT=True drops them.
+if "suspect" in df.columns and df["suspect"].any():
+    suspect = df.loc[df["suspect"], ["model", "run", "suspect_reasons"]]
+    if os.getenv("EXCLUDE_SUSPECT", "False").lower() in ("true", "1", "t"):
+        print(f"EXCLUDE_SUSPECT: dropping {len(suspect)} suspect fits:")
+        print(suspect.to_string(index=False))
+        df = df.loc[~df["suspect"]]
+    else:
+        print(f"WARNING: {len(suspect)} suspect fits are in the sample "
+              "(EXCLUDE_SUSPECT=True drops them):")
+        print(suspect.to_string(index=False))
 models = df["model"].unique()
 
 # NorESM2-LM is currently INCLUDED. Comment below left in for train-of-thought.
@@ -73,31 +90,25 @@ multi_runs = {
 params = {}
 
 params[r"$\gamma$"] = np.ones(n_models) * np.nan
-params["$c_1$"] = np.ones(n_models) * np.nan
-params["$c_2$"] = np.ones(n_models) * np.nan
-params["$c_3$"] = np.ones(n_models) * np.nan
-params[r"$\kappa_1$"] = np.ones(n_models) * np.nan
-params[r"$\kappa_2$"] = np.ones(n_models) * np.nan
-params[r"$\kappa_3$"] = np.ones(n_models) * np.nan
+for i in range(1, n_layers + 1):
+    params[f"$c_{i}$"] = np.ones(n_models) * np.nan
+for i in range(1, n_layers + 1):
+    params[rf"$\kappa_{i}$"] = np.ones(n_models) * np.nan
 params[r"$\epsilon$"] = np.ones(n_models) * np.nan
 params[r"$\sigma_{\eta}$"] = np.ones(n_models) * np.nan
 params[r"$\sigma_{\xi}$"] = np.ones(n_models) * np.nan
 params[r"$F_{4\times}$"] = np.ones(n_models) * np.nan
 
 for im, model in enumerate(models):
+    condition = df["model"] == model
     if model in multi_runs:
-        condition = (df["model"] == model) & (df["run"] == multi_runs[model])
-    else:
-        condition = df["model"] == model
+        preferred = condition & (df["run"] == multi_runs[model])
+        if preferred.any():  # the preferred run may have been excluded as suspect
+            condition = preferred
     params[r"$\gamma$"][im] = df.loc[condition, "gamma"].values[0]
-    params["$c_1$"][im], params["$c_2$"][im], params["$c_3$"][im] = df.loc[
-        condition, "C1":"C3"
-    ].values.squeeze()
-    (
-        params[r"$\kappa_1$"][im],
-        params[r"$\kappa_2$"][im],
-        params[r"$\kappa_3$"][im],
-    ) = df.loc[condition, "kappa1":"kappa3"].values.squeeze()
+    for i in range(1, n_layers + 1):
+        params[f"$c_{i}$"][im] = df.loc[condition, f"C{i}"].values[0]
+        params[rf"$\kappa_{i}$"][im] = df.loc[condition, f"kappa{i}"].values[0]
     params[r"$\epsilon$"][im] = df.loc[condition, "epsilon"].values[0]
     params[r"$\sigma_{\eta}$"][im] = df.loc[condition, "sigma_eta"].values[0]
     params[r"$\sigma_{\xi}$"][im] = df.loc[condition, "sigma_xi"].values[0]
@@ -113,15 +124,15 @@ if plots:
     pl.tight_layout()
     pl.subplots_adjust(wspace=0, hspace=0)
     os.makedirs(
-        "../../plots/", exist_ok=True
+        f"{ROOT}/plots/", exist_ok=True
     )
     pl.savefig(
-        "../../plots/"
-        "ebm3_distributions.png"
+        f"{ROOT}/plots/"
+        f"ebm{n_layers}_distributions.png"
     )
     pl.savefig(
-        "../../plots/"
-        "ebm3_distributions.pdf"
+        f"{ROOT}/plots/"
+        f"ebm{n_layers}_distributions.pdf"
     )
     pl.close()
 
@@ -130,82 +141,117 @@ NINETY_TO_ONESIGMA = scipy.stats.norm.ppf(0.95)
 kde = scipy.stats.gaussian_kde(params.T)
 ebm_sample = kde.resample(size=int(samples * 4), seed=2181882)
 
+# Row layout of the sample: gamma, C1..Cn, kappa1..kappan, epsilon, sigma_eta,
+# sigma_xi, F_4xCO2.
+i_kappa1 = n_layers + 1
+i_epsilon = 2 * n_layers + 1
+i_sigma_eta = 2 * n_layers + 2
+i_sigma_xi = 2 * n_layers + 3
+i_f4xco2 = 2 * n_layers + 4
+
 # remove unphysical combinations
-for col in range(10):
+for col in range(i_f4xco2):
     ebm_sample[:, ebm_sample[col, :] <= 0] = np.nan
 ebm_sample[:, ebm_sample[0, :] <= 0.5] = np.nan  # gamma
 ebm_sample[:, ebm_sample[1, :] <= 1.8] = np.nan  # C1
-ebm_sample[:, ebm_sample[2, :] <= ebm_sample[1, :]] = np.nan  # C2
-ebm_sample[:, ebm_sample[3, :] <= ebm_sample[2, :]] = np.nan  # C3
-ebm_sample[:, ebm_sample[4, :] <= 0.3] = np.nan  # kappa1 = lambda
+for layer in range(2, n_layers + 1):  # each layer larger than the one above
+    ebm_sample[:, ebm_sample[layer, :] <= ebm_sample[layer - 1, :]] = np.nan
+ebm_sample[:, ebm_sample[i_kappa1, :] <= 0.3] = np.nan  # kappa1 = lambda
 
 mask = np.all(np.isnan(ebm_sample), axis=0)
 ebm_sample = ebm_sample[:, ~mask]
 
 # check that covariance matrix is positive semidefinite and if not, remove param combo.
 # to do: change away from sparse, once we move away from R
-for isample in tqdm(range(len(ebm_sample.T)), disable=1 - progress):
-    ebm = EnergyBalanceModel(
-        ocean_heat_capacity=ebm_sample[1:4, isample],
-        ocean_heat_transfer=ebm_sample[4:7, isample],
-        deep_ocean_efficacy=ebm_sample[7, isample],
-        gamma_autocorrelation=ebm_sample[0, isample],
-        sigma_xi=ebm_sample[9, isample],
-        sigma_eta=ebm_sample[8, isample],
-        forcing_4co2=ebm_sample[10, isample],
-        stochastic_run=True,
+
+batch_offset = 0  # first candidate of the batch being checked (read by the workers)
+
+
+def psd_check_failed(start, stop):
+    """Flag batch samples in [start, stop) whose discretised noise covariance fails."""
+    failed = np.zeros(stop - start, dtype=bool)
+    for ibatch in range(start, stop):
+        isample = batch_offset + ibatch
+        ebm = EnergyBalanceModel(
+            ocean_heat_capacity=ebm_sample[1 : n_layers + 1, isample],
+            ocean_heat_transfer=ebm_sample[i_kappa1:i_epsilon, isample],
+            deep_ocean_efficacy=ebm_sample[i_epsilon, isample],
+            gamma_autocorrelation=ebm_sample[0, isample],
+            sigma_xi=ebm_sample[i_sigma_xi, isample],
+            sigma_eta=ebm_sample[i_sigma_eta, isample],
+            forcing_4co2=ebm_sample[i_f4xco2, isample],
+            stochastic_run=True,
+        )
+        eb_matrix = ebm._eb_matrix()
+        n_state = n_layers + 1
+        q_mat = np.zeros((n_state, n_state))
+        q_mat[0, 0] = ebm.sigma_eta**2
+        q_mat[1, 1] = (ebm.sigma_xi / ebm.ocean_heat_capacity[0]) ** 2
+        h_mat = np.zeros((2 * n_state, 2 * n_state))
+        h_mat[:n_state, :n_state] = -eb_matrix
+        h_mat[:n_state, n_state:] = q_mat
+        h_mat[n_state:, n_state:] = eb_matrix.T
+        g_mat = scipy.sparse.linalg.expm(h_mat)
+        q_mat_d = g_mat[n_state:, n_state:].T @ g_mat[:n_state, n_state:]
+        q_mat_d = q_mat_d.astype(np.float64)
+
+        # I can't work out exactly what checks scipy is doing to decide the param
+        # set is a fail. Best to just let it tell me if it likes it or not.
+        try:
+            scipy.stats.multivariate_normal.rvs(
+                size=1, mean=np.zeros(n_state), cov=q_mat_d
+            )
+        except:  # noqa: E722
+            failed[ibatch - start] = True
+    return failed
+
+
+# The check is the expensive step, so run it only until `samples` candidates have
+# passed. Candidates are taken in order and the first `samples` survivors kept, which
+# is the same set as checking every candidate and truncating. Each batch is sized from
+# the pass rate seen so far, so the last one overshoots only slightly.
+n_candidates = ebm_sample.shape[1]
+passed = np.zeros(n_candidates, dtype=bool)
+n_checked = 0
+n_passed = 0
+while n_passed < samples and n_checked < n_candidates:
+    pass_rate = n_passed / n_checked if n_checked else 1.0
+    batch = int(np.ceil(1.05 * (samples - n_passed) / max(pass_rate, 0.05)))
+    batch = min(batch, n_candidates - n_checked)
+    batch_offset = n_checked
+    failed = np.concatenate(
+        map_chunks(psd_check_failed, batch, n_workers(), progress=progress)
     )
-    eb_matrix = ebm._eb_matrix()
-    q_mat = np.zeros((4, 4))
-    q_mat[0, 0] = ebm.sigma_eta**2
-    q_mat[1, 1] = (ebm.sigma_xi / ebm.ocean_heat_capacity[0]) ** 2
-    h_mat = np.zeros((8, 8))
-    h_mat[:4, :4] = -eb_matrix
-    h_mat[:4, 4:] = q_mat
-    h_mat[4:, 4:] = eb_matrix.T
-    g_mat = scipy.sparse.linalg.expm(h_mat)
-    q_mat_d = g_mat[4:, 4:].T @ g_mat[:4, 4:]
-    q_mat_d = q_mat_d.astype(np.float64)
+    passed[n_checked : n_checked + batch] = ~failed
+    n_checked += batch
+    n_passed += int((~failed).sum())
 
-    # I can't work out exactly what checks scipy is doing to decide the param
-    # set is a fail. Best to just let it tell me if it likes it or not.
-    try:
-        scipy.stats.multivariate_normal.rvs(size=1, mean=np.zeros(4), cov=q_mat_d)
-    except:  # noqa: E722
-        ebm_sample[:, isample] = np.nan
-
-mask = np.all(np.isnan(ebm_sample), axis=0)
-ebm_sample = ebm_sample[:, ~mask]
-
-print("Total number of retained samples:", len(ebm_sample.T))
-
-ebm_sample_df = pd.DataFrame(
-    data=ebm_sample[:, :samples].T,
-    columns=[
-        "gamma",
-        "c1",
-        "c2",
-        "c3",
-        "kappa1",
-        "kappa2",
-        "kappa3",
-        "epsilon",
-        "sigma_eta",
-        "sigma_xi",
-        "F_4xCO2",
-    ],
+print(
+    f"Checked {n_checked} of {n_candidates} candidates; "
+    f"{n_passed} passed the covariance check."
 )
 
-assert len(ebm_sample_df) >= samples
+assert n_passed >= samples, (
+    f"Only {n_passed} of {n_candidates} candidates passed the covariance check, "
+    f"{samples} needed: increase the draw size."
+)
+
+ebm_sample = ebm_sample[:, passed][:, :samples]
+
+ebm_sample_df = pd.DataFrame(
+    data=ebm_sample.T,
+    columns=climate_response_columns(n_layers),
+)
+
+assert len(ebm_sample_df) == samples
 
 os.makedirs(
-    f"../../output/priors/",
+    f"{ROOT}/output/priors/",
     exist_ok=True,
 )
 
 ebm_sample_df.to_csv(
-    f"../../output/priors/"
-    "climate_response_ebm3.csv",
+    f"{ROOT}/output/priors/" + climate_response_file(n_layers),
     index=False,
 )
 

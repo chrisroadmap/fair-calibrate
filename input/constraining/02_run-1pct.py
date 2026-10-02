@@ -14,11 +14,14 @@ from fair import __version__
 from parallel_1pct import run_fair
 from utils import _parallel_process
 
+from fair_calibrate.layers import climate_response_file, get_n_layers, layer_config
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 if __name__ == "__main__":
     print("Running 1pctCO2 scenarios...")
     load_dotenv()
+    n_layers = get_n_layers()
 
     samples = PRIOR_SAMPLES
     batch_size = int(os.getenv("BATCH_SIZE"))
@@ -28,15 +31,14 @@ if __name__ == "__main__":
     WORKERS = min(multiprocessing.cpu_count(), WORKERS)
 
     df_cc = pd.read_csv(
-        "../../output/priors/"
+        f"{ROOT}/output/priors/"
         "carbon_cycle.csv"
     )
     df_cr = pd.read_csv(
-        "../../output/priors/"
-        "climate_response_ebm3.csv"
+        f"{ROOT}/output/priors/" + climate_response_file(n_layers)
     )
     df_scaling = pd.read_csv(
-        "../../output/priors/"
+        f"{ROOT}/output/priors/"
         "forcing_scaling.csv"
     )
 
@@ -45,7 +47,7 @@ if __name__ == "__main__":
 
     # we also only want to run ensembles that passed RMSE test
     rmse_pass = np.loadtxt(
-        "../../output/posteriors/"
+        f"{ROOT}/output/posteriors/"
         "runids_rmse_pass.csv"
     ).astype(int)
 
@@ -60,18 +62,9 @@ if __name__ == "__main__":
         batch_end = min(batch_start + batch_size, len(rmse_pass))
         config[ibatch]["batch_start"] = batch_start
         config[ibatch]["batch_end"] = batch_end
-        config[ibatch]["c1"] = df_cr.loc[rmse_pass[batch_start:batch_end], "c1"].values
-        config[ibatch]["c2"] = df_cr.loc[rmse_pass[batch_start:batch_end], "c2"].values
-        config[ibatch]["c3"] = df_cr.loc[rmse_pass[batch_start:batch_end], "c3"].values
-        config[ibatch]["kappa1"] = df_cr.loc[
-            rmse_pass[batch_start:batch_end], "kappa1"
-        ].values
-        config[ibatch]["kappa2"] = df_cr.loc[
-            rmse_pass[batch_start:batch_end], "kappa2"
-        ].values
-        config[ibatch]["kappa3"] = df_cr.loc[
-            rmse_pass[batch_start:batch_end], "kappa3"
-        ].values
+        config[ibatch].update(
+            layer_config(df_cr, rmse_pass[batch_start:batch_end], n_layers)
+        )
         config[ibatch]["epsilon"] = df_cr.loc[
             rmse_pass[batch_start:batch_end], "epsilon"
         ].values
@@ -122,23 +115,23 @@ if __name__ == "__main__":
         temp_1000_out[batch_start:batch_end] = res[ibatch][2]
 
     os.makedirs(
-        "../../output/prior_runs/",
+        f"{ROOT}/output/prior_runs/",
         exist_ok=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "temperature_1pctCO2_y70_y140_y210.npy",
         temp_2x4x8x_out,
         allow_pickle=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "airborne_fraction_1pctCO2_y70_y140_y210.npy",
         af_out,
         allow_pickle=True,
     )
     np.save(
-        "../../output/prior_runs/"
+        f"{ROOT}/output/prior_runs/"
         "temperature_1pctCO2_1000GtC.npy",
         temp_1000_out,
         allow_pickle=True,

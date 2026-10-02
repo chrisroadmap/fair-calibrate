@@ -11,14 +11,12 @@ import os
 
 import pandas as pd
 from dotenv import load_dotenv
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
 print("Calculating land use + irrigation scale factor...")
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
 datadir = os.getenv("DATADIR")
 
 target_forcing = -0.2
@@ -26,7 +24,7 @@ base_year = 1750
 assessment_year = 2019
 
 df_emis = pd.read_csv(
-    f"../../data/emissions/"
+    f"{ROOT}/data/emissions/"
     "historical_emissions_1750-2023_cmip7.csv"
 )
 co2_afolu = df_emis.loc[
@@ -43,10 +41,10 @@ df = pd.DataFrame(
     index=["historical_best"],
 )
 os.makedirs(
-    "../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/calibrations/",
+    f"{ROOT}/output/calibrations/",
     exist_ok=True,
 )
 df.to_csv(
-    "../../output/calibrations/"
+    f"{ROOT}/output/calibrations/"
     "landuse_scale_factor.csv"
 )

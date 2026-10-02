@@ -6,37 +6,32 @@
 # we don't constrain on these as they are model-based assessments, but we want to add
 # to the table.
 
-import os
-
 import numpy as np
 from dotenv import load_dotenv
 from fair.earth_params import mass_atmosphere, molecular_weight_air
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
-cal_v = os.getenv("CALIBRATION_VERSION")
-fair_v = os.getenv("FAIR_VERSION")
-constraint_set = os.getenv("CONSTRAINT_SET")
-
 af = np.load(
-    f"../../output/"
+    f"{ROOT}/output/"
     "prior_runs/airborne_fraction_1pctCO2_y70_y140_y210.npy"
 )
 temp = np.load(
-    f"../../output/"
+    f"{ROOT}/output/"
     "prior_runs/temperature_1pctCO2_y70_y140_y210.npy"
 )
 temp1000 = np.load(
-    f"../../output/"
+    f"{ROOT}/output/"
     "prior_runs/temperature_1pctCO2_1000GtC.npy"
 )
 pass1 = np.loadtxt(
-    f"../../output/"
+    f"{ROOT}/output/"
     "posteriors/runids_rmse_pass.csv",
     dtype=int,
 )
 pass2 = np.loadtxt(
-    f"../../output/"
+    f"{ROOT}/output/"
     "posteriors/runids_rmse_reweighted_pass.csv",
     dtype=int,
 )

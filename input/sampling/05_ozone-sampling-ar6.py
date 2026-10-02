@@ -19,10 +19,11 @@ from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
-pl.style.use("../../defaults.mplstyle")
+pl.style.use(f"{ROOT}/defaults.mplstyle")
 
 samples = PRIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
@@ -34,7 +35,7 @@ print("Doing ozone sampling...")
 # now include temperature feedback
 # to update with 2024 when it comes in
 Tobs = pd.read_csv(
-    "../../data/forcing/IGCC_GMST_1850-2024.csv", index_col=0
+    f"{ROOT}/data/forcing/IGCC_GMST_1850-2024.csv", index_col=0
 ).values
 
 delta_gmst = [
@@ -65,7 +66,7 @@ good_models = [
     "OsloCTM3",
 ]
 skeie_trop = pd.read_csv(
-    "../../data/forcing/skeie_ozone_trop.csv", index_col=0
+    f"{ROOT}/data/forcing/skeie_ozone_trop.csv", index_col=0
 )
 skeie_trop = skeie_trop.loc[good_models]
 skeie_trop.insert(0, 1850, 0)
@@ -73,7 +74,7 @@ skeie_trop.columns = pd.to_numeric(skeie_trop.columns)
 skeie_trop.interpolate(axis=1, method="values", limit_area="inside", inplace=True)
 
 skeie_strat = pd.read_csv(
-    "../../data/forcing/skeie_ozone_strat.csv", index_col=0
+    f"{ROOT}/data/forcing/skeie_ozone_strat.csv", index_col=0
 )
 skeie_strat = skeie_strat.loc[good_models]
 skeie_strat.insert(0, 1850, 0)
@@ -113,11 +114,11 @@ print("2019-1750 ozone ERF from Skeie:", o3total[269])
 print("2014-1850 ozone ERF from Skeie:", o3total[264] - o3total[100])
 
 df_emis = pd.read_csv(
-    "../../data/emissions/"
+    f"{ROOT}/data/emissions/"
     "historical_emissions_1750-2023_cmip7.csv"
 )
 df_conc = pd.read_csv(
-    "../../data/concentrations/ghg_concentrations_1750-2023_cmip7.csv", index_col=0
+    f"{ROOT}/data/concentrations/ghg_concentrations_1750-2023_cmip7.csv", index_col=0
 )
 emitted_species = [
     "NOx",
@@ -358,14 +359,14 @@ if plots:
     pl.xlim(1750, 2023)
     pl.tight_layout()
     os.makedirs(
-        "../../plots/", exist_ok=True
+        f"{ROOT}/plots/", exist_ok=True
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "ozone_calibration.png"
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "ozone_calibration.pdf"
     )
     pl.close()
@@ -420,10 +421,10 @@ df = pd.DataFrame(
 )
 
 os.makedirs(
-    f"../../output/priors/",
+    f"{ROOT}/output/priors/",
     exist_ok=True,
 )
 df.to_csv(
-    f"../../output/priors/ozone.csv",
+    f"{ROOT}/output/priors/ozone.csv",
     index=False,
 )

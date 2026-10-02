@@ -13,6 +13,7 @@ import pooch
 from netCDF4 import Dataset
 
 import matplotlib.pyplot as pl
+from fair_calibrate.paths import ROOT
 
 print("Making solar forcing ERF time series...")
 
@@ -70,10 +71,10 @@ df_solar.index.name = "year"
 
 # save out
 os.makedirs(
-    f"../../output/forcing/",
+    f"{ROOT}/output/forcing/",
     exist_ok=True,
 )
 df_solar.to_csv(
-    f"../../output/forcing/"
+    f"{ROOT}/output/forcing/"
     "solar_forcing_timebounds_cmip7.csv"
 )

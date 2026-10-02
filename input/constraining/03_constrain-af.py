@@ -9,16 +9,17 @@ import numpy as np
 import pandas as pd
 from fair import __version__
 from tqdm.auto import tqdm
+from fair_calibrate.paths import ROOT
 
 print("Doing AF constraint...")
 
 af_in = np.load(
-    "../../output/prior_runs/"
+    f"{ROOT}/output/prior_runs/"
     "airborne_fraction_1pctCO2_y70_y140_y210.npy"
 )
 
 valid_temp = np.loadtxt(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "runids_rmse_pass.csv"
 ).astype(np.int64)
 
@@ -36,12 +37,9 @@ af_out = af_in[:, ~mask]
 print(np.min(af_out, axis=1))
 
 print("Passing RMSE & AF constraint:", len(valid_temp_af))
-os.makedirs(
-    "../../output/fair-{fair_v}/v{cal_v}/{constraint_set}/posteriors",
-    exist_ok=True,
-)
+os.makedirs(f"{ROOT}/output/posteriors", exist_ok=True)
 np.savetxt(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "runids_rmse_af_pass.csv",
     valid_temp_af.astype(int),
     fmt="%d",

@@ -20,10 +20,11 @@ from scipy.optimize import curve_fit
 from tqdm import tqdm
 
 from fair_calibrate.parameters import PRIOR_SAMPLES
+from fair_calibrate.paths import ROOT
 
 load_dotenv()
 
-pl.style.use("../../defaults.mplstyle")
+pl.style.use(f"{ROOT}/defaults.mplstyle")
 
 samples = PRIOR_SAMPLES
 plots = os.getenv("PLOTS", "False").lower() in ("true", "1", "t")
@@ -33,7 +34,7 @@ datadir = os.getenv("DATADIR")
 print("Sampling aerosol cloud interactions...")
 
 
-files = glob.glob("../../data/smith2023aerosol/*.csv")
+files = glob.glob(f"{ROOT}/data/smith2023aerosol/*.csv")
 
 ari = {}
 aci = {}
@@ -53,7 +54,7 @@ models = list(models_runs.keys())
 for model in models:
     nruns = 0
     for run in models_runs[model]:
-        file = f"../../data/smith2023aerosol/{model}_{run}_aerosol_forcing.csv"
+        file = f"{ROOT}/data/smith2023aerosol/{model}_{run}_aerosol_forcing.csv"
         df = pd.read_csv(file, index_col=0)
         if nruns == 0:
             ari_temp = df["ERFari"].values.squeeze()
@@ -200,14 +201,14 @@ if plots:
 
     fig.tight_layout()
     os.makedirs(
-        "../../plots/", exist_ok=True
+        f"{ROOT}/plots/", exist_ok=True
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "aci_calibration.png"
     )
     pl.savefig(
-        "../../plots/"
+        f"{ROOT}/plots/"
         "aci_calibration.pdf"
     )
     pl.close()
@@ -215,7 +216,7 @@ if plots:
 df_params = pd.DataFrame(param_fits, index=["aci_scale", "Sulfur", "BC", "OC"]).T
 
 df_params.to_csv(
-    f"../../output/calibrations/"
+    f"{ROOT}/output/calibrations/"
     "aerosol_cloud.csv"
 )
 
@@ -245,7 +246,7 @@ erfaci_sample = scipy.stats.trapezoid.rvs(
 
 # Sampling with updated emissions.
 df_emis_obs = pd.read_csv(
-    "../../data/emissions/"
+    f"{ROOT}/data/emissions/"
     "historical_emissions_1750-2023_cmip7.csv"
 )
 
@@ -285,12 +286,12 @@ df = pd.DataFrame(
 )
 
 os.makedirs(
-    "../../output/priors/",
+    f"{ROOT}/output/priors/",
     exist_ok=True,
 )
 
 df.to_csv(
-    f"../../output/priors/"
+    f"{ROOT}/output/priors/"
     "aerosol_cloud.csv",
     index=False,
 )

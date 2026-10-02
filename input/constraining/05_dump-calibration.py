@@ -9,7 +9,18 @@ import numpy as np
 import pandas as pd
 from fair import __version__
 
+from dotenv import load_dotenv
+
+from fair_calibrate.layers import (
+    climate_response_file,
+    climate_response_renames,
+    get_n_layers,
+)
 from fair_calibrate.parameters import PRIOR_SAMPLES, POSTERIOR_SAMPLES
+from fair_calibrate.paths import ROOT
+
+load_dotenv()
+n_layers = get_n_layers()
 
 print("Dumping output...")
 
@@ -18,35 +29,34 @@ output_ensemble_size = POSTERIOR_SAMPLES
 
 
 df_cc = pd.read_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "carbon_cycle.csv"
 )
 df_cr = pd.read_csv(
-    "../../output/priors/"
-    "climate_response_ebm3.csv"
+    f"{ROOT}/output/priors/" + climate_response_file(n_layers)
 )
 df_aci = pd.read_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "aerosol_cloud.csv"
 )
 df_ari = pd.read_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "aerosol_radiation.csv"
 )
 df_ozone = pd.read_csv(
-    "../../output/priors/ozone.csv"
+    f"{ROOT}/output/priors/ozone.csv"
 )
 df_scaling = pd.read_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "forcing_scaling.csv"
 )
 df_1750co2 = pd.read_csv(
-    "../../output/priors/"
+    f"{ROOT}/output/priors/"
     "co2_concentration_1750.csv"
 )
 
 valid_all = np.loadtxt(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "runids_rmse_reweighted_pass.csv"
 ).astype(
     np.int64
@@ -59,19 +69,7 @@ seed
 # concatenate each param dataframe and prefix with its model element to avoid
 # namespace conflicts (and a bit of user intuivity)
 
-cr_renames = {
-    "gamma": "gamma_autocorrelation",
-    "c1": "ocean_heat_capacity[0]",
-    "c2": "ocean_heat_capacity[1]",
-    "c3": "ocean_heat_capacity[2]",
-    "kappa1": "ocean_heat_transfer[0]",
-    "kappa2": "ocean_heat_transfer[1]",
-    "kappa3": "ocean_heat_transfer[2]",
-    "epsilon": "deep_ocean_efficacy",
-    "sigma_eta": "sigma_eta",
-    "sigma_xi": "sigma_xi",
-    "F_4xCO2": "forcing_4co2",
-}
+cr_renames = climate_response_renames(n_layers)
 cc_renames = {
     "r0": "iirf_0[CO2]",
     "rU": "iirf_uptake[CO2]",
@@ -180,6 +178,6 @@ params_out = pd.concat(
 params_out.drop(columns=['minorGHG'], inplace=True)
 
 params_out.to_csv(
-    "../../output/posteriors/"
+    f"{ROOT}/output/posteriors/"
     "calibrated_constrained_parameters.csv"
 )
