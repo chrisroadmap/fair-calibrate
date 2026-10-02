@@ -164,10 +164,14 @@ ebm_sample = ebm_sample[:, ~mask]
 # check that covariance matrix is positive semidefinite and if not, remove param combo.
 # to do: change away from sparse, once we move away from R
 
+batch_offset = 0  # first candidate of the batch being checked (read by the workers)
+
+
 def psd_check_failed(start, stop):
-    """Flag samples in [start, stop) whose discretised noise covariance fails."""
+    """Flag batch samples in [start, stop) whose discretised noise covariance fails."""
     failed = np.zeros(stop - start, dtype=bool)
-    for isample in range(start, stop):
+    for ibatch in range(start, stop):
+        isample = batch_offset + ibatch
         ebm = EnergyBalanceModel(
             ocean_heat_capacity=ebm_sample[1 : n_layers + 1, isample],
             ocean_heat_transfer=ebm_sample[i_kappa1:i_epsilon, isample],
@@ -198,26 +202,48 @@ def psd_check_failed(start, stop):
                 size=1, mean=np.zeros(n_state), cov=q_mat_d
             )
         except:  # noqa: E722
-            failed[isample - start] = True
+            failed[ibatch - start] = True
     return failed
 
 
-failed = np.concatenate(
-    map_chunks(psd_check_failed, len(ebm_sample.T), n_workers(), progress=progress)
+# The check is the expensive step, so run it only until `samples` candidates have
+# passed. Candidates are taken in order and the first `samples` survivors kept, which
+# is the same set as checking every candidate and truncating. Each batch is sized from
+# the pass rate seen so far, so the last one overshoots only slightly.
+n_candidates = ebm_sample.shape[1]
+passed = np.zeros(n_candidates, dtype=bool)
+n_checked = 0
+n_passed = 0
+while n_passed < samples and n_checked < n_candidates:
+    pass_rate = n_passed / n_checked if n_checked else 1.0
+    batch = int(np.ceil(1.05 * (samples - n_passed) / max(pass_rate, 0.05)))
+    batch = min(batch, n_candidates - n_checked)
+    batch_offset = n_checked
+    failed = np.concatenate(
+        map_chunks(psd_check_failed, batch, n_workers(), progress=progress)
+    )
+    passed[n_checked : n_checked + batch] = ~failed
+    n_checked += batch
+    n_passed += int((~failed).sum())
+
+print(
+    f"Checked {n_checked} of {n_candidates} candidates; "
+    f"{n_passed} passed the covariance check."
 )
-ebm_sample[:, failed] = np.nan
 
-mask = np.all(np.isnan(ebm_sample), axis=0)
-ebm_sample = ebm_sample[:, ~mask]
+assert n_passed >= samples, (
+    f"Only {n_passed} of {n_candidates} candidates passed the covariance check, "
+    f"{samples} needed: increase the draw size."
+)
 
-print("Total number of retained samples:", len(ebm_sample.T))
+ebm_sample = ebm_sample[:, passed][:, :samples]
 
 ebm_sample_df = pd.DataFrame(
-    data=ebm_sample[:, :samples].T,
+    data=ebm_sample.T,
     columns=climate_response_columns(n_layers),
 )
 
-assert len(ebm_sample_df) >= samples
+assert len(ebm_sample_df) == samples
 
 os.makedirs(
     f"{ROOT}/output/priors/",
