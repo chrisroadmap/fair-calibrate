@@ -8,6 +8,7 @@ from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
+from fair_calibrate.carbon_cycle_override import set_boxes
 from fair_calibrate.layers import fill_layers
 from fair_calibrate.paths import ROOT
 
@@ -91,6 +92,10 @@ def run_fair(cfg):
     fill(f.species_configs["iirf_airborne"], cfg["iirf_airborne"], specie="CO2")
     fill(f.species_configs["iirf_uptake"], cfg["iirf_uptake"], specie="CO2")
     fill(f.species_configs["iirf_temperature"], cfg["iirf_temperature"], specie="CO2")
+    # temporary override from fair-carbon-feedbacks (CARBON_CYCLE_FILE in script 10):
+    # the four CO2 boxes. Without it FaIR keeps its default box parameters.
+    if "partition_fraction" in cfg:
+        set_boxes(f, cfg["partition_fraction"], cfg["unperturbed_lifetime_co2"])
 
     # methane lifetime baseline and sensitivity
     fill(f.species_configs["unperturbed_lifetime"], cfg["ch4_base"], specie="CH4")

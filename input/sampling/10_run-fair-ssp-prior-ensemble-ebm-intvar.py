@@ -14,6 +14,7 @@ from fair import __version__
 from parallel import run_fair
 from utils import _parallel_process
 
+from fair_calibrate.carbon_cycle_override import carbon_cycle_config, load_override
 from fair_calibrate.layers import climate_response_file, get_n_layers, layer_config
 from fair_calibrate.parameters import PRIOR_SAMPLES
 from fair_calibrate.paths import ROOT
@@ -53,6 +54,10 @@ if __name__ == "__main__":
     irrigation_forcing = df_irrigation["VL"].loc[1750:2024].values
 
     df_cc = pd.read_csv(f"{ROOT}/output/priors/carbon_cycle.csv")
+    # TEMPORARY override of the 04 carbon cycle from fair-carbon-feedbacks, set by
+    # CARBON_CYCLE_FILE in .env (see fair_calibrate.carbon_cycle_override).
+    df_cc_override = load_override(samples)
+
     df_cr = pd.read_csv(f"{ROOT}/output/priors/" + climate_response_file(n_layers))
     df_aci = pd.read_csv(f"{ROOT}/output/priors/aerosol_cloud.csv")
     df_ari = pd.read_csv(f"{ROOT}/output/priors/aerosol_radiation.csv")
@@ -126,6 +131,10 @@ if __name__ == "__main__":
         config[ibatch]["iirf_temperature"] = df_cc.loc[
             batch_start : batch_end - 1, "rT"
         ].values.squeeze()
+        if df_cc_override is not None:
+            config[ibatch].update(
+                carbon_cycle_config(df_cc_override, slice(batch_start, batch_end - 1))
+            )
         config[ibatch]["beta"] = df_aci.loc[
             batch_start : batch_end - 1, "beta"
         ].values.squeeze()

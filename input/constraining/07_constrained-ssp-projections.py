@@ -15,6 +15,12 @@ from fair import FAIR
 from fair.interface import fill, initialise
 from fair.io import read_properties
 
+from fair_calibrate.carbon_cycle_override import (
+    BOXES_FILE,
+    LIFETIME_COLUMNS,
+    PARTITION_COLUMNS,
+    set_boxes,
+)
 from fair_calibrate.layers import get_n_layers
 from fair_calibrate.parameters import POSTERIOR_SAMPLES
 from fair_calibrate.paths import ROOT
@@ -112,6 +118,24 @@ f.override_defaults(
     f"{ROOT}/output/posteriors/"
     "calibrated_constrained_parameters.csv",
 )
+
+# TEMPORARY carbon cycle override (CARBON_CYCLE_FILE in .env): the CO2 boxes that
+# constraining/05 wrote to their own file, as override_defaults cannot set them.
+if os.getenv("CARBON_CYCLE_FILE"):
+    df_boxes = pd.read_csv(
+        f"{ROOT}/output/posteriors/" + BOXES_FILE, index_col=0
+    )
+    if not df_boxes.index.equals(df_configs.index):
+        raise SystemExit(
+            f"{BOXES_FILE} does not match calibrated_constrained_parameters.csv: "
+            "rerun constraining/05 with CARBON_CYCLE_FILE set"
+        )
+    print("OVERRIDING the CO2 carbon boxes from", BOXES_FILE)
+    set_boxes(
+        f,
+        df_boxes[PARTITION_COLUMNS].values,
+        df_boxes[LIFETIME_COLUMNS].values,
+    )
 
 # initial conditions
 initialise(f.concentration, f.species_configs["baseline_concentration"])

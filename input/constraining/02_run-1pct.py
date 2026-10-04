@@ -14,6 +14,7 @@ from fair import __version__
 from parallel_1pct import run_fair
 from utils import _parallel_process
 
+from fair_calibrate.carbon_cycle_override import carbon_cycle_config, load_override
 from fair_calibrate.layers import climate_response_file, get_n_layers, layer_config
 from fair_calibrate.parameters import PRIOR_SAMPLES
 from fair_calibrate.paths import ROOT
@@ -34,6 +35,8 @@ if __name__ == "__main__":
         f"{ROOT}/output/priors/"
         "carbon_cycle.csv"
     )
+    # TEMPORARY override of the 04 carbon cycle (CARBON_CYCLE_FILE in .env)
+    df_cc_override = load_override(samples)
     df_cr = pd.read_csv(
         f"{ROOT}/output/priors/" + climate_response_file(n_layers)
     )
@@ -86,6 +89,10 @@ if __name__ == "__main__":
         config[ibatch]["iirf_temperature"] = df_cc.loc[
             rmse_pass[batch_start:batch_end], "rT"
         ].values.squeeze()
+        if df_cc_override is not None:
+            config[ibatch].update(
+                carbon_cycle_config(df_cc_override, rmse_pass[batch_start:batch_end])
+            )
         config[ibatch]["scaling_CO2"] = df_scaling.loc[
             rmse_pass[batch_start:batch_end], "CO2"
         ].values.squeeze()

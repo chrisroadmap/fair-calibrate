@@ -16,6 +16,13 @@ from fair_calibrate.layers import (
     climate_response_renames,
     get_n_layers,
 )
+from fair_calibrate.carbon_cycle_override import (
+    BOXES_FILE,
+    LIFETIME_COLUMNS,
+    PARTITION_COLUMNS,
+    dump_columns,
+    load_override,
+)
 from fair_calibrate.parameters import PRIOR_SAMPLES, POSTERIOR_SAMPLES
 from fair_calibrate.paths import ROOT
 
@@ -157,10 +164,22 @@ minor_ghgs = [
 ]
 # seed, stochastic_run = TRUE, use_seed = TRUE
 
+# TEMPORARY override of the 04 carbon cycle (CARBON_CYCLE_FILE in .env). FaIR's
+# override_defaults cannot set per-box parameters, so the boxes go to their own file,
+# which constraining/07 applies.
+df_cc_override = load_override(samples)
+if df_cc_override is not None:
+    cc_out = dump_columns(df_cc_override).loc[valid_all, :]
+    df_cc_override.loc[valid_all, PARTITION_COLUMNS + LIFETIME_COLUMNS].to_csv(
+        f"{ROOT}/output/posteriors/" + BOXES_FILE
+    )
+else:
+    cc_out = df_cc.loc[valid_all, :].rename(columns=cc_renames)
+
 params_out = pd.concat(
     (
         df_cr.loc[valid_all, :].rename(columns=cr_renames),
-        df_cc.loc[valid_all, :].rename(columns=cc_renames),
+        cc_out,
         df_ari.loc[valid_all, :].rename(columns=ari_renames),
         df_aci.loc[valid_all, :].rename(columns=aci_renames),
         df_ozone.loc[valid_all, :].rename(columns=ozone_renames),

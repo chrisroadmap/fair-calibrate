@@ -9,6 +9,7 @@ from fair.interface import fill, initialise
 from fair.io import read_properties
 from scipy.interpolate import interp1d
 
+from fair_calibrate.carbon_cycle_override import set_boxes
 from fair_calibrate.layers import fill_layers
 from fair_calibrate.paths import ROOT
 
@@ -75,6 +76,9 @@ def run_fair(cfg):
     fill(f.species_configs["iirf_airborne"], cfg["iirf_airborne"], specie="CO2")
     fill(f.species_configs["iirf_uptake"], cfg["iirf_uptake"], specie="CO2")
     fill(f.species_configs["iirf_temperature"], cfg["iirf_temperature"], specie="CO2")
+    # temporary override from fair-carbon-feedbacks (CARBON_CYCLE_FILE): the CO2 boxes
+    if "partition_fraction" in cfg:
+        set_boxes(f, cfg["partition_fraction"], cfg["unperturbed_lifetime_co2"])
 
     # forcing scaling
     fill(f.species_configs["forcing_scale"], cfg["scaling_CO2"], specie="CO2")
