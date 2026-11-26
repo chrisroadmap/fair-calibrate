@@ -63,7 +63,7 @@ faci_in = np.load(
 )
 co2_in = np.load(
     "../../output/prior_runs/"
-    "concentration_co2_2023.npy"
+    "concentration_co2_2014-2023.npy"
 )
 
 # we are not constraining ECS and TCR in RCMIP3, but want to know how it looks.
